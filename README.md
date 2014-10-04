@@ -1,4 +1,5 @@
 Informal code for numerical computation in research on orbital dynamics in the Heisenberg group.
+No warranty is provided -- use at your own risk.
 
 #### Contributors
 
@@ -7,8 +8,15 @@ Informal code for numerical computation in research on orbital dynamics in the H
 
 #### Contents
 
-- initial-conditions-dynamics : Sage code (worksheet) for numerically approximating the dynamics
+This git repository is organized into multiple components, each of which is a logical
+unit of code/math/etc.  Some components depend on the code within or the output of other
+components.
+
+- [initial-conditions-dynamics](https://github.com/vdods/heisenberg/tree/master/initial-conditions-dynamics) : Sage code (worksheet) for numerically approximating the dynamics
   for orbital mechanics in the Heisenberg group.
+- [fourier-analysis](https://github.com/vdods/heisenberg/tree/master/fourier-analysis) : Python 
+  code (using numpy and scipy, no Sage code) for numerical computations in the Heisenberg group
+  dynamics, using a Lagrangian formalism and a partial Fourier series representation.
 
 #### Resources on markdown (which is what the .md extension in README.md stands for):
 
