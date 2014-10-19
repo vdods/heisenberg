@@ -58,6 +58,16 @@ def PrintNiceList (L):
     for x in L:
         print x
 
+def Modulo (a, b):
+    assert b > 0
+    if a < 0:
+        retval = b - (-a)%b
+        if retval == b:
+            retval = 0
+        return retval
+    else:
+        return a%b
+
 def ComplexVector (*components):
     return np.ndarray(shape=(len(components),), dtype=complex, buffer=np.array([complex(c) for c in components]))
 
@@ -128,6 +138,26 @@ def FourierSum (modes, coefficients, period, t):
     exponent_factor = complex(1j*omega)
     return sum(coefficient*cmath.exp(exponent_factor*mode*t) for (mode,coefficient) in izip(modes,coefficients))
 
+# Returns Fourier coefficients of derivative of Fourier sum
+def FourierDerivative (modes, coefficients, period):
+    omega = float(2*math.pi/period)
+    return [coefficient*1j*omega*mode for (mode,coefficient) in izip(modes,coefficients)]
+
+def Energy (V, V_prime):
+    assert len(V) == 3, "V must be a 3-vector"
+    x = V[0]
+    y = V[1]
+    z = V[2]
+    p_x = V_prime[0]
+    p_y = V_prime[1]
+    p_z = V_prime[2]
+    alpha = 1
+    r_squared = x**2 + y**2
+    mu = r_squared**2 + 0.0625*z**2
+    P_x = p_x - 0.5*y*p_z
+    P_y = p_y + 0.5*x*p_z
+    return (0.5*(P_x**2 + P_y**2) - alpha*mu**(-0.5)).real
+
 # This is the negative gradient of the potential energy function.
 def Force (V):
     assert len(V) == 3, "V must be a 3-vector"
@@ -137,13 +167,14 @@ def Force (V):
     alpha = 1
     r_squared = x**2 + y**2
     mu = r_squared**2 + 0.0625*z**2
-    return ComplexVector(-alpha*mu^(-3/2)*r_squared*2*x, \
-                         -alpha*mu^(-3/2)*r_squared*2*y, \
-                         -.0625*alpha*mu^(-3/2)*z)
+    return ComplexVector(-alpha*mu**(-1.5)*r_squared*2*x, \
+                         -alpha*mu**(-1.5)*r_squared*2*y, \
+                         -.0625*alpha*mu**(-1.5)*z)
 
 def ForceCoefficients (position_modes, position_coefficients, period, force_modes):
     sample_times = [t for t in linterp(float(0), float(period), value_count=1000)]
-    force_field_samples = [FourierSum(position_modes, position_coefficients, period, t) for t in sample_times]
+    position_samples = [FourierSum(position_modes, position_coefficients, period, t) for t in sample_times]
+    force_field_samples = [Force(position_sample) for position_sample in position_samples]
     
     #def ForceField (t):
     #    position_at_time_t = FourierSum(position_modes, position_coefficients, period, t)
