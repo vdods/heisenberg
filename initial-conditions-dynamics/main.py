@@ -45,7 +45,7 @@ def compute_Fourier_coefficients_of (Xs, Ts):
     max_diff = max(diffs)
     print "max_diff = {0}".format(max_diff)
 
-def test_Fourier ():
+def test_fourier_Transform ():
     import sys
 
     L_range = range(3,40)
@@ -65,7 +65,11 @@ def test_Fourier ():
         sys.stdout.write('\n')
 
 def main ():
-    # test_Fourier()
+    # test_fourier_Transform()
+    import fourier
+    fourier.Transform.test_partial_inverse()
+
+    return None
 
     (Xs,Ts,period) = compute_coreys_flow_curve()
 

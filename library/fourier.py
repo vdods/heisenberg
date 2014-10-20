@@ -54,30 +54,57 @@ class Transform:
         return Transform(self.modes, sample_times)
 
     @staticmethod
-    def test (L, sample_count):
-        import cmath
-        import linalg_util
-        import math
-        import numpy
-        # L = 10
-        # modes = range(-L,L+1)
-        modes = range(L)
-        sample_times = numpy.linspace(0.0, 2.0*math.pi, num=sample_count+1)
-        Ft = Transform(modes, sample_times)
+    def test_partial_inverse ():
+        """
+        Let M be the set of modes for which the Fourier coefficients will be computed.
+        Let T be the set of times at which the signal function will be sampled, and
+        assumed that T is uniformly distributed over the half-open interval [0,P), where
+        P is the period.
 
-        # Let S denote sample space.  Let C denote coefficient space.
-        # Let F denote the linear map taking sample space to [Fourier] coefficient space.
-        # Let R denote the linear map taking coefficient space to [reconstructed] sample space.
+        Let C be the space of Fourier coefficients corresponding to the modes M.  Note
+        that C is [isomorphic to] the free complex vector space over M.  Let S be the
+        space of function sample values over the set T.  Note that S is [isomorphic to]
+        the free [real or] complex vector space over T.
 
-        F = Ft.period_times_fourier_transform_matrix / Ft.period
-        R = Ft.fourier_sum_matrix
+        Let F be the linear map taking a sampled function to its M-spectrum.  This is the
+        discrete analog of the Fourier transform of the function.
 
-        # This composition gives the endomorphism of coordinate space
-        # C_to_C = F.dot(R)
-        S_to_S = R.dot(F)
+        Let R be the linear map taking a set of Fourier coefficients to the T-sampled
+        signal that it represents.
 
-        # print "|C_to_C - I|^2 = {0}".format(linalg_util.ComplexMatrixNormSquared(C_to_C - numpy.eye(len(C_to_C), dtype=complex)))
-        # print "|S_to_S - I|^2 = {0}".format(linalg_util.ComplexMatrixNormSquared(S_to_S - numpy.eye(len(S_to_S), dtype=complex)))
+        This test verifies that if dim(C) >= dim(S), then the composition F*R : C -> C
+        is the identity map.  Note that the map R*F : S -> S is an linear projection,
+        but is not necessarily the identity map.
+        """
 
-        # return linalg_util.ComplexMatrixNormSquared(C_to_C - numpy.eye(len(C_to_C), dtype=complex))
-        return linalg_util.ComplexMatrixNormSquared(S_to_S - numpy.eye(len(S_to_S), dtype=complex))
+        def norm_squared_for_composition (modes, sample_count):
+            import math
+            import numpy
+            sample_times = numpy.linspace(0.0, 2.0*math.pi, num=sample_count+1)
+            Ft = Transform(modes, sample_times)
+
+            # Let S denote sample space.  Let C denote coefficient space.
+            # Let F denote the linear map taking sample space to [Fourier] coefficient space.
+            # Let R denote the linear map taking coefficient space to [reconstructed] sample space.
+
+            F = Ft.period_times_fourier_transform_matrix / Ft.period
+            R = Ft.fourier_sum_matrix
+
+            # This composition gives the endomorphism of coordinate space
+            C_to_C = F.dot(R)
+
+            import linalg_util
+            return linalg_util.ComplexMatrixNormSquared(C_to_C - numpy.eye(len(C_to_C), dtype=complex))
+
+        import sys
+        modes_upper_bounds = range(1,30+1)
+        sample_counts = range(3,100)
+
+        epsilon = 1.0e-12
+        epsilon_squared = epsilon**2
+        for modes_upper_bound in modes_upper_bounds:
+            for sample_count in sample_counts:
+                if modes_upper_bound <= sample_count:
+                    norm_squared = norm_squared_for_composition(range(modes_upper_bound),sample_count)
+                    assert norm_squared < epsilon_squared, 'Composition F*R differs too much from the identity (norm squared of difference is {0}.'.format(norm_squared)
+        print 'test_partial_inverse passed.' # TODO: print timing info
