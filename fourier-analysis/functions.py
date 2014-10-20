@@ -9,45 +9,6 @@ import numpy as np
 import pickle
 from scipy import integrate
 
-# must provide one of the 'value_count' or 'step_size' keyword arguments.
-# the 'start' and 'end' arguments must be ones for which addition,
-# subtraction, multiplication-by-integer and division-by-integer are
-# defined.
-def linterp (start, end, **keywords):
-    r"""
-    Returns a generator function for linearly interpolating between the `start` and `end` values.
-    
-    Must provide exactly one of the following keyword arguments:
-    - `value_count` : The returned generator will produce exactly value_count values (value_count must be at least 2).
-    - `step_size`   : The absolute value of the increment between generated values.
-
-    If `value_count` is specified, then the values specified for `start` and `end` can be anything that behaves as
-    a vector (specifically, has defined addition, subtraction, and scalar multiplication operations).  Otherwise,
-    the values specified for `start` and `end` must be scalar values which have an ordering relation (__gt__) defined.
-    """
-    
-    # logical XOR
-    assert ('value_count' in keywords) != ('step_size' in keywords), "must specify exactly one of 'value_count' or 'step_size'"
-    if 'value_count' in keywords:
-        value_count = keywords['value_count']
-        assert value_count >= 2
-        step_count = value_count - 1
-        for i in range(value_count-1):
-            yield start + (end - start) * i / step_count
-        yield end # yield end exactly
-    else:
-        step_size = keywords['step_size']
-        assert step_size > 0
-        value = start
-        if end > start:
-            while value <= end:
-                yield value
-                value += step_size
-        else:
-            while value >= end:
-                yield value
-                value -= step_size
-
 def PickleThis (obj, filename):
     pickle.dump(obj, open(filename, "wb"))
 
@@ -172,7 +133,8 @@ def Force (V):
                          -.0625*alpha*mu**(-1.5)*z)
 
 def ForceCoefficients (position_modes, position_coefficients, period, force_modes):
-    sample_times = [t for t in linterp(float(0), float(period), value_count=1000)]
+    import numpy
+    sample_times = [t for t in numpy.linspace(0.0, period, num=1000)]
     position_samples = [FourierSum(position_modes, position_coefficients, period, t) for t in sample_times]
     force_field_samples = [Force(position_sample) for position_sample in position_samples]
     
