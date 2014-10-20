@@ -96,15 +96,23 @@ class Transform:
             import linalg_util
             return linalg_util.ComplexMatrixNormSquared(C_to_C - numpy.eye(len(C_to_C), dtype=complex))
 
+        # Record start time for computing profiling information.
+        import time
+        start_time = time.time()
+
         import sys
         modes_upper_bounds = range(1,30+1)
         sample_counts = range(3,100)
 
         epsilon = 1.0e-12
         epsilon_squared = epsilon**2
+        test_case_count = 0
         for modes_upper_bound in modes_upper_bounds:
             for sample_count in sample_counts:
                 if modes_upper_bound <= sample_count:
+                    test_case_count += 1 # Increment the test counter
                     norm_squared = norm_squared_for_composition(range(modes_upper_bound),sample_count)
                     assert norm_squared < epsilon_squared, 'Composition F*R differs too much from the identity (norm squared of difference is {0}.'.format(norm_squared)
-        print 'test_partial_inverse passed.' # TODO: print timing info
+
+        duration = time.time() - start_time
+        print 'test_partial_inverse passed -- {0} test cases, duration: {1}s, which was {2}s per test case.'.format(test_case_count, duration, duration/test_case_count)
