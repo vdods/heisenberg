@@ -1,8 +1,7 @@
-import sys
-
 # Add our library code directory to the import search path.  This allows things like
-# `import Fourier` to work.  It relies on the relative filesystem position of this
+# `import fourier` to work.  It relies on the relative filesystem position of this
 # file to the `library` directory.
+import sys
 sys.path.append('../library')
 
 def compute_coreys_flow_curve ():
@@ -45,32 +44,7 @@ def compute_Fourier_coefficients_of (Xs, Ts):
     max_diff = max(diffs)
     print "max_diff = {0}".format(max_diff)
 
-def test_fourier_Transform ():
-    import sys
-
-    L_range = range(3,40)
-    sample_count_range = range(10,100+1)
-
-    sys.stdout.write('horizontal axis is mode count, vertical axis is sample count.\n')
-    sys.stdout.write('{:>20} '.format(''))
-    for L in L_range:
-        mode_count = L
-        sys.stdout.write('{:>20}'.format(mode_count))
-    sys.stdout.write('\n\n')
-    for sample_count in sample_count_range:
-        sys.stdout.write('{:>20}:'.format(sample_count))
-        for L in L_range:
-            import fourier
-            sys.stdout.write('{:>20}'.format(fourier.Transform.test(L, sample_count)))
-        sys.stdout.write('\n')
-
 def main ():
-    # test_fourier_Transform()
-    import fourier
-    fourier.Transform.test_partial_inverse()
-
-    return None
-
     (Xs,Ts,period) = compute_coreys_flow_curve()
 
     # Compute the Hamiltonian at each curve sample point to verify that energy is
