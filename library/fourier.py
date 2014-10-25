@@ -125,8 +125,8 @@ class Transform:
         timing_info = 'duration: {0}s, which was {1}s per test case.'.format(test_case_count, duration, duration/test_case_count)
         if failed_test_case_count == 0:
             print 'test_partial_inverse passed -- {0} test cases, {1}'.format(test_case_count, timing_info)
+        else:
+            print 'test_partial_inverse failed -- {0} failed out of {1} test cases, {2}'.format(failed_test_case_count, test_case_count, timing_info)
             print '    failed test cases:'
             for failed_test_case in failed_test_cases:
                 print '    {0}'.format(failed_test_case)
-        else:
-            print 'test_partial_inverse failed -- {0} failed out of {1} test cases, {2}'.format(failed_test_case_count, test_case_count, timing_info)
