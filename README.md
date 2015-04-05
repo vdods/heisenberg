@@ -17,6 +17,9 @@ components.
 - [fourier-analysis](https://github.com/vdods/heisenberg/tree/master/fourier-analysis) : Python 
   code (using numpy and scipy, no Sage code) for numerical computations in the Heisenberg group
   dynamics, using a Lagrangian formalism and a partial Fourier series representation.
+- [library](https://github.com/vdods/heisenberg/tree/master/library) : Python library code which
+  is used in multiple programs.  For example, the fourier.Transform class, plotting functions,
+  etc.
 - [unit-tests.py](https://github.com/vdods/heisenberg/blob/master/unit-tests.py) : The main Python
   script for running unit tests of some of the code in this project.  Each test will generally
   run a number of test cases, and print out the test results and possibly timing information.
