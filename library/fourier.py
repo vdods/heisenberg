@@ -21,15 +21,15 @@ class Transform:
         self.omega = 2.0*math.pi/self.period
         self.i_omega = 1.0j*self.omega
         self.sample_times = linalg_util.FloatVector(sample_times[0:-1])
-        dts_for_average = linalg_util.FloatVector([sample_times[i+1] - sample_times[i] for i in range(len(sample_times)-1)])
-        assert abs(dts_for_average.sum() - self.period) < 1.0e-10, "The sum of dts should be equal to the period, up to numerical error."
+        self.dts_for_integral = linalg_util.FloatVector([sample_times[i+1] - sample_times[i] for i in range(len(sample_times)-1)])
+        assert abs(self.dts_for_integral.sum() - self.period) < 1.0e-10, "The sum of dts should be equal to the period, up to numerical error."
         self.fourier_sum_matrix = \
             linalg_util.ComplexMatrix([[cmath.exp(self.i_omega*mode*sample_time) \
                                         for mode in self.modes] \
                                        for sample_time in self.sample_times])
         self.period_times_fourier_transform_matrix = \
             linalg_util.ComplexMatrix([[cmath.exp(-self.i_omega*mode*sample_time)*dt \
-                                        for (sample_time,dt) in itertools.izip(self.sample_times,dts_for_average)] \
+                                        for (sample_time,dt) in itertools.izip(self.sample_times,self.dts_for_integral)] \
                                        for mode in self.modes])
 
     def coefficients_of (self, samples):
@@ -53,6 +53,39 @@ class Transform:
         """
         return Transform(self.modes, sample_times)
 
+    def product_of_signals (self, lhs_modes, lhs_coefficients, rhs_modes, rhs_coefficients):
+        """
+        If lhs_coefficients and rhs_coefficients represent functions A(t) and B(t), then this computes
+        the coefficients of A(t)*B(t).  Note that this Transform object must have been produced from
+        Transform.product_transform from the Transform objects corresponding to lhs_coefficients and
+        rhs_coefficients.
+        """
+        import itertools
+        return [sum(lhs_coefficient*rhs_coefficient \
+                for ((lhs_mode,lhs_coefficient),(rhs_mode,rhs_coefficient)) \
+                in itertools.product(itertools.izip(lhs_modes,lhs_coefficients), itertools.izip(rhs_modes,rhs_coefficients)) \
+                if lhs_mode + rhs_mode == mode) for mode in self.modes]
+
+    @staticmethod
+    def product_transform (lhs, rhs):
+        """
+        If lhs and rhs are Transform objects representing signals A(t) and B(t),
+        then this function computes the Fourier transform object which can exactly
+        represent A(t)*B(t) -- in particular, this boils down to a discrete convolution
+        of the modes of lhs and rhs.  The sample times for both lhs and rhs must be equal,
+        but the modes don't have to be.
+        """
+        import itertools
+        assert all(l == r for (l,r) in itertools.izip(lhs.sample_times,rhs.sample_times)), "The sample_times of lhs and rhs must be equal."
+
+        import linalg_util
+        import numpy
+        # Form the set of modes -- the set of the sum of each pair of elements from the
+        # respective sets of modes.
+        modes = list(set([m0 + m1 for (m0,m1) in itertools.product(lhs.modes, rhs.modes)]))
+        sample_times = numpy.append(lhs.sample_times, linalg_util.FloatVector([lhs.period]))
+        return Transform(modes, sample_times)
+
     @staticmethod
     def test_partial_inverse ():
         """
@@ -73,8 +106,8 @@ class Transform:
         signal that it represents.
 
         This test verifies that if dim(C) >= dim(S), then the composition F*R : C -> C
-        is the identity map.  Note that the map R*F : S -> S is an linear projection,
-        but is not necessarily the identity map.
+        is the identity map.  Note that the map R*F : S -> S is an orthogonal linear
+        projection, but is not necessarily the identity map.
         """
 
         def diff_norm_squared_for_composition (modes, sample_count):
@@ -100,7 +133,6 @@ class Transform:
         import time
         start_time = time.time()
 
-        import sys
         # modes_upper_bounds = range(1,30+1)
         # sample_counts = range(3,100)
         modes_upper_bounds = range(1,3+1)
@@ -130,3 +162,63 @@ class Transform:
             print '    failed test cases:'
             for failed_test_case in failed_test_cases:
                 print '    {0}'.format(failed_test_case)
+
+    @staticmethod
+    def test_product_of_signals ():
+        """
+        Tests product_transform and product_of_signals work correctly.  In particular, if A(t)
+        and B(t) are signals with the same period and sampling, then product_of_signals called
+        on their spectra (which could be different) produces the spectrum for A(t)*B(t), noting
+        that the spectrum of the product is a discrete convolution of their modes.
+        """
+
+        import itertools
+        import linalg_util
+        import numpy
+        period = 100.0
+        sample_count = 100
+        sample_times = numpy.linspace(0.0, period, num=sample_count+1)
+
+        # TODO: generate a bunch of random sets of modes
+        modes_choices = [range(0,mode_upper_bound+1) for mode_upper_bound in range(0,3+1)]
+        for lhs_modes in modes_choices:
+            lhs_transform = Transform(lhs_modes, sample_times)
+            # Generate a random spectrum corresponding to lhs_modes
+            lhs_coefficients = linalg_util.ComplexVector([numpy.random.random() + numpy.random.random()*1j for _ in lhs_modes])
+            for rhs_modes in modes_choices:
+                rhs_transform = Transform(rhs_modes, sample_times)
+                # Generate a random spectrum corresponding to rhs_modes
+                rhs_coefficients = linalg_util.ComplexVector([numpy.random.random() + numpy.random.random()*1j for _ in rhs_modes])
+
+                product_transform = Transform.product_transform(lhs_transform, rhs_transform)
+
+                # Verify that the sum of each of the pairs of modes is present in the product_transform's modes.
+                for lhs_mode in lhs_modes:
+                    for rhs_mode in rhs_modes:
+                        assert lhs_mode+rhs_mode in product_transform.modes
+
+                product_coefficients = product_transform.product_of_signals(lhs_modes, lhs_coefficients, rhs_modes, rhs_coefficients)
+                # Verify that the product of signals is [almost] equal to the signal reconstructed
+                # from the lhs and rhs spectra.
+                lhs_signal = lhs_transform.sampled_sum_of(lhs_coefficients)
+                rhs_signal = rhs_transform.sampled_sum_of(rhs_coefficients)
+                actual_product_signal = linalg_util.ComplexVector([lhs_sample*rhs_sample for (lhs_sample,rhs_sample) in itertools.izip(lhs_signal,rhs_signal)])
+                reconstructed_product_signal = product_transform.sampled_sum_of(product_coefficients)
+                # print 'len(lhs_signal) = {0}, len(rhs_signal) = {1}, len(actual_product_signal) = {2}, len(reconstructed_product_signal = {3}'.format(len(lhs_signal), len(rhs_signal), len(actual_product_signal), len(reconstructed_product_signal))
+                # print 'squared norm = {0}'.format(linalg_util.ComplexVectorNormSquared(actual_product_signal - reconstructed_product_signal))
+                squared_error = linalg_util.ComplexVectorNormSquared(actual_product_signal - reconstructed_product_signal)
+                assert squared_error < 1.0e-20
+
+        # Test a particular case with known result -- opposing, period-1 exponentials.
+        lhs_modes = [-1.0]
+        rhs_modes = [1.0]
+        lhs_transform = Transform(lhs_modes, sample_times)
+        rhs_transform = Transform(rhs_modes, sample_times)
+        lhs_coefficients = linalg_util.ComplexVector([1.0])
+        rhs_coefficients = linalg_util.ComplexVector([1.0])
+        product_transform = Transform.product_transform(lhs_transform, rhs_transform)
+        assert product_transform.modes == [0.0]
+        product_coefficients = product_transform.product_of_signals(lhs_modes, lhs_coefficients, rhs_modes, rhs_coefficients)
+        assert product_coefficients == linalg_util.ComplexVector([1.0])
+
+        print 'test_product_of_signals passed'
