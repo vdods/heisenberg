@@ -4,16 +4,6 @@
 import sys
 sys.path.append('../library')
 
-def compute_coreys_flow_curve ():
-    period = 273.5
-    sample_count = 2735
-    import heisenberg_dynamics
-    X_0 = heisenberg_dynamics.coreys_initial_condition()
-    print "Computing flow curve for time duration {0}, with {1} samples, from initial condition {2}.".format(period, sample_count, X_0)
-    import vector_field
-    (Xs,Ts) = vector_field.compute_flow_curve(heisenberg_dynamics.hamiltonian_vector_field, X_0, 0.0, period, sample_count)
-    return (Xs,Ts,period)
-
 def pickle_curve_positions (Xs, Ts, period):
     import numpy
     samples = [numpy.array(X[0:3], dtype=float) for X in Xs]
@@ -35,7 +25,7 @@ def compute_Fourier_coefficients_of (Xs, Ts):
     Ws = linalg_util.ComplexVector([complex(X[0],X[1]) for X in Xs[0:-1]])
     coefficients = Ft.coefficients_of(Ws)
     # print 'coefficients = {0}'.format(coefficients)
-    reconstructed_Ws = fourier.sampled_sum_of(coefficients)
+    reconstructed_Ws = Ft.sampled_sum_of(coefficients)
 
     import itertools
     # Really the norm should be taken via the norm defined by a Riemann sum that involves Ft.dts_for_average.
@@ -45,11 +35,11 @@ def compute_Fourier_coefficients_of (Xs, Ts):
     print "max_diff = {0}".format(max_diff)
 
 def main ():
-    (Xs,Ts,period) = compute_coreys_flow_curve()
+    import heisenberg_dynamics
+    (Xs,Ts,period) = heisenberg_dynamics.compute_coreys_flow_curve()
 
     # Compute the Hamiltonian at each curve sample point to verify that energy is
     # identically zero.  Do this by computing the max of the norm of the energy.
-    import heisenberg_dynamics
     Hs = [heisenberg_dynamics.hamiltonian(X) for X in Xs]
     max_abs_H = max(abs(H) for H in Hs)
     print 'max_abs_H = {0}'.format(max_abs_H)
@@ -59,6 +49,8 @@ def main ():
     plotty.plotty_2d_points(Xs, save_to_file='dynamics_rk4.png')
 
     pickle_curve_positions(Xs, Ts, period)
+
+    compute_Fourier_coefficients_of(Xs, Ts)
 
 if __name__ == "__main__":
     main()

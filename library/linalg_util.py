@@ -1,34 +1,40 @@
-def FloatVector (x):
+def FloatVector (X):
     import numpy
-    return numpy.array(x, dtype=float)
+    return numpy.array(X, dtype=float)
 
-def FloatVectorNormSquared (x):
-    return x.transpose().dot(x)
+def FloatVectorNormSquared (X):
+    # return x.transpose().dot(x)
+    return sum(x**2 for x in X.flat)
 
-def FloatMatrix (x):
+def FloatMatrix (X):
     import numpy
-    rows = len(x)
-    cols = len(x[0])
-    return numpy.ndarray(shape=(rows,cols), dtype=float, buffer=numpy.array(x))
+    rows = len(X)
+    cols = len(X[0])
+    return numpy.ndarray(shape=(rows,cols), dtype=float, buffer=numpy.array(X))
 
-def FloatMatrixNormSquared (x):
-    return x.transpose().dot(x).trace()
+def FloatMatrixNormSquared (X):
+    # return x.transpose().dot(x).trace()
+    return sum(x**2 for x in X.flat)
 
-def ComplexNormSquared (x):
-    return (x.conjugate()*x).real
+def ComplexNormSquared (z):
+    # return (x.conjugate()*x).real
+    return z.real**2 + z.imag**2
 
-def ComplexVector (x):
+def ComplexVector (Z):
     import numpy
-    return numpy.array(x, dtype=complex)
+    return numpy.array(Z, dtype=complex)
 
-def ComplexVectorNormSquared (x):
-    return x.conjugate().transpose().dot(x).real
+def ComplexVectorNormSquared (Z):
+    # return x.conjugate().transpose().dot(x).real
+    return sum(ComplexNormSquared(z) for z in Z.flat)
 
-def ComplexMatrix (x):
+def ComplexMatrix (Z):
     import numpy
-    rows = len(x)
-    cols = len(x[0])    
-    return numpy.ndarray(shape=(rows,cols), dtype=complex, buffer=numpy.array(x))
+    rows = len(Z)
+    cols = len(Z[0])
+    return numpy.ndarray(shape=(rows,cols), dtype=complex, buffer=numpy.array(Z))
 
-def ComplexMatrixNormSquared (x):
-    return x.conjugate().transpose().dot(x).trace().real
+def ComplexMatrixNormSquared (Z):
+    import numpy
+    # return numpy.einsum('ij,ij', x.conjugate(), x).real
+    return sum(ComplexNormSquared(z) for z in Z.flat)
