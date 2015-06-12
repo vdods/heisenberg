@@ -27,18 +27,23 @@ class Transform:
             linalg_util.ComplexMatrix([[cmath.exp(self.i_omega*mode*sample_time) \
                                         for mode in self.modes] \
                                        for sample_time in self.sample_times])
-        self.period_times_fourier_transform_matrix = \
-            linalg_util.ComplexMatrix([[cmath.exp(-self.i_omega*mode*sample_time)*dt \
+        self.fourier_transform_matrix = \
+            linalg_util.ComplexMatrix([[cmath.exp(-self.i_omega*mode*sample_time)*dt/self.period \
                                         for (sample_time,dt) in itertools.izip(self.sample_times,self.dts_for_integral)] \
                                        for mode in self.modes])
 
     def coefficients_of (self, samples):
         """samples must be a complex-based numpy.array and correspond 1-to-1 with self.sample_times."""
-        return self.period_times_fourier_transform_matrix.dot(samples) / self.period
+        import linalg_util
+        import numpy
+        return linalg_util.ComplexVector(numpy.einsum('ij,j', self.fourier_transform_matrix, samples))
+
 
     def sampled_sum_of (self, coefficients):
         """This uses self.sample_times to evaluate the sums.  coefficients must be a complex-based numpy.array and correspond exactly with self.modes."""
-        return self.fourier_sum_matrix.dot(coefficients)
+        import linalg_util
+        import numpy
+        return linalg_util.ComplexVector(numpy.einsum('ij,j', self.fourier_sum_matrix, coefficients))
 
     def evaluate_sum_at_arbitrary_time (self, coefficients, t):
         """coefficients must be a complex-based numpy.array and correspond exactly with self.modes."""
@@ -65,6 +70,12 @@ class Transform:
                 for ((lhs_mode,lhs_coefficient),(rhs_mode,rhs_coefficient)) \
                 in itertools.product(itertools.izip(lhs_modes,lhs_coefficients), itertools.izip(rhs_modes,rhs_coefficients)) \
                 if lhs_mode + rhs_mode == mode) for mode in self.modes]
+
+    def coefficients_of_derivative_of (self, coefficients):
+        """coefficients must be a complex-based numpy.array and correspond exactly with self.modes."""
+        import itertools
+        import numpy
+        return numpy.array([mode*self.i_omega*coefficient for (mode,coefficient) in itertools.izip(self.modes,coefficients)])
 
     @staticmethod
     def product_transform (lhs, rhs):
@@ -99,11 +110,11 @@ class Transform:
         space of function sample values over the set T.  Note that S is [isomorphic to]
         the free [real or] complex vector space over T.
 
-        Let F be the linear map taking a sampled function to its M-spectrum.  This is the
-        discrete analog of the Fourier transform of the function.
+        Let F (as in Fourier transform) be the linear map taking a sampled function to its
+        M-spectrum.  This is the discrete analog of the Fourier transform of the function.
 
-        Let R be the linear map taking a set of Fourier coefficients to the T-sampled
-        signal that it represents.
+        Let R (as in signal Reconstruction) be the linear map taking a set of Fourier
+        coefficients to the T-sampled signal that it represents.
 
         This test verifies that if dim(C) >= dim(S), then the composition F*R : C -> C
         is the identity map.  Note that the map R*F : S -> S is an orthogonal linear
@@ -120,14 +131,20 @@ class Transform:
             # Let F denote the linear map taking sample space to [Fourier] coefficient space.
             # Let R denote the linear map taking coefficient space to [reconstructed] sample space.
 
-            F = Ft.period_times_fourier_transform_matrix / Ft.period
+            F = Ft.fourier_transform_matrix
             R = Ft.fourier_sum_matrix
 
             # This composition gives the endomorphism of coordinate space
-            C_to_C = F.dot(R)
+            C_to_C = numpy.einsum('ij,jk', F, R)
+            print 'C_to_C = {0}'.format(C_to_C)
 
             import linalg_util
-            return linalg_util.ComplexMatrixNormSquared(C_to_C - numpy.eye(len(C_to_C), dtype=complex))
+            retval = linalg_util.ComplexMatrixNormSquared(C_to_C - numpy.eye(len(C_to_C), dtype=complex))
+            if retval < 1.0e-10:
+                print 'passed (modes = {0}, sample_count = {1}'.format(modes, sample_count)
+            else:
+                print 'failed (modes = {0}, sample_count = {1}'.format(modes, sample_count)
+            return retval
 
         # Record start time for computing profiling information.
         import time
@@ -135,7 +152,7 @@ class Transform:
 
         # modes_upper_bounds = range(1,30+1)
         # sample_counts = range(3,100)
-        modes_upper_bounds = range(1,3+1)
+        modes_upper_bounds = range(1,10+1)
         sample_counts = range(3,10)
 
         epsilon = 1.0e-12
@@ -144,17 +161,17 @@ class Transform:
         failed_test_case_count = 0
         failed_test_cases = []
         for modes_upper_bound in modes_upper_bounds:
+            modes = range(-modes_upper_bound,modes_upper_bound+1)
             for sample_count in sample_counts:
-                if modes_upper_bound <= sample_count:
+                if len(modes) <= sample_count:
                     test_case_count += 1 # Increment the test counter
-                    diff_norm_squared = diff_norm_squared_for_composition(range(modes_upper_bound),sample_count)
+                    diff_norm_squared = diff_norm_squared_for_composition(modes,sample_count)
                     if diff_norm_squared >= epsilon_squared:
                         failed_test_case_count += 1
                         failed_test_cases.append({'modes_upper_bound':modes_upper_bound, 'sample_count':sample_count, 'diff_norm_squared':diff_norm_squared})
-                    # assert diff_norm_squared < epsilon_squared, 'Composition F*R differs too much from the identity (norm squared of difference is {0}.'.format(diff_norm_squared)
 
         duration = time.time() - start_time
-        timing_info = 'duration: {0}s, which was {1}s per test case.'.format(test_case_count, duration, duration/test_case_count)
+        timing_info = 'duration: {0}s to compute {1} test cases, which was {2}s per test case.'.format(duration, test_case_count, duration/test_case_count)
         if failed_test_case_count == 0:
             print 'test_partial_inverse passed -- {0} test cases, {1}'.format(test_case_count, timing_info)
         else:
@@ -222,3 +239,25 @@ class Transform:
         assert product_coefficients == linalg_util.ComplexVector([1.0])
 
         print 'test_product_of_signals passed'
+
+if __name__ == "__main__":
+    Transform.test_partial_inverse()
+    Transform.test_product_of_signals()
+
+    import linalg_util
+    import numpy
+    k = 5
+    M = list(range(-k,k+1))
+    sample_count = 11
+    period = 123.0
+    FT = Transform(M, numpy.linspace(0.0, period, sample_count+1))
+    F = FT.fourier_transform_matrix
+    R = FT.fourier_sum_matrix
+    print 'FT.period = {0}'.format(FT.period)
+    print 'number of samples = {0}'.format(len(FT.sample_times))
+    print 'number of modes = {0}'.format(len(FT.modes))
+    print 'FT.sample_times = {0}'.format(FT.sample_times)
+    print 'F.shape = {0}, R.shape = {1}'.format(F.shape, R.shape)
+    print '|F*R - I|^2 = {0}'.format(linalg_util.ComplexMatrixNormSquared(numpy.einsum('ij,jk', F, R) - numpy.eye(F.shape[0], dtype=complex)))
+    print '|R*F - I|^2 = {0}'.format(linalg_util.ComplexMatrixNormSquared(numpy.einsum('ij,jk', R, F) - numpy.eye(R.shape[0], dtype=complex)))
+    # TODO: maybe verify that F*R and R*F are at least diagonal, and then if they're not the identity, print the diagonal components.
