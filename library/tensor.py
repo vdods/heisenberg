@@ -352,19 +352,69 @@ def contract__run_unit_tests ():
         print 'Summary: {0} unit tests, {1} passed, {2} failed, failure rate was {3}%'.format(unit_test_count, pass_count, fail_count, float(fail_count)*100.0/unit_test_count)
 
 if __name__ == '__main__':
-    print 'Because this module is being run as \'__main__\', the unit tests will be run.'
-    contract__run_unit_tests()
+    # print 'Because this module is being run as \'__main__\', the unit tests will be run.'
+    # contract__run_unit_tests()
 
-    # import sympy
+    import sympy
     
-    # def symbolic_tensor (name, shape):
-    #     return np.ndarray(shape, dtype=object, buffer=np.array([sympy.var(name+''.join(repr(i) for i in multiindex)) for multiindex in multiindex_iterator(shape)]))
+    def symbolic_tensor (name, shape):
+        return np.ndarray(shape, dtype=object, buffer=np.array([sympy.var(name+''.join(repr(i) for i in multiindex)) for multiindex in multiindex_iterator(shape)]))
 
-    # a = symbolic_tensor('a', (2,2))
-    # v = symbolic_tensor('v', (2,))
-    # p = contract('i,ij,j', v, a, v)
-    # print 'type(p) = {0}'.format(type(p))
-    # print sympy.sqrt(p)
+    a = symbolic_tensor('a', (2,2))
+    v = symbolic_tensor('v', (2,))
+    p = contract('i,ij,j', v, a, v)
+    f = sympy.sin(p)
+    X = list(a.flat) + list(v.flat)
+
+    import sympy.utilities.autowrap
+
+    # import pyximport
+    # pyximport.install(setup_args={#"script_args":["--compiler=/usr/bin/clang"],
+    #                               "include_dirs":np.get_include()},
+    #                   reload_support=True)
+
+    aw = sympy.utilities.autowrap.autowrap(f, backend='cython')
+    bf = sympy.utilities.autowrap.binary_function('bf', f, backend='cython')
+    uf = sympy.utilities.autowrap.ufuncify(X, f, language='C')
+
+    def run_es (F_list):
+        return [f.evalf(subs=dict(zip(X,F))) for F in F_list]
+
+    def run_aw (F_list):
+        return [aw(*F) for F in F_list]
+
+    def run_bf (F_list):
+        return [bf(*F) for F in F_list]
+
+    def run_uf (F_list):
+        return [uf(*F) for F in F_list]
+
+    def time_function_call (func, *args):
+        import time
+        start = time.time()
+        func(*args)
+        end = time.time()
+        duration = end - start
+        return duration
+
+    def profile_function (func_name, func, F_list):
+        duration = time_function_call(func, F_list)
+        duration_per_iteration = duration / len(F_list)
+        print '{0}: {1} evaluations took {2} s (which is {3} per iteration).'.format(func_name, len(F_list), duration, duration_per_iteration)
+
+    run_count = 10000
+    F_list = [[float(np.random.randn()) for _ in range(6)] for _ in range(run_count)]
+
+    print 'f = {0}'.format(f)
+    profile_function('run_es', run_es, F_list)
+    profile_function('run_aw', run_aw, F_list)
+    profile_function('run_bf', run_bf, F_list)
+    profile_function('run_uf', run_uf, F_list)
+
+
+    # print f(2.0, 3.0, 5.0, 7.0, 11.0, 13.0)
+
+
     
 
 
