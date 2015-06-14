@@ -1,7 +1,6 @@
 import itertools
 import numpy as np
 import operator
-import sympy
 
 def tensor_order (T):
     return len(T.shape) if hasattr(T,'shape') else 0
@@ -22,7 +21,8 @@ def contract (contraction_string, *tensors, **kwargs):
                 yield pos
     
     output_index_string = kwargs.get('output', None)
-    dtype = kwargs.get('dtype', object)
+    assert 'dtype' in kwargs, 'Must specify the \'dtype\' keyword argument (e.g. dtype=float, dtype=object, etc).'
+    dtype = kwargs['dtype']
     error_messages = []
     
     #
@@ -137,25 +137,23 @@ def contract (contraction_string, *tensors, **kwargs):
     return retval
 
 def contract__run_unit_tests ():
+    import symbolic
     import sympy
     import sys
     import traceback
     
-    def symbolic_tensor (name, shape):
-        return np.ndarray(shape, dtype=object, buffer=np.array([sympy.var(name+''.join(repr(i) for i in multiindex)) for multiindex in multiindex_iterator(shape)]))
-
     # Define a bunch of tensors to use in the tests
-    x = sympy.var('x')
-    T_ = symbolic_tensor('z', tuple())
-    T_4 = symbolic_tensor('a', (4,))
-    T_5 = symbolic_tensor('b', (5,))
-    U_5 = symbolic_tensor('c', (5,))
-    T_3_5 = symbolic_tensor('d', (3,5))
-    T_4_3 = symbolic_tensor('e', (4,3))
-    T_4_4 = symbolic_tensor('f', (4,4))
-    T_5_2 = symbolic_tensor('g', (5,2))
-    T_3_4_5 = symbolic_tensor('h', (3,4,5))
-    T_3_3_4 = symbolic_tensor('i', (3,3,4))
+    x = sympy.symbols('x')
+    T_ = symbolic.tensor('z', tuple())
+    T_4 = symbolic.tensor('a', (4,))
+    T_5 = symbolic.tensor('b', (5,))
+    U_5 = symbolic.tensor('c', (5,))
+    T_3_5 = symbolic.tensor('d', (3,5))
+    T_4_3 = symbolic.tensor('e', (4,3))
+    T_4_4 = symbolic.tensor('f', (4,4))
+    T_5_2 = symbolic.tensor('g', (5,2))
+    T_3_4_5 = symbolic.tensor('h', (3,4,5))
+    T_3_3_4 = symbolic.tensor('i', (3,3,4))
 
     def is_zero_tensor (T):
         return all(t == 0 for t in T.flat) if hasattr(T,'shape') else (T == 0)
@@ -164,116 +162,116 @@ def contract__run_unit_tests ():
         output_shape = (3,5,3)
         contraction_shape = (4,)
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([sum(T_3_4_5[i,j,k]*T_4_3[j,l] for (j,) in multiindex_iterator(contraction_shape)) for i,k,l in multiindex_iterator(output_shape)]))
-        assert is_zero_tensor(contract('ijk,jl', T_3_4_5, T_4_3) - expected_result)
+        assert is_zero_tensor(contract('ijk,jl', T_3_4_5, T_4_3, dtype=object) - expected_result)
     def positive__unit_test_0b ():
         output_shape = (3,5,3)
         contraction_shape = (4,)
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([sum(T_3_4_5[i,j,k]*T_4_3[j,l] for (j,) in multiindex_iterator(contraction_shape)) for i,k,l in multiindex_iterator(output_shape)]))
-        assert is_zero_tensor(contract('ijk,jl', T_3_4_5, T_4_3, output='ikl') - expected_result)
+        assert is_zero_tensor(contract('ijk,jl', T_3_4_5, T_4_3, output='ikl', dtype=object) - expected_result)
     def positive__unit_test_0c ():
         output_shape = (3,3,5)
         contraction_shape = (4,)
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([sum(T_3_4_5[i,j,k]*T_4_3[j,l] for (j,) in multiindex_iterator(contraction_shape)) for i,l,k in multiindex_iterator(output_shape)]))
-        assert is_zero_tensor(contract('ijk,jl', T_3_4_5, T_4_3, output='ilk') - expected_result)
+        assert is_zero_tensor(contract('ijk,jl', T_3_4_5, T_4_3, output='ilk', dtype=object) - expected_result)
         
     def positive__unit_test_1a ():
         output_shape = (5,)
         contraction_shape = (3,4)
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([sum(T_3_4_5[i,j,k]*T_4_3[j,i] for i,j in multiindex_iterator(contraction_shape)) for (k,) in multiindex_iterator(output_shape)]))
-        assert is_zero_tensor(contract('ijk,ji', T_3_4_5, T_4_3) - expected_result)
+        assert is_zero_tensor(contract('ijk,ji', T_3_4_5, T_4_3, dtype=object) - expected_result)
     def positive__unit_test_1b ():
         output_shape = (5,)
         contraction_shape = (3,4)
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([sum(T_3_4_5[i,j,k]*T_4_3[j,i] for i,j in multiindex_iterator(contraction_shape)) for (k,) in multiindex_iterator(output_shape)]))
-        assert is_zero_tensor(contract('ijk,ji', T_3_4_5, T_4_3, output='k') - expected_result)
+        assert is_zero_tensor(contract('ijk,ji', T_3_4_5, T_4_3, output='k', dtype=object) - expected_result)
         
     def positive__unit_test_2a ():
         output_shape = tuple()
         contraction_shape = (5,)
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([sum(T_5[i]*T_5[i] for (i,) in multiindex_iterator(contraction_shape))]))
-        assert is_zero_tensor(contract('i,i', T_5, T_5) - expected_result)
+        assert is_zero_tensor(contract('i,i', T_5, T_5, dtype=object) - expected_result)
     def positive__unit_test_2b ():
         output_shape = tuple()
         contraction_shape = (5,)
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([sum(T_5[i]*T_5[i] for (i,) in multiindex_iterator(contraction_shape))]))
-        assert is_zero_tensor(contract('i,i', T_5, T_5, output='') - expected_result)
+        assert is_zero_tensor(contract('i,i', T_5, T_5, output='', dtype=object) - expected_result)
     
     def positive__unit_test_3a ():
         output_shape = (5,5)
         contraction_shape = tuple()
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([T_5[i]*U_5[j] for i,j in multiindex_iterator(output_shape)]))
-        assert is_zero_tensor(contract('i,j', T_5, U_5) - expected_result)
+        assert is_zero_tensor(contract('i,j', T_5, U_5, dtype=object) - expected_result)
     def positive__unit_test_3b ():
         output_shape = (5,5)
         contraction_shape = tuple()
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([T_5[j]*U_5[i] for i,j in multiindex_iterator(output_shape)]))
-        assert is_zero_tensor(contract('j,i', T_5, U_5) - expected_result)
+        assert is_zero_tensor(contract('j,i', T_5, U_5, dtype=object) - expected_result)
     def positive__unit_test_3c ():
         output_shape = (5,5)
         contraction_shape = tuple()
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([T_5[i]*U_5[j] for i,j in multiindex_iterator(output_shape)]))
-        assert is_zero_tensor(contract('i,j', T_5, U_5, output='ij') - expected_result)
+        assert is_zero_tensor(contract('i,j', T_5, U_5, output='ij', dtype=object) - expected_result)
     def positive__unit_test_3d ():
         output_shape = (5,5)
         contraction_shape = tuple()
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([T_5[i]*U_5[j] for j,i in multiindex_iterator(output_shape)]))
-        assert is_zero_tensor(contract('i,j', T_5, U_5, output='ji') - expected_result)
+        assert is_zero_tensor(contract('i,j', T_5, U_5, output='ji', dtype=object) - expected_result)
     
     def positive__unit_test_4a ():
         output_shape = (4,2)
         contraction_shape = (3,5)
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([sum(T_4_3[i,j]*T_3_5[j,k]*T_5_2[k,l] for j,k in multiindex_iterator(contraction_shape)) for i,l in multiindex_iterator(output_shape)]))
-        assert is_zero_tensor(contract('ij,jk,kl', T_4_3, T_3_5, T_5_2) - expected_result)
+        assert is_zero_tensor(contract('ij,jk,kl', T_4_3, T_3_5, T_5_2, dtype=object) - expected_result)
     def positive__unit_test_4b ():
         output_shape = (2,4)
         contraction_shape = (3,5)
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([sum(T_4_3[i,j]*T_3_5[j,k]*T_5_2[k,l] for j,k in multiindex_iterator(contraction_shape)) for l,i in multiindex_iterator(output_shape)]))
-        assert is_zero_tensor(contract('lj,jk,ki', T_4_3, T_3_5, T_5_2) - expected_result)
+        assert is_zero_tensor(contract('lj,jk,ki', T_4_3, T_3_5, T_5_2, dtype=object) - expected_result)
     def positive__unit_test_4c ():
         output_shape = (4,2)
         contraction_shape = (3,5)
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([sum(T_4_3[i,j]*T_3_5[j,k]*T_5_2[k,l] for j,k in multiindex_iterator(contraction_shape)) for i,l in multiindex_iterator(output_shape)]))
-        assert is_zero_tensor(contract('ij,jk,kl', T_4_3, T_3_5, T_5_2, output='il') - expected_result)
+        assert is_zero_tensor(contract('ij,jk,kl', T_4_3, T_3_5, T_5_2, output='il', dtype=object) - expected_result)
     
     def positive__unit_test_5a ():
         output_shape = tuple()
         contraction_shape = (4,)
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([sum(T_4_4[i,i] for (i,) in multiindex_iterator(contraction_shape))]))
-        assert is_zero_tensor(contract('ii', T_4_4) - expected_result)
+        assert is_zero_tensor(contract('ii', T_4_4, dtype=object) - expected_result)
     def positive__unit_test_5b ():
         output_shape = tuple()
         contraction_shape = (4,)
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([sum(T_4_4[i,i] for (i,) in multiindex_iterator(contraction_shape))]))
-        assert is_zero_tensor(contract('ii', T_4_4, output='') - expected_result)
+        assert is_zero_tensor(contract('ii', T_4_4, output='', dtype=object) - expected_result)
     
     def positive__unit_test_6a ():
         output_shape = (4,)
         contraction_shape = (3,)
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([sum(T_3_3_4[i,i,j] for (i,) in multiindex_iterator(contraction_shape)) for (j,) in multiindex_iterator(output_shape)]))
-        assert is_zero_tensor(contract('iij', T_3_3_4) - expected_result)
+        assert is_zero_tensor(contract('iij', T_3_3_4, dtype=object) - expected_result)
     def positive__unit_test_6b ():
         output_shape = (4,)
         contraction_shape = (3,)
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([sum(T_3_3_4[i,i,j] for (i,) in multiindex_iterator(contraction_shape)) for (j,) in multiindex_iterator(output_shape)]))
-        assert is_zero_tensor(contract('iij', T_3_3_4, output='j') - expected_result)
+        assert is_zero_tensor(contract('iij', T_3_3_4, output='j', dtype=object) - expected_result)
     
     def positive__unit_test_7a ():
         expected_result = T_*T_
-        assert is_zero_tensor(contract(',', T_, T_) - expected_result)
+        assert is_zero_tensor(contract(',', T_, T_, dtype=object) - expected_result)
     def positive__unit_test_7b ():
         expected_result = T_*x
-        assert is_zero_tensor(contract(',', T_, x) - expected_result)
+        assert is_zero_tensor(contract(',', T_, x, dtype=object) - expected_result)
     def positive__unit_test_7c ():
         expected_result = T_*x
-        assert is_zero_tensor(contract(',', x, T_) - expected_result)
+        assert is_zero_tensor(contract(',', x, T_, dtype=object) - expected_result)
     def positive__unit_test_7d ():
         expected_result = x*x
-        assert is_zero_tensor(contract(',', x, x) - expected_result)
+        assert is_zero_tensor(contract(',', x, x, dtype=object) - expected_result)
     
     def positive__unit_test_8a ():
-        assert is_zero_tensor(contract('', T_) - T_)
+        assert is_zero_tensor(contract('', T_, dtype=object) - T_)
     def positive__unit_test_8b ():
-        assert is_zero_tensor(contract('', x) - x)
+        assert is_zero_tensor(contract('', x, dtype=object) - x)
     
     def positive__unit_test_9a ():
         # We will allow summation over indices that occur more than twice, even though
@@ -284,37 +282,37 @@ def contract__run_unit_tests ():
         output_shape = tuple()
         contraction_shape = (5,)
         expected_result = np.ndarray(output_shape, dtype=object, buffer=np.array([sum(T_5[i]*T_5[i]*U_5[i] for (i,) in multiindex_iterator(contraction_shape))]))
-        assert is_zero_tensor(contract('i,i,i', T_5, T_5, U_5) - expected_result)
+        assert is_zero_tensor(contract('i,i,i', T_5, T_5, U_5, dtype=object) - expected_result)
     
     def negative__unit_test_0a ():
-        contract('', T_5, T_4_4) # Wrong number of index strings.
+        contract('', T_5, T_4_4, dtype=object) # Wrong number of index strings.
     def negative__unit_test_0b ():
-        contract('i,j,k', T_5, T_4_4) # Wrong number of index strings.
+        contract('i,j,k', T_5, T_4_4, dtype=object) # Wrong number of index strings.
     def negative__unit_test_0c ():
-        contract('i,j,k', T_4_4) # Wrong number of index strings.
+        contract('i,j,k', T_4_4, dtype=object) # Wrong number of index strings.
     def negative__unit_test_0d ():
-        contract('i,j') # Wrong number of index strings.
+        contract('i,j', dtype=object) # Wrong number of index strings.
 
     def negative__unit_test_1a ():
-        contract('', T_5) # Mismatch of number of indices and tensor order.
+        contract('', T_5, dtype=object) # Mismatch of number of indices and tensor order.
     def negative__unit_test_1b ():
-        contract('ij', T_5) # Mismatch of number of indices and tensor order.
+        contract('ij', T_5, dtype=object) # Mismatch of number of indices and tensor order.
     def negative__unit_test_1c ():
-        contract('ij', T_3_4_5) # Mismatch of number of indices and tensor order.
+        contract('ij', T_3_4_5, dtype=object) # Mismatch of number of indices and tensor order.
 
     def negative__unit_test_2a ():
-        contract('i,i', T_5, T_4) # Non-matching contraction dimensions.
+        contract('i,i', T_5, T_4, dtype=object) # Non-matching contraction dimensions.
     def negative__unit_test_2b ():
-        contract('i,i,i', T_5, T_4, T_4) # Non-matching contraction dimensions.
+        contract('i,i,i', T_5, T_4, T_4, dtype=object) # Non-matching contraction dimensions.
     def negative__unit_test_2c ():
-        contract('ij,jk', T_4_3, T_4_4) # Non-matching contraction dimensions.
+        contract('ij,jk', T_4_3, T_4_4, dtype=object) # Non-matching contraction dimensions.
     def negative__unit_test_2d ():
-        contract('ij,ij', T_4_3, T_4_4) # Non-matching contraction dimensions.
+        contract('ij,ij', T_4_3, T_4_4, dtype=object) # Non-matching contraction dimensions.
     def negative__unit_test_2e ():
-        contract('ij,ij', T_5_2, T_4_4) # Non-matching contraction dimensions.
+        contract('ij,ij', T_5_2, T_4_4, dtype=object) # Non-matching contraction dimensions.
 
     def negative__unit_test_3a ():
-        contract('ij,jk', T_4_3, T_3_5, output='ii')
+        contract('ij,jk', T_4_3, T_3_5, output='ii', dtype=object)
 
     # Run all unit tests in alphabetical order.  The set of unit tests is defined
     # to be the set of callable local objects (see locals()), where an object obj is
@@ -352,69 +350,5 @@ def contract__run_unit_tests ():
         print 'Summary: {0} unit tests, {1} passed, {2} failed, failure rate was {3}%'.format(unit_test_count, pass_count, fail_count, float(fail_count)*100.0/unit_test_count)
 
 if __name__ == '__main__':
-    # print 'Because this module is being run as \'__main__\', the unit tests will be run.'
-    # contract__run_unit_tests()
-
-    import sympy
-    
-    def symbolic_tensor (name, shape):
-        return np.ndarray(shape, dtype=object, buffer=np.array([sympy.var(name+''.join(repr(i) for i in multiindex)) for multiindex in multiindex_iterator(shape)]))
-
-    a = symbolic_tensor('a', (2,2))
-    v = symbolic_tensor('v', (2,))
-    p = contract('i,ij,j', v, a, v)
-    f = sympy.sin(p)
-    X = list(a.flat) + list(v.flat)
-
-    import sympy.utilities.autowrap
-
-    # import pyximport
-    # pyximport.install(setup_args={#"script_args":["--compiler=/usr/bin/clang"],
-    #                               "include_dirs":np.get_include()},
-    #                   reload_support=True)
-
-    aw = sympy.utilities.autowrap.autowrap(f, backend='cython')
-    bf = sympy.utilities.autowrap.binary_function('bf', f, backend='cython')
-    uf = sympy.utilities.autowrap.ufuncify(X, f, language='C')
-
-    def run_es (F_list):
-        return [f.evalf(subs=dict(zip(X,F))) for F in F_list]
-
-    def run_aw (F_list):
-        return [aw(*F) for F in F_list]
-
-    def run_bf (F_list):
-        return [bf(*F) for F in F_list]
-
-    def run_uf (F_list):
-        return [uf(*F) for F in F_list]
-
-    def time_function_call (func, *args):
-        import time
-        start = time.time()
-        func(*args)
-        end = time.time()
-        duration = end - start
-        return duration
-
-    def profile_function (func_name, func, F_list):
-        duration = time_function_call(func, F_list)
-        duration_per_iteration = duration / len(F_list)
-        print '{0}: {1} evaluations took {2} s (which is {3} per iteration).'.format(func_name, len(F_list), duration, duration_per_iteration)
-
-    run_count = 10000
-    F_list = [[float(np.random.randn()) for _ in range(6)] for _ in range(run_count)]
-
-    print 'f = {0}'.format(f)
-    profile_function('run_es', run_es, F_list)
-    profile_function('run_aw', run_aw, F_list)
-    profile_function('run_bf', run_bf, F_list)
-    profile_function('run_uf', run_uf, F_list)
-
-
-    # print f(2.0, 3.0, 5.0, 7.0, 11.0, 13.0)
-
-
-    
-
-
+    print 'Because this module is being run as \'__main__\', the unit tests will be run.'
+    contract__run_unit_tests()
