@@ -130,7 +130,11 @@ def contract (contraction_string, *tensors, **kwargs):
     def component (output_component_indices):
         return sum(product_of_components_of_tensors((contraction_component_indices, output_component_indices)) for contraction_component_indices in multiindex_iterator(contraction_dims))
 
-    return np.ndarray(output_dims, dtype=dtype, buffer=np.array([component(output_component_indices) for output_component_indices in multiindex_iterator(output_dims)]))
+    retval = np.ndarray(output_dims, dtype=dtype, buffer=np.array([component(output_component_indices) for output_component_indices in multiindex_iterator(output_dims)]))
+    # If the result is a 0-tensor, then coerce it to the scalar type.
+    if retval.shape == tuple():
+        retval = retval[tuple()]
+    return retval
 
 def contract__run_unit_tests ():
     import sympy
@@ -350,3 +354,17 @@ def contract__run_unit_tests ():
 if __name__ == '__main__':
     print 'Because this module is being run as \'__main__\', the unit tests will be run.'
     contract__run_unit_tests()
+
+    # import sympy
+    
+    # def symbolic_tensor (name, shape):
+    #     return np.ndarray(shape, dtype=object, buffer=np.array([sympy.var(name+''.join(repr(i) for i in multiindex)) for multiindex in multiindex_iterator(shape)]))
+
+    # a = symbolic_tensor('a', (2,2))
+    # v = symbolic_tensor('v', (2,))
+    # p = contract('i,ij,j', v, a, v)
+    # print 'type(p) = {0}'.format(type(p))
+    # print sympy.sqrt(p)
+    
+
+
