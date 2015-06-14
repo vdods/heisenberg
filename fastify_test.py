@@ -2,19 +2,17 @@ import sys
 sys.path.append('library')
 
 import numpy as np
+import symbolic
 import sympy
 import tensor
 
 if __name__ == '__main__':
-    def symbolic_tensor (name, shape):
-        return np.ndarray(shape, dtype=object, buffer=np.array([sympy.var(name+''.join(repr(i) for i in multiindex)) for multiindex in tensor.multiindex_iterator(shape)]))
-
-    a = symbolic_tensor('a', (3,5,3))
-    v = symbolic_tensor('v', (3,))
-    p = tensor.contract('i,ijk,k', v, a, v)
+    a = symbolic.tensor('a', (3,5,3))
+    v = symbolic.tensor('v', (3,))
+    p = tensor.contract('i,ijk,k', v, a, v, dtype=object)
     I = np.array([1.0 for _ in range(5)])
     # sin_v = np.vectorize(sympy.sin)
-    s = tensor.contract('i,i', I, np.array([sympy.sin(c) for c in p]))
+    s = tensor.contract('i,i', I, np.array([sympy.sin(c) for c in p]), dtype=object)
     X = list(a.flat) + list(v.flat)
     ds_dX = np.array([s.diff(x) for x in X])
     f = sum(ds_dx**2 for ds_dx in ds_dX)
