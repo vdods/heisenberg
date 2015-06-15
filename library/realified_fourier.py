@@ -35,13 +35,12 @@ class Transform:
         self.modes = modes
         self.sample_times = sample_times
         self.period = period
-
-        omega = 2.0*math.pi/self.period
+        self.omega = 2.0*math.pi/self.period
         
-        i_omega = 1.0j*omega
-        dts = [sample_times[i+1] - sample_times[i] for i in range(len(sample_times)-1)] + [period - sample_times[-1]]
-        assert all(dt > 0 for dt in dts)
-        assert len(dts) == len(sample_times)
+        i_omega = 1.0j*self.omega
+        self.sample_deltas = [sample_times[i+1] - sample_times[i] for i in range(len(sample_times)-1)] + [period - sample_times[-1]]
+        assert all(sample_delta > 0 for sample_delta in self.sample_deltas)
+        assert len(self.sample_deltas) == len(sample_times)
 
         def squared_L2_norm_complex (T):
             return sum(z.real**2 + z.imag**2 for z in T.flat) / T.size
@@ -49,8 +48,9 @@ class Transform:
         def squared_L2_norm_real (T):
             return sum(t**2 for t in T.flat) / T.size
 
-        coeffs_from_samples_matrix = np.array([[cmath.exp(-i_omega*mode*sample_time)*dt/period for sample_time,dt in itertools.izip(sample_times,dts)] for mode in modes])
+        coeffs_from_samples_matrix = np.array([[cmath.exp(-i_omega*mode*sample_time)*sample_delta/period for sample_time,sample_delta in itertools.izip(sample_times,self.sample_deltas)] for mode in modes])
         samples_from_coeffs_matrix = np.array([[cmath.exp(i_omega*mode*sample_time) for mode in modes] for sample_time in sample_times])
+        # print 'squared_L2_norm_complex(np.einsum(\'ij,jk\', coeffs_from_samples_matrix, samples_from_coeffs_matrix) - np.eye(len(modes))) = {0}'.format(squared_L2_norm_complex(np.einsum('ij,jk', coeffs_from_samples_matrix, samples_from_coeffs_matrix) - np.eye(len(modes))))
         assert squared_L2_norm_complex(np.einsum('ij,jk', coeffs_from_samples_matrix, samples_from_coeffs_matrix) - np.eye(len(modes))) < 1.0e-10
         time_derivative_matrix = np.diag([i_omega*mode for mode in modes])
         time_integral_periodic_part_matrix = np.diag([1.0/(i_omega*mode) if mode != 0 else 0.0 for mode in modes])
