@@ -57,7 +57,7 @@ if __name__ == '__main__':
         print '{0}: {1} evaluations took {2} s (which is {3} per iteration).'.format(func_name, len(F_list), duration, duration_per_iteration)
         return duration_per_iteration
 
-    run_count = 1000
+    run_count = 100
     F_list = [np.random.randn(len(X)) for _ in range(run_count)]
 
     test_cases = frozenset([ \
