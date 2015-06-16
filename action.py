@@ -225,9 +225,16 @@ class ProblemContext:
             R_lagmult_vars[-1] = symbolic.variable('lambduh')
             return R_lagmult_vars
         
+        def compute_diff_and_print_progress (f, var, i, out_of):
+            sys.stdout.write('computing {0}th derivative out of {1} ... '.format(i, out_of))
+            retval = f.diff(var)
+            sys.stdout.write('complete.')
+            return retval
+
         self.R_lagmult_vars = load_cache_or_compute('cache/R_lagmult_vars.{0}.pickle'.format(self.parameter_string), generate_variables)
         
         self.symbolic_Lambda = load_cache_or_compute('cache/Lambda.{0}.pickle'.format(self.parameter_string), lambda : self.Lambda(self.R_lagmult_vars))
+        self.symbolic_D_Lambda = load_cache_or_compute('cache/D_Lambda.{0}.pickle'.format(self.parameter_string), lambda : np.array([compute_diff_and_print_progress(self.symbolic_Lambda, var, i, len(self.R_lagmult_vars)) for i,var in enumerate(self.R_lagmult_vars)]))
         self.symbolic_squared_L2_norm_D_Lambda = load_cache_or_compute('cache/objective_function.{0}.pickle'.format(self.parameter_string), lambda : sum(self.symbolic_Lambda.diff(var)**2 for var in self.R_lagmult_vars) / len(self.R_lagmult_vars))
         self.symbolic_constraint_function = load_cache_or_compute('cache/constraint_function.{0}.pickle'.format(self.parameter_string), lambda : self.imag_Q(self.R_lagmult_vars[:-1])**2)
     
