@@ -117,6 +117,27 @@ def lagrangian_v (PV):
     assert PV.shape[1] == 6
     return np.array([lagrangian(pv) for pv in PV])
 
+def load_cache_or_compute (cache_filename, computation):
+    import pickle
+    
+    try:
+        print 'attempting to unpickle from file \'{0}\'.'.format(cache_filename)
+        cached_value = pickle.load(open(cache_filename, 'r'))
+        print 'unpickling succeeded -- returning unpickled value.'
+        return cached_value
+    except:
+        print 'unpickling failed -- computing value.'
+        start = time.time()
+        computed_value = computation()
+        print 'value computed in {0} s.'.format(time.time() - start)
+        try:
+            print 'attempting to pickle computed value to file \'{0}\'.'.format(cache_filename)
+            pickle.dump(computed_value, open(cache_filename, 'w'))
+            print 'pickling succeeded -- returning computed value.'
+        except:
+            print 'WARNING: Could not pickle data to file \'{0}\' -- returning computed value.'.format(cache_filename)
+        return computed_value
+
 class ProblemContext:
     def __init__ (self, **kwargs):
         """
@@ -129,6 +150,8 @@ class ProblemContext:
             period          : A positive float indicating the period of the curve.
             use_np_einsum   : A boolean indicating if np.einsum should be used instead of tensor.contract.  The default is True.
         """
+        self.parameter_string = repr(kwargs)
+        
         self.symmetry_degree = kwargs['symmetry_degree']
         self.symmetry_class = kwargs['symmetry_class']
         assert fractions.gcd(self.symmetry_class, self.symmetry_degree), 'symmetry_class and symmetry_degree kwargs must be coprime.'
@@ -193,6 +216,31 @@ class ProblemContext:
         self.velocity = lambda R : chi((xy_prime_curve(R), z_prime_curve(R)))
         self.position_and_velocity = lambda R : eta((self.position(R), self.velocity(R)))
         self.action = lambda R : self.integrate_over_sample_times(lagrangian_v(self.position_and_velocity(R)))
+        self.Lambda = lambda R_lagmult : self.action(R_lagmult[:-1]) + R_lagmult[-1]*self.imag_Q(R_lagmult[:-1])
+
+    def generate_symbolic_functions (self):
+        def generate_variables ():
+            R_lagmult_vars = np.ndarray((2*self.xy_mode_count+1,), dtype=object)
+            R_lagmult_vars[:-1] = symbolic.tensor('R', (2*self.xy_mode_count,))
+            R_lagmult_vars[-1] = symbolic.variable('lambduh')
+            return R_lagmult_vars
+        
+        self.R_lagmult_vars = load_cache_or_compute('cache/R_lagmult_vars.{0}.pickle'.format(self.parameter_string), generate_variables)
+        
+        self.symbolic_Lambda = load_cache_or_compute('cache/Lambda.{0}.pickle'.format(self.parameter_string), lambda : self.Lambda(self.R_lagmult_vars))
+        self.symbolic_squared_L2_norm_D_Lambda = load_cache_or_compute('cache/objective_function.{0}.pickle'.format(self.parameter_string), lambda : sum(self.symbolic_Lambda.diff(var)**2 for var in self.R_lagmult_vars) / len(self.R_lagmult_vars))
+        self.symbolic_constraint_function = load_cache_or_compute('cache/constraint_function.{0}.pickle'.format(self.parameter_string), lambda : self.imag_Q(self.R_lagmult_vars[:-1])**2)
+    
+    def generate_autowrapped_functions (self):
+        import sympy.utilities.autowrap
+        
+        start = time.time()
+        self.constraint_function = sympy.utilities.autowrap.autowrap(self.symbolic_constraint_function, args=self.R_lagmult_vars[:-1], backend='cython')
+        print 'generating constraint_function (via autowrap) took {0} s.'.format(time.time() - start)
+        
+        start = time.time()
+        self.objective_function = sympy.utilities.autowrap.autowrap(self.symbolic_squared_L2_norm_D_Lambda, args=self.R_lagmult_vars, backend='cython')
+        print 'generating objective_function (via autowrap) took {0} s.'.format(time.time() - start)
 
 def main ():
     import scipy.optimize
@@ -200,46 +248,33 @@ def main ():
 
     start = time.time()
     # pc = ProblemContext(symmetry_degree=3, symmetry_class=1, xy_mode_count=7, sample_count=100, period=10.0, use_np_einsum=False)
-    pc = ProblemContext(symmetry_degree=3, symmetry_class=1, xy_mode_count=7, sample_count=100, period=10.0, use_np_einsum=False)
+    pc = ProblemContext(symmetry_degree=3, symmetry_class=1, xy_mode_count=10, sample_count=100, period=10.0, use_np_einsum=False)
     print 'ProblemContext generated in {0} s.'.format(time.time() - start)
 
-    # R = np.random.randn(2*pc.xy_mode_count)
-    # print 'starting R = {0}'.format(R)
-    # print 'imag_Q(R) = {0}'.format(pc.imag_Q(R))
-    # def print_R (R):
-    #     print 'R = {0}'.format(R)
-    # start = time.time()
-    # R = scipy.optimize.fmin(lambda R : pc.imag_Q(R)**2, R, disp=True)#, callback=print_R)
-    # print 'optimization took {0} s.'.format(time.time() - start)
+    pc.generate_symbolic_functions()
+    pc.generate_autowrapped_functions()
+    
+    # ---------------------------------------
 
-    R_vars = symbolic.tensor('R', (2*pc.xy_mode_count,))
-
-    start = time.time()
-    action = pc.action(R_vars)
-    print 'computing symbolic expression for action took {0} s.'.format(time.time() - start)
-
-    start = time.time()
-    D_action_squared_L2_norm = sum(action.diff(r)**2 for r in R_vars) / len(R_vars)
-    print 'computing symbolic expression for D_action took {0} s.'.format(time.time() - start)
-
-    start = time.time()
-    autowrapped_action = sympy.utilities.autowrap.autowrap(action, args=R_vars, backend='cython')
-    print 'autowrapped_action computed in {0} s.'.format(time.time() - start)
-
-    start = time.time()
-    autowrapped_D_action_squared_L2_norm = sympy.utilities.autowrap.autowrap(D_action_squared_L2_norm, args=R_vars, backend='cython')
-    print 'autowrapped_D_action_squared_L2_norm computed in {0} s.'.format(time.time() - start)
-
-    start = time.time()
     R = np.random.randn(2*pc.xy_mode_count)
-    R = scipy.optimize.fmin(lambda R : autowrapped_action(*R), R, disp=True, maxfun=10000)#, callback=print_R)
-    print 'optimization took {0} s.'.format(time.time() - start)
+    start = time.time()
+    R = scipy.optimize.fmin(lambda R : pc.constraint_function(*R), R, maxfun=100000000, disp=True)
+    print 'constraint optimization took {0} s.'.format(time.time() - start)
 
-    print 'action = {0}, D_action_squared_L2_norm = {1}.'.format(autowrapped_action(*R), autowrapped_D_action_squared_L2_norm(*R))
-
+    start = time.time()
+    R_lagmult = np.ndarray((2*pc.xy_mode_count+1,), dtype=float)
+    R_lagmult[:-1] = R
+    R_lagmult[-1] = 1.0 # Sort of arbitrary.
+    R_lagmult = scipy.optimize.fmin(lambda R_lagmult : pc.objective_function(*R_lagmult), R_lagmult, disp=True, maxfun=100000000)#, callback=print_R)
+    print 'constrainted action optimization took {0} s.'.format(time.time() - start)
+    
+    R = R_lagmult[:-1] # Extract all but the Lagrange multiplier.
+    
     start = time.time()
     PV = pc.position_and_velocity(R)
     print 'generated position and velocity in {0} s.'.format(time.time() - start)
+
+    print 'action(R) = {0}'.format(pc.action(R))
 
     H = hamiltonian_v(PV)
     L = lagrangian_v(PV)
