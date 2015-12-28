@@ -1,3 +1,4 @@
+import complex_multiplication
 import numpy as np
 import tensor
 
@@ -29,6 +30,8 @@ class Scalar:
         self.half_open_time_interval = half_open_time_interval = closed_time_interval[:-1]
         # Number of time-samples in the fundamental domain
         self.T = T = len(half_open_time_interval)
+        # The shape of the coefficients tensor it expects for Scalar.sample.
+        self.fourier_coefficients_shape = (F,2)
 
         # This is the linear transform taking Fourier coefficients and producing a time-sampled curve.
         # I.e. the linear map from frequency domain to time domain.
@@ -37,12 +40,12 @@ class Scalar:
         for t,time in enumerate(half_open_time_interval):
             self.full_fourier_tensor[t,:,:,:] = Scalar.compute_fourier_tensor(derivatives, frequencies, period, time, dtype, tau, cos, sin)
 
-    def sample (self, coefficient_tensor, dtype=float):
-        assert coefficient_tensor.shape == (self.F,2)
-        if dtype == object:
-            return tensor.contract('tdfc,fc', self.full_fourier_tensor, coefficient_tensor, output='td', dtype=object)
+    def sample (self, coefficient_tensor, at_t=None, dtype=float):
+        assert coefficient_tensor.shape == self.fourier_coefficients_shape, 'expected {0} but got {1}'.format(coefficient_tensor.shape)
+        if at_t == None:
+            return tensor.contract('tdfc,fc', self.full_fourier_tensor, coefficient_tensor, output='td', dtype=dtype)
         else:
-            return np.einsum('tdfc,fc->td', self.full_fourier_tensor, coefficient_tensor)
+            return tensor.contract('dfc,fc', self.full_fourier_tensor[t,:,:,:], coefficient_tensor, output='td', dtype=dtype)
 
     @staticmethod
     def compute_fourier_tensor (derivatives, frequencies, period, time, dtype, tau, cos, sin):
@@ -70,79 +73,147 @@ class Scalar:
         import sympy as sp
         import sys
 
+        sys.stdout.write('fourier_parameterization.Scalar.test()\n')
+
         def lerp (start, end, count):
             for i in xrange(count):
                 yield (start*(count-1-i) + end*i)/(count-1)
 
+        D = 5
         frequencies = np.array([1,2,3,4,5])
-        derivatives = np.array([0,1,2,3,4])
+        derivatives = np.array(range(D))
         period = sp.symbols('period')
         tau = 2*sp.pi
-        closed_time_interval = np.array(list(lerp(0, period, 33)))
+        T = 32
+        closed_time_interval = np.array(list(lerp(0, period, T+1)))
 
-        s = Scalar(frequencies, derivatives, closed_time_interval, dtype=object, tau=tau, cos=sp.cos, sin=sp.sin)
+        fourier_parameterization = Scalar(frequencies, derivatives, closed_time_interval, dtype=object, tau=tau, cos=sp.cos, sin=sp.sin)
 
         t = sp.symbols('t')
         coefficients = sy.tensor('c', (len(frequencies),2))
         basis_functions = np.array([[sp.cos(tau/period*f*t), sp.sin(tau/period*f*t)] for f in frequencies])
         f = np.dot(coefficients.flat, basis_functions.flat)
 
-        s_sampled = s.sample(coefficients, dtype=object)
+        s_sampled = fourier_parameterization.sample(coefficients, dtype=object)
+        assert s_sampled.shape == (T,D)
 
         expand_vec = np.vectorize(sp.expand)
         for d,derivative in enumerate(derivatives):
             sys.stdout.write('testing {0}th derivative...'.format(d))
-            dth_derivative_of_f_sampled = np.array([f.diff(t,d).subs({t:sampled_t}) for sampled_t in s.half_open_time_interval])
+            dth_derivative_of_f_sampled = np.array([f.diff(t,d).subs({t:sampled_t}) for sampled_t in fourier_parameterization.half_open_time_interval])
             assert all(expand_vec(dth_derivative_of_f_sampled - s_sampled[:,d]) == 0)
+            sys.stdout.write('passed.\n')
+
+class Planar:
+    def __init__ (self, frequencies, derivatives, closed_time_interval, dtype=float, tau=2.0*np.pi, cos=np.cos, sin=np.sin):
+        # NOTE: This is designed to be able to work with any type, including e.g. sympy symbols.
+        assert len(frequencies.shape) == 1
+        assert len(derivatives.shape) == 1
+        assert len(closed_time_interval.shape) == 1
+        assert frequencies.shape[0] > 0
+        assert derivatives.shape[0] > 0
+        assert closed_time_interval.shape[0] >= 2
+
+        # Period of orbit
+        self.period = period = closed_time_interval[-1] - closed_time_interval[0]
+        # Number of frequencies specified
+        self.F = F = len(frequencies)
+        # The frequencies of the basis (cos,sin) functions.
+        self.frequencies = frequencies
+        # Number of derivatives specified
+        self.D = D = len(derivatives)
+        # Derivatives requested
+        self.derivatives = derivatives
+        # Times that the Fourier sum will be sampled at.
+        self.closed_time_interval = closed_time_interval
+        # Half-open interval without the right endpoint (the right endpoint defines the period).
+        # This serves as the discretization of time at which the Fourier sum will be sampled.
+        # This is a discrete sampling of a fundamental domain of the periodicity.
+        self.half_open_time_interval = half_open_time_interval = closed_time_interval[:-1]
+        # Number of time-samples in the fundamental domain
+        self.T = T = len(half_open_time_interval)
+        # The shape of the coefficients tensor it expects for Planar.sample.
+        self.fourier_coefficients_shape = (F,2)
+
+        scalar = Scalar(frequencies, derivatives, closed_time_interval, dtype=dtype, tau=tau, cos=cos, sin=sin)
+        complex_multiplication_tensor = complex_multiplication.generate_complex_multiplication_tensor(dtype=dtype)
+
+        # self.full_fourier_tensor = full_fourier_tensor = np.ndarray((T,D,F,2,2), dtype=dtype)
+        self.full_fourier_tensor = tensor.contract('tdfc,xcp', scalar.full_fourier_tensor, complex_multiplication_tensor, output='tdfxp', dtype=dtype)
+        assert self.full_fourier_tensor.shape == (T,D,F,2,2)
+
+        # # This is the linear transform taking Fourier coefficients and producing a time-sampled curve.
+        # # I.e. the linear map from frequency domain to time domain.
+        # # 2 indicates that there are two coefficients for each (cos,sin) pair
+        # self.full_fourier_tensor = full_fourier_tensor = np.ndarray((T,D,F,2,2), dtype=dtype)
+        # for t,time in enumerate(half_open_time_interval):
+        #     self.full_fourier_tensor[t,:,:,:] = Scalar.compute_fourier_tensor(derivatives, frequencies, period, time, dtype, tau, cos, sin)
+
+    def sample (self, coefficient_tensor, at_t=None, dtype=float):
+        assert coefficient_tensor.shape == self.fourier_coefficients_shape, 'expected {0} but got {1}'.format(coefficient_tensor.shape)
+        if at_t == None:
+            return tensor.contract('tdfxc,fc', self.full_fourier_tensor, coefficient_tensor, output='tdx', dtype=dtype)
+        else:
+            return tensor.contract('dfxc,fc', self.full_fourier_tensor[at_t,:,:,:,:], coefficient_tensor, output='dx', dtype=dtype)
+
+    @staticmethod
+    def test ():
+        import itertools
+        import symbolic as sy
+        import sympy as sp
+        import sys
+
+        sys.stdout.write('fourier_parameterization.Planar.test()\n')
+
+        def lerp (start, end, count):
+            for i in xrange(count):
+                yield (start*(count-1-i) + end*i)/(count-1)
+
+        frequencies = np.array([-4,-1,0,2,3])
+        D = 5
+        derivatives = np.array(range(D))
+        period = sp.symbols('period')
+        tau = 2*sp.pi
+        T = 32
+        closed_time_interval = np.array(list(lerp(0, period, T+1)))
+
+        fourier_parameterization = Planar(frequencies, derivatives, closed_time_interval, dtype=object, tau=tau, cos=sp.cos, sin=sp.sin)
+
+        complex_multiplication_tensor = complex_multiplication.generate_complex_multiplication_tensor(dtype=object)
+
+        t = sp.symbols('t')
+        coefficients = sy.tensor('c', (len(frequencies),2))
+        basis_functions = np.array([[sp.cos(tau/period*f*t), sp.sin(tau/period*f*t)] for f in frequencies])
+        f = tensor.contract('ijk,fj,fk', complex_multiplication_tensor, basis_functions, coefficients, output='i', dtype=object)
+
+        s_sampled = fourier_parameterization.sample(coefficients, dtype=object)
+
+        expand_vec = np.vectorize(sp.expand)
+        diff_vec = np.vectorize(sp.diff)
+        for d,derivative in enumerate(derivatives):
+            sys.stdout.write('testing {0}th derivative...'.format(d))
+            dth_derivative_of_f_sampled = np.array([np.vectorize(lambda x:x.subs({t:sampled_t}))(diff_vec(f,t,d)) for sampled_t in fourier_parameterization.half_open_time_interval])
+            assert all((expand_vec(dth_derivative_of_f_sampled - s_sampled[:,d]) == 0).flat)
             sys.stdout.write('passed.\n')
 
 if __name__ == '__main__':
     Scalar.test()
+    Planar.test()
 
+    import matplotlib.pyplot as plt
 
+    n = 1
+    k = 5
+    p = Planar(np.array(range(1-k*n,1+k*n+1,k)), np.array([0]), np.linspace(0.0, 1.0, 513))
+    fc = np.random.randn(*p.fourier_coefficients_shape)
+    curve = p.sample(fc)
+    t = p.T//2
+    curve_at_t = p.sample(fc, at_t=t) 
+    assert curve.shape == (p.T,p.D,2)
 
-# class Planar:
-#     def __init__ (self, freq_v, period=1.0, T=50, D=1):
-#         # Period of orbit
-#         self.period = period
-#         # The number of frequencies specified by freq_v.
-#         self.freq_count = freq_count = len(freq_v)
-#         # The frequencies appearing in this parameterization (e.g.. cos(tau/period*freq*t))
-#         self.freq_v = freq_v
-#         # Number of points in discretization Theta of fundamental domain of time parameter
-#         self.T = T
-#         # Number of derivatives in parameterization of curve
-#         self.D = D
-
-#         # A discrete, uniform sampling of the time range [0, period).
-#         self.time_discretization = time_discretization = np.array([period*t/T for t in xrange(T)])
-#         # This is the linear transform taking Fourier coefficients and producing a time-sampled curve.
-#         # I.e. the linear map from frequency domain to time domain.
-#         # 2 indicates that there are two coefficients for each (cos,sin) pair
-#         self.full_fourier_tensor = full_fourier_tensor = np.ndarray((T,D,freq_count,2,2), dtype=float)
-#         for t,time in enumerate(time_discretization):
-#             self.full_fourier_tensor[t,:,:,:,:] = FourierCurveParameterization.compute_fourier_tensor(D, F, period, time)
-
-#     @staticmethod
-#     def compute_fourier_tensor (D, F, period, time):
-#         complex_multiplication_tensor = np.zeros((2,2,2), dtype=float)
-#         complex_multiplication_tensor[0,0,0] =  1.0
-#         complex_multiplication_tensor[0,1,1] = -1.0
-#         complex_multiplication_tensor[1,0,1] =  1.0
-#         complex_multiplication_tensor[1,1,0] =  1.0
-
-#         # 2 indicates that there are two coefficients; one for each element of a (cos,sin) pair
-#         fourier_tensor = np.ndarray((D,F,2), dtype=float)
-#         omega = tau/period
-#         omega_f = omega*np.arange(F)
-#         assert len(omega_f) == F
-#         cos_sin_tensor = np.ndarray((F,2), dtype=float)
-#         for d in xrange(D):
-#             omega_f__d = omega_f**d
-#             cos_sin_tensor[:,0] = (-1.0)**((d+1)//2) * omega_f__d * np.cos(omega_f*time)
-#             cos_sin_tensor[:,1] = (-1.0)**(d//2)     * omega_f__d * np.sin(omega_f*time)
-#             fourier_tensor[d,:,:,:] = np.einsum('ijk,fj->fik', complex_multiplication_tensor, cos_sin_tensor)
-#         return fourier_tensor
-
-# if __name__ == '__main__':
-#     fpcp = FourierPlaneCurveParameterization(F=3)
+    fig,axes = plt.subplots(1, 1, figsize=(6,6))
+    a = axes
+    a.plot(curve[:,0,0], curve[:,0,1])
+    a.plot((curve[-1,0,0],curve[0,0,0]), (curve[-1,0,1],curve[0,0,1]))
+    a.plot(curve_at_t[0,0], curve_at_t[0,1], 'ro', color='black')
+    plt.show()
