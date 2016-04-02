@@ -18,10 +18,14 @@ class Scalar:
         self.F = F = len(frequencies)
         # The frequencies of the basis (cos,sin) functions.
         self.frequencies = frequencies
+        # The map giving an index for a valid frequency
+        self.frequency_index_d = {frequency:i for i,frequency in enumerate(frequencies)}
         # Number of derivatives specified
         self.D = D = len(derivatives)
         # Derivatives requested
         self.derivatives = derivatives
+        # The map giving an index for a valid derivative
+        self.derivative_index_d = {derivative:i for i,derivative in enumerate(derivatives)}
         # Times that the Fourier sum will be sampled at.
         self.closed_time_interval = closed_time_interval
         # Half-open interval without the right endpoint (the right endpoint defines the period).
@@ -46,6 +50,12 @@ class Scalar:
             return tensor.contract('tdfc,fc', self.full_fourier_tensor, coefficient_tensor, output='td', dtype=dtype)
         else:
             return tensor.contract('dfc,fc', self.full_fourier_tensor[t,:,:,:], coefficient_tensor, output='td', dtype=dtype)
+
+    def index_of_frequency (self, frequency):
+        return self.frequency_index_d[frequency]
+
+    def index_of_derivative (self, derivative):
+        return self.derivative_index_d[derivative]
 
     @staticmethod
     def compute_fourier_tensor (derivatives, frequencies, period, time, dtype, tau, cos, sin):
@@ -120,10 +130,14 @@ class Planar:
         self.F = F = len(frequencies)
         # The frequencies of the basis (cos,sin) functions.
         self.frequencies = frequencies
+        # The map giving an index for a valid frequency
+        self.frequency_index_d = {frequency:i for i,frequency in enumerate(frequencies)}
         # Number of derivatives specified
         self.D = D = len(derivatives)
         # Derivatives requested
         self.derivatives = derivatives
+        # The map giving an index for a valid derivative
+        self.derivative_index_d = {derivative:i for i,derivative in enumerate(derivatives)}
         # Times that the Fourier sum will be sampled at.
         self.closed_time_interval = closed_time_interval
         # Half-open interval without the right endpoint (the right endpoint defines the period).
@@ -156,14 +170,20 @@ class Planar:
         else:
             return tensor.contract('dfxc,fc', self.full_fourier_tensor[at_t,:,:,:,:], coefficient_tensor, output='dx', dtype=dtype)
 
+    def index_of_frequency (self, frequency):
+        return self.frequency_index_d[frequency]
+
+    def index_of_derivative (self, derivative):
+        return self.derivative_index_d[derivative]
+
     @staticmethod
-    def test ():
+    def test1 ():
         import itertools
         import symbolic as sy
         import sympy as sp
         import sys
 
-        sys.stdout.write('fourier_parameterization.Planar.test()\n')
+        sys.stdout.write('fourier_parameterization.Planar.test1()\n')
 
         def lerp (start, end, count):
             for i in xrange(count):
@@ -196,16 +216,67 @@ class Planar:
             assert all((expand_vec(dth_derivative_of_f_sampled - s_sampled[:,d]) == 0).flat)
             sys.stdout.write('passed.\n')
 
+    @staticmethod
+    def test2 ():
+        import matplotlib.pyplot as plt
+        import itertools
+        import sys
+
+        sys.stdout.write('fourier_parameterization.Planar.test2()\n')
+
+        frequencies = np.array([0,1])
+        derivatives = np.array([0])
+        period = 1.0
+        T = 100
+        closed_time_interval = np.linspace(0.0, period, T+1)
+        p = Planar(frequencies, derivatives, closed_time_interval)
+        omega = 2.0*np.pi/period
+        fc = np.ndarray(p.fourier_coefficients_shape, dtype=float)
+
+        fc.fill(0.0)
+        fc[p.index_of_frequency(0),:] = [1.5, 2.5]
+        expected_curve = np.array([[1.5, 2.5] for t in p.half_open_time_interval])
+        curve = p.sample(fc)
+        assert np.max(np.abs(expected_curve-curve[:,0,:])) < 1.0e-10
+
+        fc.fill(0.0)
+        fc[p.index_of_frequency(1),0] = 1.0
+        expected_curve = np.array([np.cos(omega*p.half_open_time_interval), np.sin(omega*p.half_open_time_interval)]).T
+        curve = p.sample(fc)
+        assert np.max(np.abs(expected_curve-curve[:,0,:])) < 1.0e-10
+
+        fc.fill(0.0)
+        fc[p.index_of_frequency(1),1] = 1.0
+        expected_curve = np.array([-np.sin(omega*p.half_open_time_interval), np.cos(omega*p.half_open_time_interval)]).T
+        curve = p.sample(fc)
+        assert np.max(np.abs(expected_curve-curve[:,0,:])) < 1.0e-10
+
+        # plt.figure(1)
+        # plt.plot(p.half_open_time_interval, curve[:,0,0], color='blue')
+        # plt.plot(p.half_open_time_interval, curve[:,0,1], color='green')
+        # plt.show()
+
+        sys.stdout.write('passed.\n')
+
+
 if __name__ == '__main__':
-    Scalar.test()
-    Planar.test()
+    import sys
+
+    # Planar.test2()
+    # # sys.exit(0)
+
+    # Scalar.test()
+    # Planar.test1()
 
     import matplotlib.pyplot as plt
 
+    # Make a random closed curve that has a 5-fold rotational symmetry.
     n = 1
     k = 5
     p = Planar(np.array(range(1-k*n,1+k*n+1,k)), np.array([0]), np.linspace(0.0, 1.0, 513))
     fc = np.random.randn(*p.fourier_coefficients_shape)
+    # fc = np.zeros(p.fourier_coefficients_shape, dtype=float)
+    # fc[p.index_of_frequency(1),0] = 1
     curve = p.sample(fc)
     t = p.T//2
     curve_at_t = p.sample(fc, at_t=t) 

@@ -139,8 +139,38 @@ def generate_hamiltonian_v (hamiltonian):
         return np.array([hamiltonian(pv) for pv in PV])
     return hamiltonian_v
 
+def generate_hamiltonian_vector_field (alpha, beta):
+    # -\omega*dH is the hamiltonian vector field for this system
+    # X is the list of coordinates [x, y, z, p_x, p_y, p_z]
+    # t is the time at which to evaluate the flow.  This particular vector field is independent of time.
+    def hamiltonian_vector_field (X, t):
+        assert len(X) == 6, "must have 6 coordinates"
+        x = X[0]
+        y = X[1]
+        z = X[2]
+        p_x = X[3]
+        p_y = X[4]
+        p_z = X[5]
+        P_x = p_x - 0.5*y*p_z
+        P_y = p_y + 0.5*x*p_z
+
+        r = x**2 + y**2
+        mu = r**2 + beta*z**2
+        # alpha = 2.0/math.pi
+        # alpha = 1.0
+        alpha_times_mu_to_neg_three_halves = alpha*mu**(-1.5)
+        return np.array([P_x, \
+                         P_y, \
+                          0.5*x*P_y - 0.5*y*P_x, \
+                         -0.5*P_y*p_z - alpha_times_mu_to_neg_three_halves*r*2.0*x, \
+                          0.5*P_x*p_z - alpha_times_mu_to_neg_three_halves*r*2.0*y, \
+                         -16.0*alpha_times_mu_to_neg_three_halves*z],
+                         dtype=float)
+    return hamiltonian_vector_field
+
 def generate_lagrangian (alpha, beta):
     def lagrangian (pv):
+        # NOTE that this doesn't use pv[5] (i.e. dz/dt) at all.
         assert len(pv) == 6
         mu = (pv[0]**2 + pv[1]**2)**2 + beta*pv[2]**2
         # First term is kinetic energy, second is potential.
@@ -153,7 +183,7 @@ def generate_lagrangian_v (lagrangian):
         return np.array([lagrangian(pv) for pv in PV])
     return lagrangian_v
 
-def load_cache_or_compute (cache_filename, computation):
+def load_cache_or_compute (cache_filename, computation, *args, **kwargs):
     import pickle
     
     try:
@@ -164,7 +194,7 @@ def load_cache_or_compute (cache_filename, computation):
     except:
         print 'unpickling failed -- computing value.'
         start = time.time()
-        computed_value = computation()
+        computed_value = computation(*args, **kwargs)
         print 'value computed in {0} s.'.format(time.time() - start)
         try:
             print 'attempting to pickle computed value to file \'{0}\'.'.format(cache_filename)
@@ -239,11 +269,11 @@ class ProblemContext:
         start = time.time(); z_curve_tensor = np.einsum('ij,jkl', np.einsum('ij,jk', self.imag_projection_matrix, self.F_wz.samples_from_coeffs_matrix), self.zeta_tensor); print 'z_curve_tensor (with shape {0}): {1} s'.format(z_curve_tensor.shape, time.time() - start)
         def z_curve (R):
             if self.contraction == 'np.einsum':
-                return np.einsum('ijk,j,k', z_curve_tensor, R, R) + self.imag_Q(R)*self.sample_times
+                return np.einsum('ijk,j,k', z_curve_tensor, R, R)# + self.imag_Q(R)*self.sample_times
             elif self.contraction == 'tensor.contract':
-                return tensor.contract('ijk,j,k', z_curve_tensor, R, R, dtype=R.dtype) + self.imag_Q(R)*self.sample_times
+                return tensor.contract('ijk,j,k', z_curve_tensor, R, R, dtype=R.dtype)# + self.imag_Q(R)*self.sample_times
             else:
-                return alt_einsum('ijk,j,k', z_curve_tensor, R, R) + self.imag_Q(R)*self.sample_times
+                return alt_einsum('ijk,j,k', z_curve_tensor, R, R)# + self.imag_Q(R)*self.sample_times
 
         start = time.time(); xy_prime_curve_matrix = np.einsum('ij,jk', self.F_xy.samples_from_coeffs_matrix, self.F_xy.time_derivative_matrix); print 'xy_prime_curve_matrix (with shape {0}): {1} s'.format(xy_prime_curve_matrix.shape, time.time() - start)
         def xy_prime_curve (R):
@@ -259,14 +289,19 @@ class ProblemContext:
         vector_of_ones = np.array([1.0 for _ in self.sample_times])
         def z_prime_curve (R):
             if self.contraction == 'np.einsum':
-                return np.einsum('ijk,j,k', z_prime_curve_tensor, R, R) + self.imag_Q(R)*vector_of_ones
+                return np.einsum('ijk,j,k', z_prime_curve_tensor, R, R)# + self.imag_Q(R)*vector_of_ones
             elif self.contraction == 'tensor.contract':
-                return tensor.contract('ijk,j,k', z_prime_curve_tensor, R, R, dtype=R.dtype) + self.imag_Q(R)*vector_of_ones
+                return tensor.contract('ijk,j,k', z_prime_curve_tensor, R, R, dtype=R.dtype)# + self.imag_Q(R)*vector_of_ones
             else:
-                return alt_einsum('ijk,j,k', z_prime_curve_tensor, R, R) + self.imag_Q(R)*vector_of_ones
+                return alt_einsum('ijk,j,k', z_prime_curve_tensor, R, R)# + self.imag_Q(R)*vector_of_ones
+
+        z_prime_curve_dummy_tensor = np.zeros(self.sample_count)
+        def z_prime_curve_dummy (R):
+            return z_prime_curve_dummy_tensor
 
         self.position = lambda R : chi((xy_curve(R), z_curve(R)))
-        self.velocity = lambda R : chi((xy_prime_curve(R), z_prime_curve(R)))
+        # self.velocity = lambda R : chi((xy_prime_curve(R), z_prime_curve(R)))
+        self.velocity = lambda R : chi((xy_prime_curve(R), z_prime_curve_dummy(R)))
         self.position_and_velocity = lambda R : eta((self.position(R), self.velocity(R)))
         self.lagrangian = generate_lagrangian(self.alpha, self.beta)
         self.lagrangian_v = generate_lagrangian_v(self.lagrangian)
@@ -283,9 +318,9 @@ class ProblemContext:
             return R_lagmult_vars
         
         def compute_diff_and_print_progress (f, var, i, out_of):
-            sys.stdout.write('computing {0}th derivative out of {1} ... '.format(i, out_of))
-            retval = f.diff(var)
-            sys.stdout.write('complete.\n')
+            # sys.stdout.write('computing {0}th derivative out of {1} ... '.format(i, out_of))
+            retval = load_cache_or_compute('cache/D_Lambda_{0}.{1}.pickle'.format(i, self.parameter_string), f.diff, var)
+            # sys.stdout.write('complete.\n')
             return retval
 
         self.R_lagmult_vars = load_cache_or_compute('cache/R_lagmult_vars.{0}.pickle'.format(self.parameter_string), generate_variables)
@@ -328,38 +363,225 @@ def profile_ProblemContext ():
                 print ''
                 print ''
 
+# Initial conditions in form [alpha, beta, time, x,y,z, px, py, pz]:
+#3-Fold:
+#[1, 1/16, 273.5, 1, 0, 4 sqrt 3, 0, 1, 0]
+def coreys_3_fold_curve ():
+    import cmath
+    import matplotlib.pyplot as plt
+    import vector_field
+
+    # Corey's 5-fold
+    # initial_condition = [1.0, 0.0, 4.0*math.sqrt(3.0), 0.0, 1.0, 0.0]
+    # period = 273.5
+    # omega = cmath.exp(2.0j*math.pi/period)
+    # print 'initial_condition = {0}'.format(initial_condition)
+
+    alpha = 1.0
+    beta = 1.0/16.0
+
+    # H = generate_hamiltonian(alpha, beta)
+    # print 'H(initial_condition) = {0}'.format(H(initial_condition))
+
+    # hamiltonian_vector_field = generate_hamiltonian_vector_field(alpha, beta)
+
+    # Xs,Ts = vector_field.compute_flow_curve(hamiltonian_vector_field, initial_condition, 0.0, period, sample_count)
+    import heisenberg_dynamics
+    Xs,Ts,period,sample_count = heisenberg_dynamics.compute_coreys_flow_curve()
+    Xs = np.array(Xs)
+
+    XY = np.ndarray((2*len(Xs),), dtype=float)
+    XY[0::2] = Xs[:,0]
+    XY[1::2] = Xs[:,1]
+
+    X = Xs[:,0]
+    Y = Xs[:,1]
+    Z = Xs[:,2]
+
+    import matplotlib.pyplot as plt
+
+    plt.figure(1, figsize=(30,15))
+
+    sp = plt.subplot(1,2,1)
+    sp.set_title('(x,y) curve image')
+    # plt.axes().set_aspect('equal')
+    plt.plot(X,Y)
+    
+    sp = plt.subplot(1,2,2)
+    sp.set_title('z(t)')
+    plt.plot(Ts,Z)
+
+    plt.savefig('3fold.png')
+
+
+
+    return XY,period,sample_count,alpha,beta
+
+def coreys_5_fold_curve (sample_count):
+    import cmath
+    import matplotlib.pyplot as plt
+    import vector_field
+
+    # Corey's 5-fold
+    initial_condition = [1.0, 0.0, math.sqrt(3.0)/4.0, 0.0, 1.0, 0.0]
+    period = 46.5
+    omega = cmath.exp(2.0j*math.pi/period)
+    print 'initial_condition = {0}'.format(initial_condition)
+
+    alpha = 1.0
+    beta = 16.0
+
+    hamiltonian_vector_field = generate_hamiltonian_vector_field(alpha, beta)
+
+    Xs,Ts = vector_field.compute_flow_curve(hamiltonian_vector_field, initial_condition, 0.0, period, sample_count)
+    Xs = np.array(Xs)
+
+    XY = np.ndarray((2*len(Xs),), dtype=float)
+    XY[0::2] = Xs[:,0]
+    XY[1::2] = Xs[:,1]
+
+    # X = Xs[:,0]
+    # Y = Xs[:,1]
+    # Z = Xs[:,2]
+
+    return XY,period,alpha,beta
+
+    # # print Xs
+    # X = [x for (x,_,_,_,_,_) in Xs]
+    # Y = [y for (_,y,_,_,_,_) in Xs]
+    # Z = [z for (_,_,z,_,_,_) in Xs]
+
+    # plt.figure(1, figsize=(30,15))
+
+    # sp = plt.subplot(1,2,1)
+    # sp.set_title('(x,y) curve for RK4-solved dynamics')
+    # # plt.axes().set_aspect('equal')
+    # plt.plot(X,Y)
+    
+    # sp = plt.subplot(1,2,2)
+    # sp.set_title('z(t) for RK4-solved dynamics')
+    # plt.plot(Ts,Z)
+    
+    # # sp = plt.subplot(1,3,3)
+    # # sp.set_title('H(t) for RK4-solved dynamics')
+    # # plt.plot(Ts, [hamiltonian(X) for X in Xs])
+
+    # plt.savefig('5fold.png')
+
+
+#Initial conditions in form [alpha, beta, time, x,y,z, px, py, pz]:
+#7-Fold:
+#[2/pi, 16, 57.9, 1, 0, z, 0, 1, 0]  with z=sqrt{ pi^(-2) - 1/16 }
+def coreys_7_fold_curve (sample_count):
+    import cmath
+    import matplotlib.pyplot as plt
+    import vector_field
+
+    # Corey's 5-fold
+    c = math.sqrt(math.pi**-2 - 1.0/16.0)
+    initial_condition = [1.0, 0.0, c, 0.0, 1.0, 0.0]
+    period = 57.9
+    omega = cmath.exp(2.0j*math.pi/period)
+    print 'initial_condition = {0}'.format(initial_condition)
+
+    alpha = 2.0/math.pi
+    beta = 16.0
+
+    hamiltonian_vector_field = generate_hamiltonian_vector_field(alpha, beta)
+
+    Xs,Ts = vector_field.compute_flow_curve(hamiltonian_vector_field, initial_condition, 0.0, period, sample_count)
+    Xs = np.array(Xs)
+
+    XY = np.ndarray((2*len(Xs),), dtype=float)
+    XY[0::2] = Xs[:,0]
+    XY[1::2] = Xs[:,1]
+
+    # X = Xs[:,0]
+    # Y = Xs[:,1]
+    # Z = Xs[:,2]
+
+    # import matplotlib.pyplot as plt
+
+    # plt.figure(1, figsize=(30,15))
+
+    # sp = plt.subplot(1,2,1)
+    # sp.set_title('(x,y) curve image')
+    # # plt.axes().set_aspect('equal')
+    # plt.plot(X,Y)
+    
+    # sp = plt.subplot(1,2,2)
+    # sp.set_title('z(t)')
+    # plt.plot(Ts,Z)
+
+    # plt.savefig('7fold.png')
+
+
+
+    return XY,period,alpha,beta
+
 def main ():
+    XY,period,sample_count,alpha,beta = coreys_3_fold_curve()
+
+    # pc = ProblemContext(symmetry_degree=3, symmetry_class=2, xy_mode_count=60, sample_count=sample_count, period=period, alpha=alpha, beta=beta, contraction='np.einsum')
+    # # pc = ProblemContext(symmetry_degree=5, symmetry_class=2, xy_mode_count=60, sample_count=sample_count, period=period, alpha=alpha, beta=beta, contraction='np.einsum')
+    # # pc = ProblemContext(symmetry_degree=7, symmetry_class=2, xy_mode_count=60, sample_count=sample_count, period=period, alpha=alpha, beta=beta, contraction='np.einsum')
+    # R = np.einsum('ij,j', pc.F_xy.coeffs_from_samples_matrix, XY)
+
+    # # import scipy.optimize
+    # # R = scipy.optimize.fmin(pc.imag_Q, R, maxfun=1000000)
+
+    # P = pc.position(R)
+
+    # import matplotlib.pyplot as plt
+
+    # plt.figure(1, figsize=(30,15))
+
+    # sp = plt.subplot(1,2,1)
+    # sp.set_title('(x,y) curve image')
+    # # plt.axes().set_aspect('equal')
+    # plt.plot(P[:,0],P[:,1])
+    
+    # sp = plt.subplot(1,2,2)
+    # sp.set_title('z(t)')
+    # plt.plot(pc.sample_times,P[:,2])
+
+    # plt.savefig('7fold.png')
+
+    return 0
+
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
     import scipy.optimize
     import sympy.utilities.autowrap
 
     # pc = ProblemContext(symmetry_degree=3, symmetry_class=1, xy_mode_count=7, sample_count=100, period=10.0, contraction='alt_einsum')
     # pc = ProblemContext(symmetry_degree=5, symmetry_class=2, xy_mode_count=10, sample_count=200, period=46.5, alpha=1.0, beta=16.0, contraction='alt_einsum')
-    pc = call_func_and_print_timing_info('ProblemContext', ProblemContext, symmetry_degree=5, symmetry_class=2, xy_mode_count=4, sample_count=30, period=46.5, alpha=1.0, beta=16.0, contraction='tensor.contract')
+    pc = call_func_and_print_timing_info('ProblemContext', ProblemContext, symmetry_degree=5, symmetry_class=2, xy_mode_count=15, sample_count=150, period=46.5, alpha=1.0, beta=16.0, contraction='tensor.contract')
 
     call_func_and_print_timing_info('pc.generate_symbolic_functions', pc.generate_symbolic_functions)
     call_func_and_print_timing_info('pc.generate_autowrapped_functions', pc.generate_autowrapped_functions)
     
-    # ---------------------------------------
+    # Start with the 5-fold curve.
+    XY = coreys_5_fold_curve(pc.sample_count)
+    R = pc.F_xy.coeffs_from_samples_matrix.dot(XY)
 
-    R = np.random.randn(2*pc.xy_mode_count)
-    start = time.time()
-    R = scipy.optimize.fmin(lambda R : pc.constraint_function(*R), R, maxfun=100000000, disp=True)
-    print 'constraint optimization took {0} s.'.format(time.time() - start)
+    # R = np.random.randn(2*pc.xy_mode_count)
+    # start = time.time()
+    # R = scipy.optimize.fmin(lambda R : pc.constraint_function(*R), R, maxfun=100000000, disp=True)
+    # print 'constraint optimization took {0} s.'.format(time.time() - start)
 
     start = time.time()
     R_lagmult = np.ndarray((2*pc.xy_mode_count+1,), dtype=float)
     R_lagmult[:-1] = R
     R_lagmult[-1] = 1.0 # Sort of arbitrary.
-    R_lagmult = scipy.optimize.fmin(lambda R_lagmult : pc.objective_function(*R_lagmult), R_lagmult, disp=True, maxfun=100000000)#, callback=print_R)
-    print 'constrainted action optimization took {0} s.'.format(time.time() - start)
+    R_lagmult = call_func_and_print_timing_info('optimize objective function', scipy.optimize.fmin, lambda R_lagmult : pc.objective_function(*R_lagmult), R_lagmult, disp=True, maxfun=100000000)#, callback=print_R)
     
     R = R_lagmult[:-1] # Extract all but the Lagrange multiplier.
     
-    start = time.time()
-    PV = pc.position_and_velocity(R)
-    print 'generated position and velocity in {0} s.'.format(time.time() - start)
+    PV = call_func_and_print_timing_info('pc.position_and_velocity', pc.position_and_velocity, R)
 
     print 'action(R) = {0}'.format(pc.action(R))
+    print 'imag_Q(R) = {0}'.format(pc.imag_Q(R))
 
     H = pc.hamiltonian_v(PV)
     L = pc.lagrangian_v(PV)

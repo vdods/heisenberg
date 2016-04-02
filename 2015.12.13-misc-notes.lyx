@@ -1,0 +1,955 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass article
+\begin_preamble
+\usepackage{amsthm}
+\usepackage{fullpage}
+\usepackage{verbatim}
+\usepackage{makeidx}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{latexsym}
+\usepackage[all,cmtip]{xy}
+\usepackage{stmaryrd}
+\usepackage{color}
+\usepackage[colorlinks=true]{hyperref}
+\usepackage{tikz}
+\usepackage[colorlinks=true]{hyperref}
+\makeindex
+
+\newcommand{\bw}{\;\;\makebox[0pt]{$\square$}\makebox[0pt]{$\wedge$}\;\;}
+
+\newcommand{\Alt}{\mathop{\mathrm{Alt}}\nolimits}
+\newcommand{\Codom}{\mathop{\mathrm{Codom}}\nolimits}
+\newcommand{\Diff}{\mathop{\mathrm{Diff}}\nolimits}
+\newcommand{\Div}{\mathop{\mathrm{Div}}\nolimits}
+\newcommand{\Dom}{\mathop{\mathrm{Dom}}\nolimits}
+\newcommand{\Grad}{\mathop{\mathrm{Grad}}\nolimits}
+\newcommand{\Hom}{\mathop{\mathrm{Hom}}\nolimits}
+\newcommand{\Id}{\mathop{\mathrm{Id}}\nolimits}
+\newcommand{\Image}{\mathop{\mathrm{Image}}\nolimits}
+\def \impliedby {\Longleftarrow}
+\newcommand{\Lie}{\mathop{\mathrm{Lie}}\nolimits}
+% \renewcommand{\Mod}{\mathop{\mathrm{mod}}\nolimits}
+\newcommand{\Mor}{\mathop{\mathrm{Mor}}\nolimits}
+\newcommand{\Ob}{\mathop{\mathrm{Ob}}\nolimits}
+%\newcommand{\Pr}{\mathop{\mathrm{Pr}}\nolimits}
+\newcommand{\Proj}{\mathop{\mathrm{Proj}}\nolimits}
+\newcommand{\Rank}{\mathop{\mathrm{Rank}}\nolimits}
+\newcommand{\Sgn}{\mathop{\mathrm{Sgn}}\nolimits}
+\newcommand{\Span}{\mathop{\mathrm{Span}}\nolimits}
+\newcommand{\Supp}{\mathop{\mathrm{Supp}}\nolimits}
+\newcommand{\Tr}{\mathop{\mathrm{Tr}}\nolimits}
+\newcommand{\Vertical}{\mathop{\mathrm{Vert}}\nolimits}
+\newcommand{\Vol}{\mathop{\mathrm{Vol}}\nolimits}
+
+\newcommand{\nablacirc}{\;\;\makebox[0pt]{$\nabla$}\makebox[0.4pt]{\raisebox{1.7pt}{$\circ$}}\;\;}
+\newcommand{\nablashortmid}{\;\;\makebox[0pt]{$\nabla$}\makebox[0.4pt]{\raisebox{1.7pt}{$\shortmid$}}\;\;}
+\def \nnabla {\nablacirc}
+\def \lnabla {\nablashortmid}
+
+\newcommand{\shortrightarrowtimes}{\;\;\makebox[0pt]{$\times$}\makebox[0.4pt]{$\shortrightarrow$}\;\;}
+\newcommand{\shortleftarrowtimes}{\;\;\makebox[0pt]{$\times$}\makebox[0.4pt]{$\shortleftarrow$}\;\;}
+\def \rtriv {\shortrightarrowtimes}
+\def \ltriv {\shortleftarrowtimes}
+\end_preamble
+\use_default_options false
+\begin_modules
+theorems-ams
+eqs-within-sections
+figs-within-sections
+theorems-named
+theorems-sec
+\end_modules
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry true
+\use_amsmath 1
+\use_esint 0
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine natbib_authoryear
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+2015.12.13 - Victor Dods - Simplified case for numerical optimization of action
+ functional (orbital dynamics)
+\end_layout
+
+\begin_layout Standard
+Consider the planar 
+\begin_inset Formula $n$
+\end_inset
+
+-body gravitational system.
+ Let 
+\begin_inset Formula $I:=\left\{ 1,\dots,n\right\} .$
+\end_inset
+
+ A configuration is an 
+\begin_inset Formula $n$
+\end_inset
+
+-tuple of paths in 
+\begin_inset Formula $\mathbb{R}^{2},$
+\end_inset
+
+ call it 
+\begin_inset Formula $\left(q_{i}\left(t\right)\right)_{i\in I}.$
+\end_inset
+
+ Let body 
+\begin_inset Formula $i$
+\end_inset
+
+ have mass 
+\begin_inset Formula $m_{i}>0.$
+\end_inset
+
+ Use the ordinary kinetic energy for body 
+\begin_inset Formula $i$
+\end_inset
+
+; 
+\begin_inset Formula $K_{i}\left(t\right):=\frac{1}{2}m_{i}\left|q_{i}^{\prime}\left(t\right)\right|^{2}.$
+\end_inset
+
+ The potential energy due to bodies 
+\begin_inset Formula $i$
+\end_inset
+
+ and 
+\begin_inset Formula $j$
+\end_inset
+
+ is 
+\begin_inset Formula $U_{ij}\left(t\right):=-\frac{1}{\left|q_{i}\left(t\right)-q_{j}\left(t\right)\right|}.$
+\end_inset
+
+ Define Lagrangian for the system to be
+\begin_inset Formula 
+\[
+L\left(t\right):=\sum_{i}K_{i}\left(t\right)-\sum_{i\neq j}U_{ij}\left(t\right).
+\]
+
+\end_inset
+
+The action functional over time domain 
+\begin_inset Formula $T\subset\mathbb{R}$
+\end_inset
+
+ is
+\begin_inset Formula 
+\[
+\mathcal{L}\left(\left(q_{i}\right)_{i\in I}\right):=\int_{T}L\left(t\right)\, dt.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Can discretely parameterize the bodies' paths in the following way.
+ Let 
+\begin_inset Formula $\Theta$
+\end_inset
+
+ be a discrete sampling of the time domain, and let 
+\begin_inset Formula $q_{i}^{\theta}:=q_{i}\left(\theta\right)\in\mathbb{R}^{2}$
+\end_inset
+
+ and 
+\begin_inset Formula $v_{i}^{\theta}:=q_{i}^{\prime}\left(\theta\right)\in\mathbb{R}^{2}.$
+\end_inset
+
+ The Lagrangian takes the following form:
+\begin_inset Formula 
+\begin{align*}
+L^{\theta} & :=L\left(\theta\right)\\
+ & =\sum_{i}K_{i}\left(\theta\right)-\sum_{i\neq j}U_{ij}\left(\theta\right)\\
+ & =\sum_{i}\frac{1}{2}m_{i}\left|v_{i}^{\theta}\right|^{2}+\sum_{i<j}\frac{1}{\left|q_{i}^{\theta}-q_{j}^{\theta}\right|}.
+\end{align*}
+
+\end_inset
+
+This is a function of 
+\begin_inset Formula $q_{i}^{\theta},v_{i}^{\theta}$
+\end_inset
+
+ for all 
+\begin_inset Formula $i\in I$
+\end_inset
+
+ and 
+\begin_inset Formula $\theta\in\Theta.$
+\end_inset
+
+ The action functional is
+\begin_inset Formula 
+\begin{align*}
+\mathcal{L}\left(q_{i}^{\theta},v_{i}^{\theta}\right) & :=\int_{\Theta}L^{\theta}\, d\theta\\
+ & =\frac{1}{\left|\Theta\right|}\sum_{\theta\in\Theta}L^{\theta}.
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+There's no notion of continuity here though, so perhaps the paths 
+\begin_inset Formula $q_{i},q_{i}^{\prime}$
+\end_inset
+
+ should be interpolated between discretely sampled points.
+ This could be done linearly or with a cubic Bezier curve.
+ Let 
+\begin_inset Formula $Q_{i}^{\theta},V_{i}^{\theta}\colon\left[0,1\right]\to\mathbb{R}^{2}$
+\end_inset
+
+ be functions that continuously interpolate 
+\begin_inset Formula $q_{i}^{\theta}$
+\end_inset
+
+ to 
+\begin_inset Formula $q_{i}^{\theta+1}$
+\end_inset
+
+ and 
+\begin_inset Formula $v_{i}^{\theta}$
+\end_inset
+
+ to 
+\begin_inset Formula $v_{i}^{\theta+1}.$
+\end_inset
+
+ Assume that 
+\begin_inset Formula $Q_{i}^{\theta}$
+\end_inset
+
+ and 
+\begin_inset Formula $V_{i}^{\theta}$
+\end_inset
+
+ are each linear functions of 
+\begin_inset Formula $q_{i}^{\theta},q_{i}^{\theta+1},v_{i}^{\theta},v_{i}^{\theta+1}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Simplification: Assume that 
+\begin_inset Formula 
+\[
+v_{i}^{\theta_{k}}:=\frac{q_{i}^{\theta_{k+1}}-q_{i}^{\theta_{k}}}{\theta_{k+1}-\theta_{k}}\mbox{ or }v_{i}^{\theta_{k}}=\frac{q_{i}^{\theta_{k+1}}-q_{i}^{\theta_{k-1}}}{\theta_{k+1}-\theta_{k-1}}.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Then 
+\begin_inset Formula $\mathcal{L}$
+\end_inset
+
+ is only a function of 
+\begin_inset Formula $q_{i}^{\theta}.$
+\end_inset
+
+
+\begin_inset Formula 
+\begin{align*}
+L^{\theta_{k}} & =\sum_{i}\frac{1}{2}m_{i}\left|\frac{q_{i}^{\theta_{k+1}}-q_{i}^{\theta_{k-1}}}{\theta_{k+1}-\theta_{k-1}}\right|^{2}+\sum_{i<j}\frac{1}{\left|q_{i}^{\theta_{k}}-q_{j}^{\theta_{k}}\right|}\\
+ & =\sum_{i}\frac{1}{2}m_{i}\frac{\left|q_{i}^{\theta_{k+1}}\right|^{2}-2q_{i}^{\theta_{k+1}}\cdot q_{i}^{\theta_{k-1}}+\left|q_{i}^{\theta_{k-1}}\right|^{2}}{\left(\theta_{k+1}-\theta_{k-1}\right)^{2}}+\sum_{i<j}\frac{1}{\left|q_{i}^{\theta_{k}}-q_{j}^{\theta_{k}}\right|}\\
+\frac{\partial L^{\theta_{k}}}{\partial q_{i}^{\theta_{\ell}}} & =\sum_{i}\frac{1}{2}m_{i}\frac{\left|q_{i}^{\theta_{k+1}}\right|^{2}-2q_{i}^{\theta_{k+1}}\cdot q_{i}^{\theta_{k-1}}+\left|q_{i}^{\theta_{k-1}}\right|^{2}}{\left(\theta_{k+1}-\theta_{k-1}\right)^{2}}+\sum_{i<j}\frac{1}{\left|q_{i}^{\theta_{k}}-q_{j}^{\theta_{k}}\right|}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+If 
+\begin_inset Formula $C\left(q_{i}^{\theta}\right)$
+\end_inset
+
+ is a constraint function, then define
+\begin_inset Formula 
+\[
+\Lambda\left(q_{i}^{\theta},\lambda\right):=\mathcal{L}\left(q_{i}^{\theta}\right)+\lambda C\left(q_{i}^{\theta}\right),
+\]
+
+\end_inset
+
+and define constrained objective function
+\begin_inset Formula 
+\begin{align*}
+F\left(q_{i}^{\theta},\lambda\right) & :=\left|D\Lambda\left(q_{i}^{\theta},\lambda\right)\right|^{2}\\
+ & =\left|\left(D\mathcal{L}\left(q_{i}^{\theta}\right)+\lambda DC\left(q_{i}^{\theta}\right),C\left(q_{i}^{\theta}\right)\right)\right|^{2}\\
+ & =\left|D\mathcal{L}\left(q_{i}^{\theta}\right)+\lambda DC\left(q_{i}^{\theta}\right)\right|^{2}+C\left(q_{i}^{\theta}\right)^{2}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+--------------------
+\end_layout
+
+\begin_layout Standard
+Try super simple version: moving body around fixed body.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+L\left(q,v\right) & :=\frac{1}{2}m\left|v\right|^{2}+\frac{1}{\left|q\right|},\\
+\frac{\partial L}{\partial q} & =-\frac{q}{\left|q\right|^{2}},\\
+\frac{\partial L}{\partial v} & =mv.
+\end{align*}
+
+\end_inset
+
+Let 
+\begin_inset Formula $A=\left\{ 0,\dots,\left|\Theta\right|-1\right\} $
+\end_inset
+
+ be an index set and let 
+\begin_inset Formula $\Theta=\left\{ a\frac{P}{\left|\Theta\right|}\colon a\in A\right\} $
+\end_inset
+
+ and Let 
+\begin_inset Formula $J\left(q_{x}^{k}\right):=\left(q_{x}^{k},\frac{q_{x}^{k+1}-q_{x}^{k-1}}{\theta^{k+1}-\theta^{k-1}}\right)=\left(q_{x}^{k},\frac{\left|\Theta\right|}{2P}\left(q_{x}^{k+1}-q_{x}^{k-1}\right)\right).$
+\end_inset
+
+ The input of 
+\begin_inset Formula $J$
+\end_inset
+
+ is a 2-tensor (indexed by 
+\begin_inset Formula $x\in\left\{ 0,1\right\} $
+\end_inset
+
+ (which is the index of the standard basis of 
+\begin_inset Formula $\mathbb{R}^{2}$
+\end_inset
+
+) and 
+\begin_inset Formula $k\in A$
+\end_inset
+
+ (which is the index of 
+\begin_inset Formula $\Theta$
+\end_inset
+
+)).
+ The output of 
+\begin_inset Formula $J$
+\end_inset
+
+ is a 3-tensor (indexed by 
+\begin_inset Formula $x,$
+\end_inset
+
+ 
+\begin_inset Formula $k,$
+\end_inset
+
+ and 
+\begin_inset Formula $s\in\left\{ 0,1\right\} $
+\end_inset
+
+ (the thing that indexes 
+\begin_inset Formula $\left\{ q,v\right\} $
+\end_inset
+
+)).
+ Thus 
+\begin_inset Formula $J$
+\end_inset
+
+ can be written as a 5-tensor 
+\begin_inset Formula $J_{xks}^{y\ell}$
+\end_inset
+
+ defined by
+\begin_inset Formula 
+\begin{align*}
+J_{xkq}^{y\ell}q_{y\ell} & =q_{xk},\\
+J_{xkv}^{y\ell}q_{y\ell} & =\frac{\left|\Theta\right|}{2P}\left(q_{x\left(k+1\right)}-q_{x\left(k-1\right)}\right),\\
+\implies J_{xkq}^{y\ell} & =\delta_{x}^{y}\delta_{k}^{\ell},\\
+J_{xkv}^{y\ell} & =\frac{\left|\Theta\right|}{2P}\delta_{x}^{y}\left(\delta_{k}^{\ell-1}-\delta_{k}^{\ell+1}\right)
+\end{align*}
+
+\end_inset
+
+Or extended with number of bodies higher than 1:
+\begin_inset Formula 
+\begin{align*}
+J_{xkiq}^{y\ell j}q_{y\ell j} & =q_{xki}\\
+\implies J_{xkiq}^{y\ell j} & =\delta_{x}^{y}\delta_{k}^{\ell}\delta_{i}^{j},\\
+J_{xkiv}^{y\ell j}q_{y\ell j} & =\frac{\left|\Theta\right|}{2P}\left(q_{x\left(k+1\right)}-q_{x\left(k-1\right)}\right)\\
+\implies J_{xkiv}^{y\ell j} & =\frac{\left|\Theta\right|}{2P}\delta_{x}^{y}\left(\delta_{k}^{\ell-1}-\delta_{k}^{\ell+1}\right)\delta_{i}^{j}.
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The integral of a discretely sampled function 
+\begin_inset Formula $f^{\theta}:=f\left(\theta\right)$
+\end_inset
+
+ can be written as
+\begin_inset Formula 
+\[
+\int_{\Theta}f\left(\theta\right)\, d\theta=\frac{1}{\left|\Theta\right|}\sum_{k\in K}f^{k}=\frac{1}{\left|\Theta\right|}\sum_{k}f^{k}.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Note the Hamiltonian is
+\begin_inset Formula 
+\[
+H\left(q,v\right)=K\left(v\right)+U\left(q\right)
+\]
+
+\end_inset
+
+The action functional is
+\begin_inset Formula 
+\begin{align*}
+\mathcal{L}\left(q\right) & =\frac{1}{\left|\Theta\right|}\sum_{k}L\left(J_{\cdot ks}^{y\ell}q_{y\ell}\right)\\
+D\mathcal{L}\left(q\right)^{y\ell} & =\frac{1}{\left|\Theta\right|}\sum_{k}\left(\frac{\partial L}{\partial q}\left(J_{\cdot ks}^{y\ell}q_{y\ell}\right)^{x}J_{xkq}^{y\ell}+\frac{\partial L}{\partial v}\left(J_{xks}^{y\ell}q_{y\ell}\right)^{x}J_{xkv}^{y\ell}\right)\\
+ & =\frac{1}{\left|\Theta\right|}\sum_{k}DL\left(J_{\cdot ks}^{y\ell}q_{y\ell}\right)^{xr}J_{xkr}^{y\ell},\\
+C\left(q\right) & =\frac{1}{2}\sum_{k}H\left(J_{\cdot ks}^{y\ell}q_{y\ell}\right)^{2}\\
+DC\left(q\right)^{y\ell} & =\sum_{k}DH\left(J_{\cdot ks}^{y\ell}q_{y\ell}\right)^{xr}J_{xkr}^{y\ell}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+-----------
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+U\left(q\right) & =-\frac{1}{\left|q\right|}=-\left(q\cdot q\right)^{-1/2}\\
+DU\left(q\right)\cdot v & =\delta_{\epsilon}\left(-\left(\left(q+\epsilon v\right)\cdot\left(q+\epsilon v\right)\right)^{-1/2}\right)\\
+ & =\delta_{\epsilon}\left(-\left(\left|q\right|^{2}+2q\cdot v\,\epsilon+\left|v\right|^{2}\epsilon^{2}\right)^{-1/2}\right)\\
+ & =\frac{1}{2}\left(\left(\left|q\right|^{2}\right)^{-3/2}\delta_{\epsilon}\left(\left|q\right|^{2}+2q\cdot v\,\epsilon+\left|v\right|^{2}\epsilon^{2}\right)\right)\\
+ & =\frac{1}{2}\left(\left(\left|q\right|^{2}\right)^{-3/2}2q\cdot v\right)\\
+ & =\frac{q}{\left|q\right|^{3}}\cdot v\\
+\implies DU\left(q\right) & =\frac{q}{\left|q\right|^{3}}.
+\end{align*}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{align*}
+U\left(x,y\right) & =-\left(x^{2}+y^{2}\right)^{-1/2}\\
+U_{x} & =--\frac{1}{2}\left(x^{2}+y^{2}\right)^{-3/2}2x\\
+ & =x\left(x^{2}+y^{2}\right)^{-3/2}\\
+\end{align*}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{eqnarray*}
+f\left(x\right) & = & \left(1+x^{2}\right)^{-1}\\
+f^{\prime}\left(x\right) & = & -\left(1+x^{2}\right)^{-2}2x
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+-----------
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+U\left(q\right)=-\sum_{i<j}\frac{1}{\left|q_{xi}-q_{xj}\right|}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\frac{\partial U}{\partial q_{xi}}=
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{eqnarray*}
+F\left(x\right) & = & -\frac{1}{\left|x\right|}\\
+DF\left(x\right)\cdot y & = & \delta_{\epsilon}\left(F\left(x+\epsilon y\right)\right)\\
+ & = & \delta_{\epsilon}\left(-\frac{1}{\left|x+\epsilon y\right|}\right)\\
+ & = & \delta_{\epsilon}\left(-\left(\left(x+\epsilon y\right)\cdot\left(x+\epsilon y\right)\right)^{-1/2}\right)\\
+ & = & \left(x\cdot x\right)^{-3/2}x\cdot y\\
+ & = & \frac{x}{\left|x\right|^{3}}\cdot y\\
+\implies DF\left(x\right) & = & \frac{x}{\left|x\right|^{3}}.
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+---------
+\end_layout
+
+\begin_layout Standard
+In Lagrangian formulation, minimizing the action functional is equivalent
+ to finding a zero of the first variation (that is a minimum of the action
+ functional).
+ Let 
+\begin_inset Formula $X$
+\end_inset
+
+ be the parameter space of the function 
+\begin_inset Formula $F$
+\end_inset
+
+ being solved for, and let 
+\begin_inset Formula $T$
+\end_inset
+
+ be the domain of the function.
+\begin_inset Formula 
+\begin{align*}
+\mathcal{L}\left(x\right) & :=\int_{T}L\left(F\left(x\right)\left(t\right)\right)\, dt.
+\end{align*}
+
+\end_inset
+
+The first variation is a covector field 
+\begin_inset Formula $E\colon X\to T\to X^{*}$
+\end_inset
+
+ called the Euler-Lagrange form.
+ A critical point 
+\begin_inset Formula $x$
+\end_inset
+
+ of 
+\begin_inset Formula $\mathcal{L}$
+\end_inset
+
+ is a solution to 
+\begin_inset Formula $E\left(x\right)=0\in T\to X^{*}$
+\end_inset
+
+ and vice-versa.
+ This can be thought of as a supervised training problem where the training
+ pairs are 
+\begin_inset Formula $\left\{ \left(t,0_{X^{*}}\right)\mid t\in T\right\} .$
+\end_inset
+
+ Thus a stochastic gradient descent would use a step with a single training
+ sample 
+\begin_inset Formula $t\in T$
+\end_inset
+
+ at a time.
+ The function to be minimized is 
+\begin_inset Formula $x\mapsto\left|E\left(x\right)\left(t\right)\right|,$
+\end_inset
+
+ or equivalently 
+\begin_inset Formula $x\mapsto\frac{1}{2}\left|E\left(x\right)\left(t\right)\right|^{2}.$
+\end_inset
+
+ The gradient descent part uses the gradient.
+ Let 
+\begin_inset Formula $C_{t}\left(x\right):=\frac{1}{2}\left|E\left(x\right)\left(t\right)\right|^{2}=\frac{1}{2}\left(E\left(x\right)\left(t\right)\cdot g\cdot E\left(x\right)\left(t\right)\right),$
+\end_inset
+
+ where 
+\begin_inset Formula $g\in X\otimes X$
+\end_inset
+
+ is the inner product on 
+\begin_inset Formula $X^{*}.$
+\end_inset
+
+
+\begin_inset Formula 
+\begin{align*}
+DC_{t}\left(x\right)\cdot y & =\delta_{\epsilon}\left(C_{t}\left(x+\epsilon y\right)\right)\\
+ & =\delta_{\epsilon}\left(\frac{1}{2}\left(E\left(x+\epsilon y\right)\left(t\right)\cdot g\cdot E\left(x+\epsilon y\right)\left(t\right)\right)\right)\\
+ & =E\left(x\right)\left(t\right)\cdot g\cdot DE\left(x\right)\left(t\right)\cdot y\\
+ & =E\left(x\right)\left(t\right)\cdot g\cdot DE\left(x\right)\left(t\right)\cdot y\\
+\implies DC_{t}\left(x\right) & =E\left(x\right)\left(t\right)\cdot g\cdot DE\left(x\right)\left(t\right),
+\end{align*}
+
+\end_inset
+
+or if you're identifying 
+\begin_inset Formula $X$
+\end_inset
+
+ and 
+\begin_inset Formula $X^{*},$
+\end_inset
+
+ then 
+\begin_inset Formula $DC_{t}\left(x\right)=E\left(x\right)\left(t\right)\cdot DE\left(x\right)\left(t\right),$
+\end_inset
+
+ and the gradient descent update step should be
+\begin_inset Formula 
+\[
+x_{i+1}:=x_{i}-\alpha E\left(x_{i}\right)\left(t\right)\cdot DE\left(x_{i}\right)\left(t\right).
+\]
+
+\end_inset
+
+A mini-batch gradient descent update step would be
+\begin_inset Formula 
+\[
+x_{i+1}:=x_{i}-\alpha\frac{1}{B}\sum_{j=1}^{B}E\left(x_{i}\right)\left(t_{b_{j}}\right)\cdot DE\left(x_{i}\right)\left(t_{b_{j}}\right),
+\]
+
+\end_inset
+
+where 
+\begin_inset Formula $b_{1},\dots,b_{B}$
+\end_inset
+
+ index the mini-batch.
+\end_layout
+
+\begin_layout Standard
+If the Lagrangian has the form 
+\begin_inset Formula $L\left(q,v\right)$
+\end_inset
+
+ and the action functional is
+\begin_inset Formula 
+\[
+\mathcal{L}\left(x\right):=\int_{T}L\left(q\left(x\right)\left(t\right),v\left(x\right)\left(t\right)\right)\, dt,
+\]
+
+\end_inset
+
+then the first variation is
+\begin_inset Formula 
+\begin{align*}
+D\mathcal{L}\left(x\right)\cdot y & =\int_{T}\delta_{\epsilon}\left(L\left(q\left(x+\epsilon y\right)\left(t\right),v\left(x+\epsilon y\right)\left(t\right)\right)\right)\, dt\\
+ & =\int_{T}\frac{\partial L}{\partial q}\left(q\left(x\right)\left(t\right),v\left(x\right)\left(t\right)\right)\cdot Dq\left(x\right)\left(t\right)\cdot y+\frac{\partial L}{\partial v}\left(q\left(x\right)\left(t\right),v\left(x\right)\left(t\right)\right)\cdot Dv\left(x\right)\left(t\right)\cdot y\, dt\\
+ & =\left[\int_{T}\left(\frac{\partial L}{\partial q}\left(q\left(x\right)\left(t\right),v\left(x\right)\left(t\right)\right)\cdot Dq\left(x\right)\left(t\right)+\frac{\partial L}{\partial v}\left(q\left(x\right)\left(t\right),v\left(x\right)\left(t\right)\right)\cdot Dv\left(x\right)\left(t\right)\right)\, dt\right]\cdot y\\
+\implies D\mathcal{L}\left(x\right) & =\int_{T}\frac{\partial L}{\partial q}\left(q\left(x\right)\left(t\right),v\left(x\right)\left(t\right)\right)\cdot Dq\left(x\right)\left(t\right)+\frac{\partial L}{\partial v}\left(q\left(x\right)\left(t\right),v\left(x\right)\left(t\right)\right)\cdot Dv\left(x\right)\left(t\right)\, dt\\
+ & =:\int_{T}E\left(x\right)\left(t\right)\, dt,
+\end{align*}
+
+\end_inset
+
+where 
+\begin_inset Formula $E\left(x\right)\colon T\to X^{*}$
+\end_inset
+
+ is the Euler-Lagrange form.
+ 
+\begin_inset Formula $D\mathcal{L}\left(x\right)=0_{X^{*}}$
+\end_inset
+
+ is equivalent to 
+\begin_inset Formula $E\left(x\right)=0_{X^{*}\otimes T^{*}}$
+\end_inset
+
+ by the fundamental lemma of COV.
+ Why is stochastic/mini-batch gradient descent better than using full gradient
+ descent on 
+\begin_inset Formula $\mathcal{L}?$
+\end_inset
+
+ Because in stochastic/mini-batch gradient descent, 
+\begin_inset Formula $E\left(x\right)$
+\end_inset
+
+ only needs to be evaluated for 
+\begin_inset Formula $t$
+\end_inset
+
+ in some small subset of 
+\begin_inset Formula $T,$
+\end_inset
+
+ instead of for all 
+\begin_inset Formula $t\in T.$
+\end_inset
+
+ But 
+\begin_inset Formula $E\left(x\right)\left(t\right)\in X^{*}$
+\end_inset
+
+ (paired with an inner product) indicates the direction of greatest increase,
+ so 
+\begin_inset Formula $-E\left(x\right)\left(t\right)$
+\end_inset
+
+ indicates direction of greatest decrease.
+ Let 
+\begin_inset Formula $E_{t}\left(x\right):=E\left(x\right)\left(t\right).$
+\end_inset
+
+ Thus the stochastic gradient descent update step for sample 
+\begin_inset Formula $t\in T$
+\end_inset
+
+ is
+\begin_inset Formula 
+\[
+x_{i+1}:=x_{i}-\alpha E_{t}\left(x_{i}\right),
+\]
+
+\end_inset
+
+and the update step for mini-batch gradient descent is
+\begin_inset Formula 
+\[
+x_{i+1}:=x_{i}-\alpha\frac{1}{B}\sum_{j=1}^{B}E_{t_{b_{j}}}\left(x_{i}\right),
+\]
+
+\end_inset
+
+where 
+\begin_inset Formula $b_{1},\dots,b_{B}$
+\end_inset
+
+ index the samples in the mini-batch.
+\end_layout
+
+\begin_layout Standard
+To simplify the above, let the action functional be
+\begin_inset Formula 
+\[
+\mathcal{L}\left(x\right):=\int_{T}L\left(F_{t}\left(x\right)\right)\, dt.
+\]
+
+\end_inset
+
+Then the first variation
+\begin_inset Formula 
+\begin{align*}
+D\mathcal{L}\left(x\right) & =\int_{T}DL\left(F_{t}\left(x\right)\right)\cdot DF_{t}\left(x\right)\, dt\\
+ & =:\int_{T}E_{t}\left(x\right)\, dt.
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+-----------------
+\begin_inset Formula 
+\begin{align*}
+D^{2}\mathcal{L}\left(x\right) & =\int_{T}D^{2}L\left(F_{t}\left(x\right)\right):\left(DF_{t}\left(x\right)\otimes DF_{t}\left(x\right)\right)\, dt
+\end{align*}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{align*}
+U\left(q,g\right) & =-g\left(q\cdot q\right)^{-1/2},\\
+\frac{\partial U}{\partial q}\left(q,g\right) & =g\left(q\cdot q\right)^{-3/2}q,\\
+\frac{\partial U}{\partial g}\left(q,g\right) & =-\left(q\cdot q\right)^{-1/2},\\
+\frac{\partial^{2}U}{\partial^{2}q}\left(q,g\right)\cdot p & =\delta_{\epsilon}\left(\frac{\partial U}{\partial q}\left(q+\epsilon p,g\right)\right)\\
+ & =\delta_{\epsilon}\left(g\left(\left(q+\epsilon p\right)\cdot\left(q+\epsilon p\right)\right)^{-3/2}\left(q+\epsilon p\right)\right)\\
+ & =-g\frac{3}{2}\left(q\cdot q\right)^{-5/2}\delta_{\epsilon}\left(\left(q+\epsilon p\right)\cdot\left(q+\epsilon p\right)\right)\left(q+\epsilon p\right)+g\left(q\cdot q\right)^{-3/2}\delta_{\epsilon}\left(q+\epsilon p\right)\\
+ & =-g\frac{3}{2}\left(q\cdot q\right)^{-5/2}\left(2q\cdot p\right)q+g\left(q\cdot q\right)^{-3/2}p\\
+ & =g\left|q\right|^{-3}\left(I-3\left|q\right|^{-2}q\otimes q\right)\cdot p\\
+\implies\frac{\partial^{2}U}{\partial^{2}q}\left(q,g\right) & =g\left|q\right|^{-3}\left(I-3\left|q\right|^{-2}q\otimes q\right),\\
+\frac{\partial^{2}U}{\partial g\partial q}\left(q,g\right)=\frac{\partial^{2}U}{\partial q\partial g}\left(q,g\right) & =\left(q\cdot q\right)^{-3/2}q,\\
+\frac{\partial^{2}U}{\partial^{2}g}\left(q,g\right) & =0.
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+K\left(v\right) & =\frac{1}{2}m\left|v\right|^{2},\\
+DK\left(v\right) & =mv,\\
+D^{2}K\left(v\right) & =mI
+\end{align*}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{align*}
+L\left(q,v,g\right) & =K\left(v\right)-U\left(q,g\right),\\
+\frac{\partial L}{\partial q}\left(q,v,g\right) & =-\frac{\partial U}{\partial q}\left(q,g\right),\\
+\frac{\partial L}{\partial g}\left(q,v,g\right) & =-\frac{\partial U}{\partial g}\left(q,g\right),\\
+\frac{\partial L}{\partial v}\left(q,v,g\right) & =DK\left(v\right),\\
+\frac{\partial^{2}L}{\partial^{2}q}\left(q,v,g\right) & =-\frac{\partial^{2}U}{\partial^{2}q}\left(q,g\right),\\
+\frac{\partial^{2}L}{\partial q\partial v}\left(q,v\right)=\frac{\partial^{2}L}{\partial v\partial q}\left(q,v\right) & =0,\\
+\frac{\partial^{2}L}{\partial^{2}v}\left(q,v\right) & =D^{2}K\left(v\right)
+\end{align*}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{align*}
+\mathcal{L}\left(x,\lambda\right) & =\int_{T}L\left(F_{t}\left(x\right)\right)+\lambda\cdot C_{t}\left(x\right)\, dt,\\
+\frac{\partial\mathcal{L}}{\partial x}\left(x,\lambda\right) & =\int_{T}DL\left(F_{t}\left(x\right)\right)\cdot DF_{t}\left(x\right)+\lambda\cdot DC_{t}\left(x\right)\, dt,\\
+\frac{\partial\mathcal{L}}{\partial\lambda}\left(x,\lambda\right) & =\int_{T}C_{t}\left(x\right)\, dt,\\
+\frac{\partial^{2}\mathcal{L}}{\partial^{2}x}\left(x,\lambda\right) & =\int_{T}D^{2}L\left(F_{t}\left(x\right)\right):\left(DF_{t}\left(x\right)\otimes DF_{t}\left(x\right)\right)+\lambda\cdot D^{2}C_{t}\left(x\right)\, dt\\
+\frac{\partial^{2}\mathcal{L}}{\partial\lambda\partial x}\left(x,\lambda\right)=\frac{\partial^{2}\mathcal{L}}{\partial x\partial\lambda}\left(x,\lambda\right) & =\int_{T}DC_{t}\left(x\right)\, dt,\\
+\frac{\partial^{2}\mathcal{L}}{\partial^{2}\lambda} & =0.
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+-------------
+\end_layout
+
+\begin_layout Standard
+Fix 
+\begin_inset Formula $k\in\mathbb{N}.$
+\end_inset
+
+ Want to map 
+\begin_inset Formula $\left(a,b\right)$
+\end_inset
+
+ pairs to 
+\begin_inset Formula $\left(a+ib\right)e^{ik\theta}\in\mathbb{C}\cong\mathbb{R}^{2},$
+\end_inset
+
+ so that separate Fourier coefficients don't need to be kept for x and y
+ coordinates separately.
+\begin_inset Formula 
+\begin{align*}
+\left(a+ib\right)e^{ik\theta} & =\left(a+ib\right)\left(\cos k\theta+i\sin k\theta\right)\\
+ & =\left(a\cos k\theta-b\sin k\theta\right)+i\left(b\cos k\theta+a\sin k\theta\right)\\
+ & \cong\left(a\cos k\theta-b\sin k\theta,b\cos k\theta+a\sin k\theta\right)
+\end{align*}
+
+\end_inset
+
+What is the complex multiplication structure, as a 3-tensor? Let 
+\begin_inset Formula $X:=\mathbb{R}^{2}.$
+\end_inset
+
+ Then the complex multiplication structure 
+\begin_inset Formula $C\in X\otimes X^{*}\otimes X^{*}$
+\end_inset
+
+ is defined by
+\begin_inset Formula 
+\[
+\left(a_{0}+ia_{1}\right)\left(b_{0}+ib_{1}\right)=\left(a_{0}b_{0}-a_{1}b_{1}\right)+i\left(a_{0}b_{1}+a_{1}b_{0}\right)
+\]
+
+\end_inset
+
+and is
+\begin_inset Formula 
+\begin{align*}
+C_{0}^{jk}a_{j}b_{k} & =a_{0}b_{0}-a_{1}b_{1},\\
+C_{1}^{jk}a_{j}b_{k} & =a_{0}b_{1}+a_{1}b_{0},\\
+C_{i}^{jk} & =\delta_{i}^{0}\left(\delta_{0}^{j}\delta_{0}^{k}-\delta_{1}^{j}\delta_{1}^{k}\right)+\delta_{i}^{1}\left(\delta_{0}^{j}\delta_{1}^{k}+\delta_{1}^{j}\delta_{0}^{k}\right).
+\end{align*}
+
+\end_inset
+
+Plugging in 
+\begin_inset Formula $\left(\cos\left(k\theta\right),\sin\left(k\theta\right)\right)$
+\end_inset
+
+ to one of the inputs of 
+\begin_inset Formula $C_{i}^{jk}$
+\end_inset
+
+ gives
+\end_layout
+
+\end_body
+\end_document

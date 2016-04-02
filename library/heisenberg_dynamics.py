@@ -31,7 +31,8 @@ def hamiltonian_vector_field (X, t):
     P_x = p_x - 0.5*y*p_z
     P_y = p_y + 0.5*x*p_z
     r = x**2 + y**2
-    mu = r**2 + 16.0*z**2
+    beta = 1.0/16.0
+    mu = r**2 + beta*z**2
     # alpha = 2.0/math.pi
     alpha = 1.0
     alpha_times_mu_to_neg_three_halves = alpha*mu**(-1.5)
@@ -44,27 +45,27 @@ def hamiltonian_vector_field (X, t):
                         -16.0*alpha_times_mu_to_neg_three_halves*z],
                         dtype=float)
 
-# def coreys_initial_condition ():
-#     #for quasi-periodic use [1, 1, 4*3^(.5),0, 0] and t_0=273.5
-#     (p_theta, r_0, z_0, p_r_0, p_z_0) = (1.0, 1.0, 4.0*3.0**0.5, 0.0, 0.0)
-#     #this is for alpha=1 and theta=0
-#     x_0 = r_0
-#     y_0 = 0.0
-#     z_0 = z_0
-#     p_x_0 = p_r_0
-#     p_y_0 = p_theta/r_0
-#     p_z_0 = p_z_0
-#     import numpy
-#     X_0 = numpy.array([x_0, y_0, z_0, p_x_0, p_y_0, p_z_0], dtype=float)
-#     # print "X_0 = {0}".format(X_0)
-#     return X_0
+def coreys_initial_condition ():
+    #for quasi-periodic use [1, 1, 4*3^(.5),0, 0] and t_0=273.5
+    (p_theta, r_0, z_0, p_r_0, p_z_0) = (1.0, 1.0, 4.0*3.0**0.5, 0.0, 0.0)
+    #this is for alpha=1 and theta=0
+    x_0 = r_0
+    y_0 = 0.0
+    z_0 = z_0
+    p_x_0 = p_r_0
+    p_y_0 = p_theta/r_0
+    p_z_0 = p_z_0
+    import numpy
+    X_0 = numpy.array([x_0, y_0, z_0, p_x_0, p_y_0, p_z_0], dtype=float)
+    # print "X_0 = {0}".format(X_0)
+    return X_0
 
-# def compute_coreys_flow_curve ():
-#     period = 273.5
-#     sample_count = 2735
-#     X_0 = coreys_initial_condition()
-#     print "Computing flow curve for time duration {0}, with {1} samples, from initial condition {2}.".format(period, sample_count, X_0)
-#     import vector_field
-#     (Xs,Ts) = vector_field.compute_flow_curve(hamiltonian_vector_field, X_0, 0.0, period, sample_count)
-#     return (Xs,Ts,period)
+def compute_coreys_flow_curve ():
+    period = 273.5
+    sample_count = 2735
+    X_0 = coreys_initial_condition()
+    print "Computing flow curve for time duration {0}, with {1} samples, from initial condition {2}.".format(period, sample_count, X_0)
+    import vector_field
+    (Xs,Ts) = vector_field.compute_flow_curve(hamiltonian_vector_field, X_0, 0.0, period, sample_count)
+    return Xs,Ts,period,sample_count
 
