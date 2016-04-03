@@ -146,6 +146,10 @@ class Planar:
         self.half_open_time_interval = half_open_time_interval = closed_time_interval[:-1]
         # Number of time-samples in the fundamental domain
         self.T = T = len(half_open_time_interval)
+        # Compute the deltas between time interval points, which can be used e.g. in integrating
+        # over the half-open time interval.  Note that this is not invariant under a reversal
+        # of the time interval; TODO: compute a symmetric version of this.
+        self.half_open_time_interval_deltas = np.diff(closed_time_interval)
         # The shape of the coefficients tensor it expects for Planar.sample.
         self.fourier_coefficients_shape = (F,2)
 
@@ -163,10 +167,17 @@ class Planar:
         # for t,time in enumerate(half_open_time_interval):
         #     self.full_fourier_tensor[t,:,:,:] = Scalar.compute_fourier_tensor(derivatives, frequencies, period, time, dtype, tau, cos, sin)
 
-    def sample (self, coefficient_tensor, at_t=None, dtype=float):
+    def sample (self, coefficient_tensor, at_t=None, dtype=float, include_endpoint=False):
         assert coefficient_tensor.shape == self.fourier_coefficients_shape, 'expected {0} but got {1}'.format(coefficient_tensor.shape)
         if at_t == None:
-            return tensor.contract('tdfxc,fc', self.full_fourier_tensor, coefficient_tensor, output='tdx', dtype=dtype)
+            if include_endpoint:
+                retval = np.ndarray((self.T+1,self.D,2), dtype=dtype)
+            else:
+                retval = np.ndarray((self.T,self.D,2), dtype=dtype)
+            retval[:self.T,:,:] = tensor.contract('tdfxc,fc', self.full_fourier_tensor, coefficient_tensor, output='tdx', dtype=dtype)
+            if include_endpoint:
+                retval[self.T,:,:] = tensor.contract('dfxc,fc', self.full_fourier_tensor[0,:,:,:,:], coefficient_tensor, output='dx', dtype=dtype)
+            return retval
         else:
             return tensor.contract('dfxc,fc', self.full_fourier_tensor[at_t,:,:,:,:], coefficient_tensor, output='dx', dtype=dtype)
 
@@ -258,6 +269,71 @@ class Planar:
 
         sys.stdout.write('passed.\n')
 
+    @staticmethod
+    def test3 ():
+        import matplotlib.pyplot as plt
+        import sys
+
+        # This could be faster, but for now, who cares.
+        def discrete_integral (array):
+            retval = np.ndarray((len(array)+1,), dtype=array.dtype)
+            retval[0] = 0.0
+            retval[1:] = np.cumsum(array)
+            return retval
+
+        np.random.seed(4201)
+
+        # Make a random closed curve that has a k-fold rotational symmetry.
+        n = 3
+        k = 3
+        frequencies = np.array(range(1-k*n,1+k*n+1,k))
+        derivatives = np.array([0,1])
+        sample_count = 1024
+        closed_time_interval = np.linspace(0.0, 1.0, sample_count+1)
+        p = Planar(frequencies, derivatives, closed_time_interval)
+        fc = np.random.randn(*p.fourier_coefficients_shape)
+
+        # fc = np.zeros(p.fourier_coefficients_shape, dtype=float)
+        # fc[p.index_of_frequency(1),0] = 1
+
+        def plot_curve (axis_row, p, fc):
+            curve = p.sample(fc, include_endpoint=True)
+            assert curve.shape == (p.T+1,p.D,2)
+
+            for derivative_index,derivative in enumerate(p.derivatives):
+                axis = axis_row[derivative_index]
+                axis.set_title('{0}th derivative'.format(derivative))
+                axis.plot(curve[:,derivative_index,0], curve[:,derivative_index,1])
+                # axis.plot((curve[-1,derivative_index,0],curve[0,derivative_index,0]), (curve[-1,derivative_index,1],curve[0,derivative_index,1]))
+                axis.scatter(curve[:-1,derivative_index,0], curve[:-1,derivative_index,1], color='black', s=2)
+
+            return curve
+
+        fig,axis_row_v = plt.subplots(2, 2, squeeze=False, figsize=(20,20))
+        curve = plot_curve(axis_row_v[0], p, fc)
+
+        # Compute the density of the curve's sample points.  This will be defined as
+        # the pseudoinverse of the vector of distances from one sample to the next
+        # (note that this is not invariant under reversal of the parameterization).
+        # For now, only do this with the 0th derivative samples.
+        deltas = np.diff(curve[:,p.index_of_derivative(0),:], axis=0)
+        distances = np.apply_along_axis(np.linalg.norm, 1, deltas)
+        arclength_over_closed_interval = discrete_integral(distances)
+        inv_arclength_function = np.vectorize(lambda s:np.interp(s, arclength_over_closed_interval, p.closed_time_interval))
+        inv_arclength_over_closed_interval = inv_arclength_function(np.linspace(arclength_over_closed_interval[0], arclength_over_closed_interval[-1], len(p.closed_time_interval)))
+
+        # print 'p.closed_time_interval = {0}'.format(p.closed_time_interval)
+        # print 'inv_arclength_over_closed_interval = {0}'.format(inv_arclength_over_closed_interval)
+
+        inv_arclength_p = Planar(frequencies, derivatives, inv_arclength_over_closed_interval)
+
+        plot_curve(axis_row_v[1], inv_arclength_p, fc)
+
+        # plt.show()
+        filename = 'fourier_parameterization.test3.png'
+        plt.savefig(filename)
+        print 'wrote "{0}"'.format(filename)
+        plt.close(fig)
 
 if __name__ == '__main__':
     import sys
@@ -268,23 +344,5 @@ if __name__ == '__main__':
     # Scalar.test()
     # Planar.test1()
 
-    import matplotlib.pyplot as plt
+    Planar.test3()
 
-    # Make a random closed curve that has a 5-fold rotational symmetry.
-    n = 1
-    k = 5
-    p = Planar(np.array(range(1-k*n,1+k*n+1,k)), np.array([0]), np.linspace(0.0, 1.0, 513))
-    fc = np.random.randn(*p.fourier_coefficients_shape)
-    # fc = np.zeros(p.fourier_coefficients_shape, dtype=float)
-    # fc[p.index_of_frequency(1),0] = 1
-    curve = p.sample(fc)
-    t = p.T//2
-    curve_at_t = p.sample(fc, at_t=t) 
-    assert curve.shape == (p.T,p.D,2)
-
-    fig,axes = plt.subplots(1, 1, figsize=(6,6))
-    a = axes
-    a.plot(curve[:,0,0], curve[:,0,1])
-    a.plot((curve[-1,0,0],curve[0,0,0]), (curve[-1,0,1],curve[0,0,1]))
-    a.plot(curve_at_t[0,0], curve_at_t[0,1], 'ro', color='black')
-    plt.show()
