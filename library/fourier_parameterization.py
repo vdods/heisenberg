@@ -2,6 +2,13 @@ import complex_multiplication
 import numpy as np
 import tensor
 
+# This could be faster, but for now, who cares.
+def discrete_integral (array):
+    retval = np.ndarray((len(array)+1,), dtype=array.dtype)
+    retval[0] = 0.0
+    retval[1:] = np.cumsum(array)
+    return retval
+
 class Scalar:
     def __init__ (self, frequencies, derivatives, closed_time_interval, dtype=float, tau=2.0*np.pi, cos=np.cos, sin=np.sin):
         # NOTE: This is designed to be able to work with any type, including e.g. sympy symbols.
@@ -187,6 +194,42 @@ class Planar:
     def index_of_derivative (self, derivative):
         return self.derivative_index_d[derivative]
 
+    def arclength_reparameterization (self, fc, derivative_mask=None):
+        """
+        Returns a fourier_parameterization.Planar object such that if the curve for the
+        Fourier coefficients fc is sampled [at its closed_time_interval values], then
+        the points are spaced evenly in jet-space (or if derivative_mask is specified
+        as a mask along the derivative axis of the curve, then only those derivatives'
+        values will be used in determining the even spacing).
+
+        This can be used for example to create a sampling of a Fourier-parameterized curve
+        that is uniform in space and therefore more useful for numerically solving dynamics
+        problems.
+        """
+        # TODO: Allow definition of inner product on curve jet space so that each derivative
+        # can be weighted differently.  E.g. weight velocity less than position.  This will
+        # take the form of contracting sample_deltas with itself using an inner product tensor
+        # which carries the weights for each jet.  The reshaping done above won't happen.
+        # sample_deltas = np.diff(curve[:,p.index_of_derivative(0),:], axis=0)
+
+        # TODO: make this dtype-agnostic, so it can be used with sympy for example.
+
+        curve = self.sample(fc, include_endpoint=True)
+        if derivative_mask != None:
+            curve = curve[:,derivative_mask,:]
+        # Estimate the tangent vector field to the curve's at its sample points.   Note that
+        # this particular definition is not invariant under reversal of the parameterization).
+        tangent_vectors = np.einsum('ijk,i->ijk', np.diff(curve[:,:,:], axis=0), 1 / self.half_open_time_interval_deltas)
+        speed = np.sqrt(np.einsum('ijk,ijk->i', tangent_vectors, tangent_vectors))
+        assert np.all(np.abs(speed - np.apply_along_axis(np.linalg.norm, 1, tangent_vectors.reshape(curve.shape[0]-1,-1))) < 1.0e-8)
+        # Compute the arclength and inverse arclength functions (via samplings of those functions).
+        arclength_over_closed_interval = discrete_integral(speed)
+        inv_arclength_function = np.vectorize(lambda s:np.interp(s, arclength_over_closed_interval, self.closed_time_interval))
+        inv_arclength_over_closed_interval = inv_arclength_function(np.linspace(arclength_over_closed_interval[0], arclength_over_closed_interval[-1], len(self.closed_time_interval)))
+        # Create a Planar object with the computed parameterization.
+        # TODO: allow specification of frequencies, derivatives, dtype, etc.
+        return Planar(self.frequencies, self.derivatives, inv_arclength_over_closed_interval)
+
     @staticmethod
     def test1 ():
         import itertools
@@ -271,15 +314,13 @@ class Planar:
 
     @staticmethod
     def test3 ():
+        """
+        Generate a random periodic curne with 3-fold rotational symmetry, and then show that it
+        can be reparameterized such that its sampling is uniform in Euclidean speed in its 0th
+        derivative, 1th derivative, or a weighted combination of both.
+        """
         import matplotlib.pyplot as plt
         import sys
-
-        # This could be faster, but for now, who cares.
-        def discrete_integral (array):
-            retval = np.ndarray((len(array)+1,), dtype=array.dtype)
-            retval[0] = 0.0
-            retval[1:] = np.cumsum(array)
-            return retval
 
         np.random.seed(4201)
 
@@ -293,45 +334,34 @@ class Planar:
         p = Planar(frequencies, derivatives, closed_time_interval)
         fc = np.random.randn(*p.fourier_coefficients_shape)
 
-        # fc = np.zeros(p.fourier_coefficients_shape, dtype=float)
-        # fc[p.index_of_frequency(1),0] = 1
-
-        def plot_curve (axis_row, p, fc):
+        def plot_curve (axis_row, p, fc, plot_name):
             curve = p.sample(fc, include_endpoint=True)
             assert curve.shape == (p.T+1,p.D,2)
 
-            for derivative_index,derivative in enumerate(p.derivatives):
-                axis = axis_row[derivative_index]
-                axis.set_title('{0}th derivative'.format(derivative))
-                axis.plot(curve[:,derivative_index,0], curve[:,derivative_index,1])
-                # axis.plot((curve[-1,derivative_index,0],curve[0,derivative_index,0]), (curve[-1,derivative_index,1],curve[0,derivative_index,1]))
-                axis.scatter(curve[:-1,derivative_index,0], curve[:-1,derivative_index,1], color='black', s=2)
+            for d,derivative in enumerate(p.derivatives):
+                axis = axis_row[d]
+                axis.set_title('{0}\n{1}th derivative'.format(plot_name, derivative))
+                axis.plot(curve[:,d,0], curve[:,d,1])
+                # axis.plot((curve[-1,d,0],curve[0,d,0]), (curve[-1,d,1],curve[0,d,1]))
+                axis.scatter(curve[:-1,d,0], curve[:-1,d,1], color='black', s=2)
 
             return curve
 
-        fig,axis_row_v = plt.subplots(2, 2, squeeze=False, figsize=(20,20))
-        curve = plot_curve(axis_row_v[0], p, fc)
+        fig,axis_row_v = plt.subplots(4, 2, squeeze=False, figsize=(20,40))
+        plot_curve(axis_row_v[0], p, fc, 'uniform-in-time parameterization')
 
-        # Compute the density of the curve's sample points.  This will be defined as
-        # the pseudoinverse of the vector of distances from one sample to the next
-        # (note that this is not invariant under reversal of the parameterization).
-        # For now, only do this with the 0th derivative samples.
-        deltas = np.diff(curve[:,p.index_of_derivative(0),:], axis=0)
-        distances = np.apply_along_axis(np.linalg.norm, 1, deltas)
-        arclength_over_closed_interval = discrete_integral(distances)
-        inv_arclength_function = np.vectorize(lambda s:np.interp(s, arclength_over_closed_interval, p.closed_time_interval))
-        inv_arclength_over_closed_interval = inv_arclength_function(np.linspace(arclength_over_closed_interval[0], arclength_over_closed_interval[-1], len(p.closed_time_interval)))
+        inv_arclength_0_jet_p = p.arclength_reparameterization(fc, p.derivatives==0)
+        plot_curve(axis_row_v[1], inv_arclength_0_jet_p, fc, 'uniform-in-0-jet-arclength parameterization')
 
-        # print 'p.closed_time_interval = {0}'.format(p.closed_time_interval)
-        # print 'inv_arclength_over_closed_interval = {0}'.format(inv_arclength_over_closed_interval)
+        inv_arclength_1_jet_p = p.arclength_reparameterization(fc, p.derivatives==1)
+        plot_curve(axis_row_v[2], inv_arclength_1_jet_p, fc, 'uniform-in-1-jet-arclength parameterization')
 
-        inv_arclength_p = Planar(frequencies, derivatives, inv_arclength_over_closed_interval)
-
-        plot_curve(axis_row_v[1], inv_arclength_p, fc)
+        inv_arclength_0_1_jet_p = p.arclength_reparameterization(fc)
+        plot_curve(axis_row_v[3], inv_arclength_0_1_jet_p, fc, 'uniform-in-[0,1]-jet-arclength parameterization')
 
         # plt.show()
         filename = 'fourier_parameterization.test3.png'
-        plt.savefig(filename)
+        plt.savefig(filename, bbox_inches='tight')
         print 'wrote "{0}"'.format(filename)
         plt.close(fig)
 
