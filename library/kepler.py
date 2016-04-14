@@ -22,7 +22,7 @@ class KeplerProblemContext:
         # self.fourier_curve_parameterization = FourierCurveParameterization(period=1.0, F=F, T=T, D=D)
         period = 1.0
         self.fourier_curve_parameterization = fourier_parameterization.Planar(np.array(range(-F,F+1)), np.array(range(D)), np.linspace(0.0, period, T+1))
-        self.riemann_sum_factor = self.fourier_curve_parameterization.period / self.fourier_curve_parameterization.T
+        # self.riemann_sum_factor = self.fourier_curve_parameterization.period / self.fourier_curve_parameterization.T
 
         # 2 indicates that there are two coefficients for each (cos,sin) pair
         self.position_velocity_shape      = position_velocity_shape      = (X,D)
@@ -177,10 +177,10 @@ class KeplerProblemContext:
         return fd_fc,fd_g,fd_lm
 
     def curve_at_t (self, t, fc):
-        return np.einsum('dfxc,fc->xd', self.fourier_curve_parameterization.full_fourier_tensor[t,:,:,:], fc)
+        return np.einsum('dfxc,fc->xd', self.fourier_curve_parameterization.fourier_tensor[t,:,:,:], fc)
 
     def curve (self, fc):
-        return np.einsum('tdfxc,fc->txd', self.fourier_curve_parameterization.full_fourier_tensor, fc)
+        return np.einsum('tdfxc,fc->txd', self.fourier_curve_parameterization.fourier_tensor, fc)
 
     def time_domain_variation_pullback_at_t (self, time_domain_parameter_variation, t):
         """Uses the Fourier-transform-parameterization of the curve to pull back a qv-g-lm vector to be a fc-g-lm vector."""
@@ -190,7 +190,7 @@ class KeplerProblemContext:
         retval = np.ndarray((self.frequency_domain_parameter_count,), dtype=float)
         fd_fc,fd_g,fd_lm = self.frequency_domain_views(retval)
 
-        fd_fc[:] = np.einsum('xd,dfxc->fc', td_qv, self.fourier_curve_parameterization.full_fourier_tensor[t,:,:,:,:])
+        fd_fc[:] = np.einsum('xd,dfxc->fc', td_qv, self.fourier_curve_parameterization.fourier_tensor[t,:,:,:,:])
         fd_g[:]  = td_g
         fd_lm[:] = td_lm
 
@@ -206,7 +206,14 @@ class KeplerProblemContext:
         return retval
 
     def Lambda (self, frequency_domain_parameters):
-        return self.riemann_sum_factor * sum(self.Lambda_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters)) for t in xrange(self.fourier_curve_parameterization.T))
+        # return self.riemann_sum_factor * sum(self.Lambda_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters)) for t in xrange(self.fourier_curve_parameterization.T))
+        return np.dot(
+            self.fourier_curve_parameterization.half_open_time_interval_deltas,
+            np.array([
+                self.Lambda_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters))
+                for t in xrange(self.fourier_curve_parameterization.T)
+            ])
+        )
 
     def DLambda_at_time (self, t, frequency_domain_parameters):
         return self.time_domain_variation_pullback_at_t(self.DLambda_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters)), t)
@@ -219,10 +226,24 @@ class KeplerProblemContext:
             batch_size = len(batch_t_v)
 
         # return (self.fourier_curve_parameterization.period / batch_size) * sum(self.DLambda_at_time(t, frequency_domain_parameters) for t in batch_t_v)
-        return self.riemann_sum_factor * sum(self.DLambda_at_time(t, frequency_domain_parameters) for t in batch_t_v)
+        # return self.riemann_sum_factor * sum(self.DLambda_at_time(t, frequency_domain_parameters) for t in batch_t_v)
+        return np.dot(
+            self.fourier_curve_parameterization.half_open_time_interval_deltas,
+            np.array([
+                self.DLambda_at_time(t, frequency_domain_parameters)
+                for t in batch_t_v
+            ])
+        )
 
     def Obj (self, frequency_domain_parameters):
-        return self.riemann_sum_factor * sum(self.Obj_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters)) for t in xrange(self.fourier_curve_parameterization.T))
+        # return self.riemann_sum_factor * sum(self.Obj_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters)) for t in xrange(self.fourier_curve_parameterization.T))
+        return np.dot(
+            self.fourier_curve_parameterization.half_open_time_interval_deltas,
+            np.array([
+                self.Obj_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters))
+                for t in xrange(self.fourier_curve_parameterization.T)
+            ])
+        )
 
     def DObj_at_time (self, t, frequency_domain_parameters):
         return self.time_domain_variation_pullback_at_t(self.DObj_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters)), t)
@@ -235,8 +256,18 @@ class KeplerProblemContext:
             batch_size = len(batch_t_v)
 
         # return (self.fourier_curve_parameterization.period / batch_size) * sum(self.DObj_at_time(t, frequency_domain_parameters) for t in batch_t_v)
-        return self.riemann_sum_factor * sum(self.DObj_at_time(t, frequency_domain_parameters) for t in batch_t_v)
+        # return self.riemann_sum_factor * sum(self.DObj_at_time(t, frequency_domain_parameters) for t in batch_t_v)
+        return np.dot(
+            self.fourier_curve_parameterization.half_open_time_interval_deltas,
+            np.array([self.DObj_at_time(t, frequency_domain_parameters) for t in batch_t_v])
+        )
 
     def C (self, frequency_domain_parameters):
-        return self.riemann_sum_factor * sum(self.C_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters)) for t in xrange(self.fourier_curve_parameterization.T))
-
+        # return self.riemann_sum_factor * sum(self.C_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters)) for t in xrange(self.fourier_curve_parameterization.T))
+        return np.dot(
+            self.fourier_curve_parameterization.half_open_time_interval_deltas,
+            np.array([
+                self.C_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters))
+                for t in xrange(self.fourier_curve_parameterization.T)
+            ])
+        )

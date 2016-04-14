@@ -167,10 +167,10 @@ class NBodyProblemContext:
         return fc,lm
 
     def curve_at_t (self, t):
-        return np.einsum('dfc,xfcn->dxn', self.fourier_curve_parameterization.full_fourier_tensor[t,:,:,:], self.fc)
+        return np.einsum('dfc,xfcn->dxn', self.fourier_curve_parameterization.fourier_tensor[t,:,:,:], self.fc)
 
     def curve (self):
-        return np.einsum('tdfc,xfcn->tdxn', self.fourier_curve_parameterization.full_fourier_tensor, self.fc)
+        return np.einsum('tdfc,xfcn->tdxn', self.fourier_curve_parameterization.fourier_tensor, self.fc)
 
     def time_domain_variation_pullback_at_t (self, time_domain_parameter_variation, t):
         """Uses the Fourier-transform-parameterization of the curve to pull back a qv-lm vector to be a fc-lm vector."""
@@ -180,7 +180,7 @@ class NBodyProblemContext:
         retval = np.ndarray((self.frequency_domain_parameter_count,), dtype=float)
         fd_fc,fd_lm = self.frequency_domain_views(retval)
 
-        fd_fc[:] = np.einsum('dxn,dfc->xfcn', td_qv, self.fourier_curve_parameterization.full_fourier_tensor[t,:,:,:])
+        fd_fc[:] = np.einsum('dxn,dfc->xfcn', td_qv, self.fourier_curve_parameterization.fourier_tensor[t,:,:,:])
         fd_lm[:] = td_lm
 
         return retval
