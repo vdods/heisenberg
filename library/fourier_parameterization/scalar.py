@@ -164,29 +164,6 @@ class Scalar:
             for i in xrange(count):
                 yield (start*(count-1-i) + end*i)/(count-1)
 
-        def is_scalar_matrix (m, scalar):
-            assert len(m.shape) == 2
-            for i,j in itertools.product(xrange(m.shape[0]),xrange(m.shape[1])):
-                if i == j:
-                    if m[i,j] != scalar:
-                        return False
-                else:
-                    if m[i,j] != 0:
-                        return False
-            return True
-
-        def is_diagonal_matrix (m, diagonal_component_v):
-            assert len(m.shape) == 2
-            assert len(diagonal_component_v) == np.min(m.shape)
-            for i,j in itertools.product(xrange(m.shape[0]),xrange(m.shape[1])):
-                if i == j:
-                    if m[i,j] != diagonal_component_v[i]:
-                        return False
-                else:
-                    if m[i,j] != 0:
-                        return False
-            return True
-
         def test_spectrum_endomorphism (frequencies):
             F = len(frequencies)
             assert F > 0
@@ -228,10 +205,11 @@ class Scalar:
             # print 'sin_coefficient_endomorphism:'
             # print sin_coefficient_endomorphism
 
-            assert is_scalar_matrix(cos_coefficient_endomorphism, 1)
+            assert np.all(cos_coefficient_endomorphism == np.eye(*cos_coefficient_endomorphism.shape, dtype=int))
             assert np.all(cos_to_sin_coefficient_morphism == 0)
             assert np.all(sin_to_cos_coefficient_morphism == 0)
-            assert is_diagonal_matrix(sin_coefficient_endomorphism, np.array(map(lambda f:1 if f!=0 else 0, frequencies)))
+            expected_diagonal = np.array(map(lambda f:1 if f!=0 else 0, frequencies))
+            assert np.all(sin_coefficient_endomorphism == np.diag(expected_diagonal))
 
             sys.stdout.write('passed.\n')
 
@@ -363,7 +341,6 @@ class Scalar:
         plt.savefig(filename, bbox_inches='tight')
         print 'wrote "{0}"'.format(filename)
         plt.close(fig)
-
 
     @staticmethod
     def run_all_unit_tests ():
