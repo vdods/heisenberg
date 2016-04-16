@@ -49,19 +49,16 @@ class Planar:
         # The shape of the coefficients tensor it expects for Planar.sample.
         self.fourier_coefficients_shape = (F,2)
 
-        scalar = fourier_parameterization.Scalar(frequencies, derivatives, closed_time_interval, dtype=dtype, tau=tau, cos=cos, sin=sin)
+        scalar = fourier_parameterization.Scalar(frequencies, derivatives, closed_time_interval, dtype=dtype, tau=tau, cos=cos, sin=sin, double_nonzero_frequency_basis_functions=False)
         complex_multiplication_tensor = complex_multiplication.generate_complex_multiplication_tensor(dtype=dtype)
 
-        # self.fourier_tensor = fourier_tensor = np.ndarray((T,D,F,2,2), dtype=dtype)
-        self.fourier_tensor = tensor.contract('tdfc,xcp', scalar.fourier_tensor, complex_multiplication_tensor, output='tdfxp', dtype=dtype)
+        self.fourier_tensor = tensor.contract('tdfp,xpc', scalar.fourier_tensor, complex_multiplication_tensor, output='tdfxc', dtype=dtype)
         assert self.fourier_tensor.shape == (T,D,F,2,2)
 
-        # # This is the linear transform taking Fourier coefficients and producing a time-sampled curve.
-        # # I.e. the linear map from frequency domain to time domain.
-        # # 2 indicates that there are two coefficients for each (cos,sin) pair
-        # self.fourier_tensor = fourier_tensor = np.ndarray((T,D,F,2,2), dtype=dtype)
-        # for t,time in enumerate(half_open_time_interval):
-        #     self.fourier_tensor[t,:,:,:] = fourier_parameterization.Scalar._compute_partial_fourier_tensor(derivatives, frequencies, period, time, dtype, tau, cos, sin)
+        # This particular contraction encodes the complex conjugation in the Hilbert space inner product
+        # integral as a transpose of the complex multiplication tensor (in the first and last indices).
+        self.inverse_fourier_tensor = tensor.contract('fpt,xpc', scalar.inverse_fourier_tensor, complex_multiplication_tensor, output='fctx', dtype=dtype)
+        assert self.inverse_fourier_tensor.shape == (F,2,T,2)
 
     def sample (self, coefficient_tensor, at_t=None, dtype=float, include_endpoint=False):
         assert coefficient_tensor.shape == self.fourier_coefficients_shape, 'expected {0} but got {1}'.format(coefficient_tensor.shape)
@@ -252,16 +249,120 @@ class Planar:
         plot_curve(axis_row_v[3], inv_arclength_0_1_jet_p, fc, 'uniform-in-[0,1]-jet-arclength parameterization')
 
         # plt.show()
-        filename = 'fourier_parameterization.test3.png'
+        filename = 'fourier_parameterization.planar.test3.png'
         plt.savefig(filename, bbox_inches='tight')
         print 'wrote "{0}"'.format(filename)
         plt.close(fig)
+
+    @staticmethod
+    def test4 ():
+        """
+        Compute the Fourier coefficients of a given curve and plot the resampled curve.
+        """
+        import matplotlib.pyplot as plt
+        import sys
+
+        def process_curve (axis_row, closed_time_interval, frequencies, points, max_expected_error=None):
+            assert len(points.shape) == 2
+            assert len(closed_time_interval) == points.shape[0]+1
+            assert points.shape[1] == 2
+
+            derivatives = np.array([0])
+            p = Planar(frequencies, derivatives, closed_time_interval)
+            fc = np.einsum('fctx,tx->fc', p.inverse_fourier_tensor, points)
+            assert fc.shape == (p.F,2)
+            print 'mode coefficient for frequency 1:', fc[p.index_of_frequency(1)]
+            reconstructed_points = np.einsum('tdfxc,fc->dtx', p.fourier_tensor, fc)
+            # print('reconstructed_points.shape:', reconstructed_points.shape)
+            assert reconstructed_points.shape == (1,p.T,2)
+            reconstructed_points = reconstructed_points[0,:,:]
+
+            max_reconstruction_errors = np.max(np.abs(reconstructed_points-points), axis=0)
+            print 'max_reconstruction_errors:', max_reconstruction_errors
+            if max_expected_error is not None:
+                assert np.all(max_reconstruction_errors <= max_expected_error), 'at least one component of max_reconstruction_errors ({0}) exceeded max_expected_error ({1})'.format(max_reconstruction_errors, max_expected_error)
+
+            assert len(axis_row) >= 3
+
+            axis = axis_row[0]
+            axis.set_title('original curve')
+            axis.scatter(points[:,0], points[:,1], s=1)
+            center_point = np.mean(points, axis=0)
+            axis.scatter(*center_point)
+            print 'center_point:', center_point
+
+            axis = axis_row[1]
+            axis.set_title('original curve components\nblue:x, green:y')
+            axis.scatter(closed_time_interval[:-1], points[:,0], color='blue', s=1)
+            axis.scatter(closed_time_interval[:-1], points[:,1], color='green', s=1)
+
+            axis = axis_row[2]
+            axis.set_title('log abs of Fourier coefficients')
+            axis.semilogy(p.frequencies, np.linalg.norm(fc, axis=1), 'o')
+            axis.semilogy(p.frequencies, np.linalg.norm(fc, axis=1), lw=5, alpha=0.2)
+
+            axis = axis_row[3]
+            axis.set_title('reconstructed curve\nmax reconstruction errors: {0}'.format(max_reconstruction_errors))
+            axis.plot(points[:,0], points[:,1], color='blue', lw=5, alpha=0.2)
+            axis.scatter(reconstructed_points[:,0], reconstructed_points[:,1], s=1, color='black')
+            reconstructed_center_point = fc[p.index_of_frequency(0),:]
+            axis.scatter(*reconstructed_center_point)
+            print 'reconstructed_center_point:', reconstructed_center_point
+
+            axis = axis_row[4]
+            axis.set_title('reconstructed curve components\nblue:x, green:y')
+            axis.plot(closed_time_interval[:-1], points[:,0], color='blue', lw=5, alpha=0.2)
+            axis.plot(closed_time_interval[:-1], points[:,1], color='green', lw=5, alpha=0.2)
+            axis.scatter(closed_time_interval[:-1], reconstructed_points[:,0], color='blue', s=1)
+            axis.scatter(closed_time_interval[:-1], reconstructed_points[:,1], color='green', s=1)
+
+        period = 10.0
+        closed_time_interval = np.linspace(0.0, period, 300)
+
+        row_count = 2
+        col_count = 5
+        fig,axis_row_v = plt.subplots(row_count, col_count, squeeze=False, figsize=(10*col_count,10*row_count))
+
+        frequencies = np.linspace(-1, 1, 3, dtype=np.int)
+        process_curve(
+            axis_row_v[0],
+            closed_time_interval,
+            frequencies,
+            np.array([[0.3+np.cos(2*np.pi/period*t), 0.8+np.sin(2*np.pi/period*t)] for t in closed_time_interval[:-1]]),
+            max_expected_error=1.0e-12
+        )
+
+        # Make a nearly-closed loop using Gaussians, and then wrap it back on itself to make it
+        # closed and periodic (this is the outer sum part).
+        fancy_curve = sum(
+            np.exp(np.array([
+                [-0.5*((t-0.4*period-offset)/(0.2*period))**2, -0.5*((t-0.6*period-offset)/(0.2*period))**2]
+                for t in closed_time_interval[:-1]
+            ]))
+            for offset in np.linspace(-4*period, 4*period, 9)
+        )
+
+        frequencies = np.array([-10,-7,-4,-2,-1,0,1,2,4,8]) #np.linspace(-20, 20, 9, dtype=np.int)
+        process_curve(
+            axis_row_v[1],
+            closed_time_interval,
+            frequencies,
+            fancy_curve,
+            max_expected_error=0.0009
+        )
+
+        filename = 'fourier_parameterization.planar.test4.png'
+        plt.savefig(filename, bbox_inches='tight')
+        print 'wrote "{0}"'.format(filename)
+        plt.close(fig)
+
 
     @staticmethod
     def run_all_unit_tests ():
         Planar.test1()
         Planar.test2()
         Planar.test3()
+        Planar.test4()
 
 if __name__ == '__main__':
     Planar.run_all_unit_tests()
