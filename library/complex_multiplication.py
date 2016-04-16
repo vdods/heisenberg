@@ -25,4 +25,8 @@ if __name__ == '__main__':
     # print fancy_product_as_complex
     # print 'difference:', (product-fancy_product_as_complex).simplify()
     assert (product-fancy_product_as_complex).simplify() == 0
-    print 'passed test'
+    print('passed test')
+
+    z = np.array([a,b])
+    print(tensor.contract('ijk,k', complex_multiplication_tensor, z, dtype=object))
+
