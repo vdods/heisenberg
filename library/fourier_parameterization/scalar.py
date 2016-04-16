@@ -3,7 +3,7 @@ import numpy as np
 import tensor
 
 class Scalar:
-    def __init__ (self, frequencies, derivatives, closed_time_interval, dtype=float, tau=2.0*np.pi, cos=np.cos, sin=np.sin):
+    def __init__ (self, frequencies, derivatives, closed_time_interval, dtype=float, tau=2.0*np.pi, cos=np.cos, sin=np.sin, double_nonzero_frequency_basis_functions=True):
         # NOTE: This is designed to be able to work with any type, including e.g. sympy symbols.
         assert len(frequencies.shape) == 1
         assert len(derivatives.shape) == 1
@@ -46,13 +46,14 @@ class Scalar:
         # This is the linear transform taking Fourier coefficients and producing a time-sampled curve.
         # I.e. the linear map from frequency domain to time domain.
         # 2 indicates that there are two coefficients for each (cos,sin) pair
+        # This tensor is indexed as fourier_tensor[t,d,f,c]
         self.fourier_tensor = fourier_tensor = np.ndarray((T,D,F,2), dtype=dtype)
         for t,time in enumerate(half_open_time_interval):
             self.fourier_tensor[t,:,:,:] = Scalar._compute_partial_fourier_tensor(derivatives, frequencies, period, time, dtype, tau, cos, sin)
 
-        # This is the linear transform projecting a time-sampled curve into the space of Fourier
-        # sums spanned by the given frequencies.
-        self.inverse_fourier_tensor = Scalar._compute_inverse_fourier_tensor(frequencies, period, half_open_time_interval, half_open_time_interval_deltas, dtype, tau, cos, sin)
+        # This is the linear transform projecting a time-sampled curve into the space of Fourier sums spanned
+        # by the given frequencies.  This tensor is indexed as inverse_fourier_tensor[f,c,t].
+        self.inverse_fourier_tensor = Scalar._compute_inverse_fourier_tensor(frequencies, period, half_open_time_interval, half_open_time_interval_deltas, dtype, tau, cos, sin, double_nonzero_frequency_basis_functions)
 
     def sample (self, coefficient_tensor, at_t=None, dtype=float):
         assert coefficient_tensor.shape == self.fourier_coefficients_shape, 'expected {0} but got {1}'.format(coefficient_tensor.shape)
@@ -92,7 +93,7 @@ class Scalar:
         return partial_fourier_tensor
 
     @staticmethod
-    def _compute_inverse_fourier_tensor (frequencies, period, half_open_time_interval, half_open_time_interval_deltas, dtype, tau, cos, sin):
+    def _compute_inverse_fourier_tensor (frequencies, period, half_open_time_interval, half_open_time_interval_deltas, dtype, tau, cos, sin, double_nonzero_frequency_basis_functions):
         """
         Computes the linear transformation taking a time-series signal and returning its Fourier coefficients for the specified frequencies.
         """
@@ -106,8 +107,9 @@ class Scalar:
             for t,(time,delta) in enumerate(itertools.izip(half_open_time_interval,half_open_time_interval_deltas)):
                 inverse_fourier_tensor[f,0,t] = cos(omega*frequency*time)*delta/period
                 inverse_fourier_tensor[f,1,t] = sin(omega*frequency*time)*delta/period
-        # Multiply the nonzero frequencies' components by the normalizing factor 2.
-        inverse_fourier_tensor[frequencies!=0,:,:] *= 2
+        if double_nonzero_frequency_basis_functions:
+            # Multiply the nonzero frequencies' components by the normalizing factor 2.
+            inverse_fourier_tensor[frequencies!=0,:,:] *= 2
         # print 'inverse_fourier_tensor:'
         # print inverse_fourier_tensor
         return inverse_fourier_tensor
@@ -297,9 +299,77 @@ class Scalar:
                 test_signal_endomorphism(T)
 
     @staticmethod
+    def test3 ():
+        """
+        Compute the Fourier coefficients of a given function and plot the resampled function.
+        """
+        import matplotlib.pyplot as plt
+        import scipy.signal
+        import sys
+
+        def process_function (axis_row, closed_time_interval, frequencies, samples):
+            assert len(samples.shape) == 1
+            assert len(closed_time_interval) == samples.shape[0]+1
+
+            derivatives = np.array([0])
+            p = Scalar(frequencies, derivatives, closed_time_interval)
+            fc = np.einsum('fct,t->fc', p.inverse_fourier_tensor, samples)
+            assert fc.shape == (p.F,2)
+            print 'mode coefficient for frequency 1:', fc[p.index_of_frequency(1)]
+            reconstructed_samples = np.einsum('tdfc,fc->dt', p.fourier_tensor, fc)
+            # print('reconstructed_samples.shape:', reconstructed_samples.shape)
+            assert reconstructed_samples.shape == (1,p.T)
+            reconstructed_samples = reconstructed_samples[0,:]
+
+            max_reconstruction_error = np.max(np.abs(reconstructed_samples - samples))
+
+            assert len(axis_row) >= 3
+
+            axis = axis_row[0]
+            axis.set_title('original function')
+            axis.plot(p.half_open_time_interval, samples)
+
+            axis = axis_row[1]
+            axis.set_title('log abs of Fourier coefficients')
+            axis.semilogy(p.frequencies, np.linalg.norm(fc, axis=1))
+
+            axis = axis_row[2]
+            axis.set_title('reconstructed function\nmax reconstruction error: {0}'.format(max_reconstruction_error))
+            axis.plot(p.half_open_time_interval, reconstructed_samples)
+
+        period = 10.0
+        closed_time_interval = np.linspace(0.0, period, 1000)
+        frequencies = np.linspace(0, 10, 11, dtype=np.int)
+
+        row_count = 2
+        col_count = 3
+        fig,axis_row_v = plt.subplots(row_count, col_count, squeeze=False, figsize=(10*col_count,10*row_count))
+
+        process_function(
+            axis_row_v[0],
+            closed_time_interval,
+            frequencies,
+            np.array([0.3+np.cos(2*np.pi/period*t) for t in closed_time_interval[:-1]])
+        )
+
+        process_function(
+            axis_row_v[1],
+            closed_time_interval,
+            frequencies,
+            scipy.signal.gaussian(len(closed_time_interval)-1, len(closed_time_interval)//10)
+        )
+
+        filename = 'fourier_parameterization.scalar.test3.png'
+        plt.savefig(filename, bbox_inches='tight')
+        print 'wrote "{0}"'.format(filename)
+        plt.close(fig)
+
+
+    @staticmethod
     def run_all_unit_tests ():
         Scalar.test1()
         Scalar.test2()
+        Scalar.test3()
 
 if __name__ == '__main__':
     Scalar.run_all_unit_tests()
