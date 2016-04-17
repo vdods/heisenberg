@@ -260,7 +260,6 @@ class Planar:
         Compute the Fourier coefficients of a given curve and plot the resampled curve.
         """
         import matplotlib.pyplot as plt
-        import sys
 
         def process_curve (axis_row, closed_time_interval, frequencies, points, max_expected_error=None):
             assert len(points.shape) == 2
@@ -356,13 +355,208 @@ class Planar:
         print 'wrote "{0}"'.format(filename)
         plt.close(fig)
 
+    @staticmethod
+    def test5 ():
+        """Ensure that fourier_tensor and inverse_fourier_tensor actually invert each other in the proper sense."""
+
+        import itertools
+        import matplotlib.pyplot as plt
+        import scipy.linalg
+        import symbolic as sy
+        import sympy as sp
+        import sys
+        import warnings
+
+        warnings.filterwarnings('ignore', module='matplotlib')
+
+        sys.stdout.write('fourier_parameterization.Planar.test5()\n')
+
+        def lerp (start, end, count):
+            for i in xrange(count):
+                yield (start*(count-1-i) + end*i)/(count-1)
+
+        def test_spectrum_endomorphism (frequencies):
+            F = len(frequencies)
+            assert F > 0
+
+            sys.stdout.write('test_spectrum_endomorphism(frequencies={0}) ... '.format(frequencies))
+
+            D = 1
+            derivatives = np.array(range(D))
+            # period = sp.symbols('period')
+            # tau = 2*sp.pi
+            period = 10.0 # arbitrary
+            tau = 2*np.pi
+            # By the Nyquist theorem, the number of time samples must be greater than twice the highest frequency.
+            # But also we need there to be at least as many dimensions in the signal vector space as there
+            # are in the spectrum space (or the spectrum_endomorphism can't hope to be the identity).
+            T = max(2*F-np.sum(frequencies==0), 2*np.max(frequencies)+2) # TODO: Figure out why `np.max(frequencies)*2+2` works and `np.max(frequencies)*2+1` doesn't.
+            # closed_time_interval = np.array(list(lerp(0, period, T+1)))
+            closed_time_interval = np.linspace(0.0, period, T+1)
+
+            fourier_parameterization = Planar(frequencies, derivatives, closed_time_interval, dtype=float, tau=tau, cos=np.cos, sin=np.sin)
+
+            # spectrum_endomorphism = tensor.contract('tdfxc,FctX', fourier_parameterization.fourier_tensor, fourier_parameterization.inverse_fourier_tensor, output='FXdfx', dtype=object)
+            spectrum_endomorphism = np.einsum('tdfxc,FctX->FXdfx', fourier_parameterization.fourier_tensor, fourier_parameterization.inverse_fourier_tensor)
+            assert spectrum_endomorphism.shape == (F,2,D,F,2)
+            spectrum_endomorphism = spectrum_endomorphism[:,:,0,:,:]
+            # spectrum_endomorphism = np.vectorize(sp.simplify)(spectrum_endomorphism)
+
+            cos_coefficient_endomorphism = spectrum_endomorphism[:,0,:,0]
+            cos_to_sin_coefficient_morphism = spectrum_endomorphism[:,0,:,1]
+            sin_to_cos_coefficient_morphism = spectrum_endomorphism[:,1,:,0]
+            sin_coefficient_endomorphism = spectrum_endomorphism[:,1,:,1]
+
+            # print 'cos_coefficient_endomorphism:'
+            # print cos_coefficient_endomorphism
+            # print 'cos_to_sin_coefficient_morphism:'
+            # print cos_to_sin_coefficient_morphism
+            # print 'sin_to_cos_coefficient_morphism:'
+            # print sin_to_cos_coefficient_morphism
+            # print 'sin_coefficient_endomorphism:'
+            # print sin_coefficient_endomorphism
+
+            assert np.all(np.abs(cos_coefficient_endomorphism - np.eye(F, F, dtype=float)) < 1.0e-12)
+
+            # assert np.all(cos_coefficient_endomorphism[:,0,:,0] == np.eye(F, F, dtype=int))
+            # assert np.all(cos_coefficient_endomorphism[:,0,:,1] == 0)
+            # assert np.all(cos_coefficient_endomorphism[:,1,:,0] == 0)
+            # assert np.all(cos_coefficient_endomorphism[:,1,:,1] == np.eye(F, F, dtype=int))
+
+            assert np.all(np.abs(cos_to_sin_coefficient_morphism) < 1.0e-12)
+            assert np.all(np.abs(sin_to_cos_coefficient_morphism) < 1.0e-12)
+
+            assert np.all(np.abs(sin_coefficient_endomorphism - np.eye(F, F, dtype=float)) < 1.0e-12)
+            # expected_diagonal = np.array(map(lambda f:1 if f!=0 else 0, frequencies))
+            # assert np.all(sin_coefficient_endomorphism == np.diag(expected_diagonal))
+
+            sys.stdout.write('passed.\n')
+
+        def test_signal_endomorphism (T):
+            assert T >= 1
+
+            sys.stdout.write('test_signal_endomorphism(T={0}) ... '.format(T))
+
+            D = 1
+            derivatives = np.array(range(D)) # Only use 0th derivative (i.e. position)
+            # Frequencies must be less than T//2, otherwise they'll count double because of aliasing.  The
+            # frequency T//2 in particular will just show up as 0, because it has nodes at every sample.
+            highest_frequency = (T-1)//2
+            # highest_frequency = T//2
+            # frequencies = np.array(range(highest_frequency+1))
+            frequencies = np.array(range(-highest_frequency,highest_frequency+1))
+            # period = sp.symbols('period')
+            # tau = 2*sp.pi
+            period = 10.0
+            tau = 2*np.pi
+            closed_time_interval = np.array(list(lerp(0.0, period, T+1)))
+
+            fourier_parameterization = Planar(frequencies, derivatives, closed_time_interval, dtype=float, tau=tau, cos=np.cos, sin=np.sin)
+
+            # print ''
+            # # print 'fourier_parameterization.fourier_tensor:'
+            # for t in xrange(T):
+            #     print 't:', t, 'time:', closed_time_interval[t]
+            #     print 'fourier_parameterization.fourier_tensor[{0},0,f,c]:'.format(closed_time_interval[t])
+            #     print fourier_parameterization.fourier_tensor[t,0,:,:]
+            #     print 'fourier_parameterization.inverse_fourier_tensor[f,c,{0}]:'.format(closed_time_interval[t])
+            #     print fourier_parameterization.inverse_fourier_tensor[:,:,t]
+            #     print ''
+            # print ''
+
+            # signal_endomorphism = tensor.contract('tdfxc,fcTX', fourier_parameterization.fourier_tensor, fourier_parameterization.inverse_fourier_tensor, output='txdTX', dtype=object)
+            signal_endomorphism = np.einsum('tdfxc,fcTX->txdTX', fourier_parameterization.fourier_tensor, fourier_parameterization.inverse_fourier_tensor)
+            assert signal_endomorphism.shape == (T,2,D,T,2)
+            # signal_endomorphism = signal_endomorphism[:,:,0,:,:].reshape(T*2,T*2)
+            signal_endomorphism = signal_endomorphism[:,:,0,:,:]
+
+            # print 'signal_endomorphism[:,0,:,0]:'
+            # print signal_endomorphism[:,0,:,0]
+            # print 'signal_endomorphism[:,0,:,1]:'
+            # print signal_endomorphism[:,0,:,1]
+            # print 'signal_endomorphism[:,1,:,0]:'
+            # print signal_endomorphism[:,1,:,0]
+            # print 'signal_endomorphism[:,1,:,1]:'
+            # print signal_endomorphism[:,1,:,1]
+
+            assert np.all(np.abs(signal_endomorphism[:,0,:,1]) < 1.0e-12)
+            assert np.all(np.abs(signal_endomorphism[:,1,:,0]) < 1.0e-12)
+
+            retval = []
+            subendomorphism_v = [signal_endomorphism[:,0,:,0], signal_endomorphism[:,1,:,1]]
+            for subendomorphism_index,subendomorphism in enumerate(subendomorphism_v):
+                eigenvalues,eigenvectors = scipy.linalg.eigh(subendomorphism)
+
+                expected_zero_eigenvalues = 1 if T%2==0 else 0
+                actual_zero_eigenvalues = np.sum(np.abs(eigenvalues) < 1.0e-12)
+                expected_one_eigenvalues = T - expected_zero_eigenvalues
+                actual_one_eigenvalues = np.sum(np.abs(eigenvalues-1) < 1.0e-12)
+
+                # print 'eigenvalues of subendomorphism:', eigenvalues
+
+                assert actual_zero_eigenvalues == expected_zero_eigenvalues, 'expected {0} eigenvalues with value [near] 0, but got {1}'.format(expected_zero_eigenvalues, actual_zero_eigenvalues)
+                assert actual_one_eigenvalues == expected_one_eigenvalues, 'expected {0} eigenvalues with value [near] 1, but got {1}'.format(expected_one_eigenvalues, actual_one_eigenvalues)
+
+                if actual_zero_eigenvalues == 1:
+                    zero_eigenvalue_filter = np.abs(eigenvalues) < 1.0e-12
+                    assert sum(zero_eigenvalue_filter) == 1
+                    zero_eigenvalue_index = list(zero_eigenvalue_filter).index(True)
+                    assert np.abs(eigenvalues[zero_eigenvalue_index]) < 1.0e-12
+                    retval.append({
+                        'T':T,
+                        'period':period,
+                        'highest_frequency':highest_frequency,
+                        'signal_domain':fourier_parameterization.half_open_time_interval,
+                        'eigenvector':eigenvectors[:,zero_eigenvalue_index],
+                        'subendomorphism_index':subendomorphism_index,
+                    })
+
+            sys.stdout.write('passed.\n')
+
+            return retval
+
+        if True:
+            for F in xrange(1,6):
+                test_spectrum_endomorphism(np.array(range(-F,F+1)))
+            test_spectrum_endomorphism(np.array([0,2]))
+            test_spectrum_endomorphism(np.array([0,3]))
+            test_spectrum_endomorphism(np.array([1]))
+            test_spectrum_endomorphism(np.array([2]))
+            test_spectrum_endomorphism(np.array([1,3,5]))
+            test_spectrum_endomorphism(np.array([0,3,4]))
+
+        if True:
+            zero_eigenvector_dv = []
+            for T in xrange(4,16):
+                d_v = test_signal_endomorphism(T)
+                if d_v is not None:
+                    zero_eigenvector_dv.extend(d_v)
+
+            row_count = len(zero_eigenvector_dv)
+            col_count = 1
+            fig,axes = plt.subplots(row_count, col_count, squeeze=False, figsize=(5*col_count, 3*row_count))
+
+            for zero_eigenvector_index,zero_eigenvector_d in enumerate(zero_eigenvector_dv):
+                axis = axes[zero_eigenvector_index][0]
+                axis.set_title('zero eigenvector for T: {0}\nhighest frequency: {1}\nsubendomorphism_index: {2}'.format(zero_eigenvector_d['T'], zero_eigenvector_d['highest_frequency'], zero_eigenvector_d['subendomorphism_index']))
+                signal_domain = zero_eigenvector_d['signal_domain']
+                eigenvector = zero_eigenvector_d['eigenvector']
+                axis.plot(signal_domain, eigenvector)
+                axis.set_xlim(0.0, zero_eigenvector_d['period'])
+
+            fig.tight_layout()
+            filename = 'fourier_parameterization.planar.test5.png'
+            plt.savefig(filename, bbox_inches='tight')
+            print 'wrote "{0}"'.format(filename)
+            plt.close(fig)
 
     @staticmethod
     def run_all_unit_tests ():
-        Planar.test1()
-        Planar.test2()
-        Planar.test3()
-        Planar.test4()
+        # Planar.test1()
+        # Planar.test2()
+        # Planar.test3()
+        # Planar.test4()
+        Planar.test5()
 
 if __name__ == '__main__':
     Planar.run_all_unit_tests()
