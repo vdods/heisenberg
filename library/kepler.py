@@ -7,6 +7,7 @@ import numpy as np
 import multiindex
 import symbolic
 import sympy
+import tensor
 
 class KeplerProblemContext:
     def __init__ (self, T=100, F=10, use_constraint=True):
@@ -85,13 +86,16 @@ class KeplerProblemContext:
         g = symbolic.variable('g')
         # lm is the lagrange multiplier
         lm = symbolic.variable('lm')
+        # qv is the q and v variables in one array
+        self.qv = qv = np.array(list(q) + list(v))
         # P is all variables
         self.P = P = np.array(list(q) + list(v) + [g, lm])
 
         # U is potential energy
         # U = -g / sympy.sqrt(np.sum(np.square(q)))
         U = -1 / sympy.sqrt(np.sum(np.square(q)))
-        # K is kinetic energy
+        # K is kinetic energy -- NOTE: There is unit mass, so the momentum is the same as the velocity.
+        # This fact is used in defining the Hamiltonian vector field.
         K = np.sum(np.square(v)) / 2
         # H is total energy (Hamiltonian)
         H = K + U
@@ -101,6 +105,14 @@ class KeplerProblemContext:
         self.H_0 = H_0 = -1.8
         # This is the constraint.  The extra division is used to act as a metric on the lagrange multiplier coordinate.
         C = (H - H_0)**2 / 2 / 100
+
+        # Construct the Hamiltonian vector field of H.
+        dH = symbolic.D(H, qv)
+        omega = np.zeros((2*X,2*X), dtype=np.int)
+        omega[0:X,X:2*X] =  np.eye(X,X)
+        omega[X:2*X,0:X] = -np.eye(X,X)
+        # Symplectic gradient of H, aka the Hamiltonian vector field.
+        X_H = tensor.contract('ij,j', omega, dH, dtype=object)
 
         # DL = symbolic.D(L, P)
         # # DH = symbolic.D(H, P)
@@ -131,6 +143,7 @@ class KeplerProblemContext:
         # self.DH = symbolic.lambdify(DH, P, replacement_d=replacement_d)
 
         self.H = symbolic.lambdify(H, P, replacement_d=replacement_d)
+        self.X_H = symbolic.lambdify(X_H, qv, replacement_d=replacement_d)
         self.Lambda_integrand = symbolic.lambdify(Lambda_integrand, P, replacement_d=replacement_d)
         self.DLambda_integrand = symbolic.lambdify(DLambda_integrand, P, replacement_d=replacement_d)
         self.Obj_integrand = symbolic.lambdify(Obj_integrand, P, replacement_d=replacement_d)
@@ -219,7 +232,7 @@ class KeplerProblemContext:
         return self.time_domain_variation_pullback_at_t(self.DLambda_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters)), t)
 
     def DLambda (self, frequency_domain_parameters, batch_t_v=None):
-        if batch_t_v == None:
+        if batch_t_v is None:
             batch_t_v = xrange(self.fourier_curve_parameterization.T)
             batch_size = self.fourier_curve_parameterization.T
         else:
@@ -249,7 +262,7 @@ class KeplerProblemContext:
         return self.time_domain_variation_pullback_at_t(self.DObj_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters)), t)
 
     def DObj (self, frequency_domain_parameters, batch_t_v=None):
-        if batch_t_v == None:
+        if batch_t_v is None:
             batch_t_v = xrange(self.fourier_curve_parameterization.T)
             batch_size = self.fourier_curve_parameterization.T
         else:
@@ -271,3 +284,89 @@ class KeplerProblemContext:
                 for t in xrange(self.fourier_curve_parameterization.T)
             ])
         )
+
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+    import scipy.integrate
+    import warnings
+
+    warnings.filterwarnings('ignore', module='matplotlib')
+
+    kpc = KeplerProblemContext()
+
+    time = np.linspace(0.0, 6.0, 1000)
+    qv_0 = np.array([1.5, 0.0, 0.0, 0.5])
+    qv = scipy.integrate.odeint(lambda qv,t:kpc.X_H(qv), qv_0, time)
+
+    # TODO: Use distance squared, then fit a parabola near the min and solve
+    # for a better approximation of the min using subsample accuracy.
+    jet_dist = np.linalg.norm(qv - qv_0, axis=1)
+    local_min_index_v = filter(lambda i:jet_dist[i-1] > jet_dist[i] and jet_dist[i] < jet_dist[i+1], xrange(1,len(jet_dist)-2))
+    print('locally minimizing jet-distances:')
+    for local_min_index in local_min_index_v:
+        print('    index: {0:3}, time: {1:17}, jet_dist: {2:17}'.format(local_min_index, time[local_min_index], jet_dist[local_min_index]))
+    assert len(local_min_index_v) > 0
+    assert local_min_index_v[0] > 0
+    estimated_period_time_index = local_min_index_v[0]
+    estimated_period = time[estimated_period_time_index]
+
+    H_v = np.apply_along_axis(kpc.H, 1, np.hstack((qv, np.zeros((qv.shape[0],2), dtype=float))))
+
+    row_count = 2
+    col_count = 3
+    fig,axes = plt.subplots(row_count, col_count, squeeze=False, figsize=(8*col_count,8*row_count))
+
+    axis = axes[0][0]
+    axis.set_title('position')
+    axis.scatter(qv[:,0], qv[:,1], s=1)
+    axis.set_aspect('equal')
+    axis.scatter([0], [0], color='black')
+
+    axis = axes[0][1]
+    axis.set_title('velocity')
+    axis.scatter(qv[:,2], qv[:,3], s=1)
+    axis.set_aspect('equal')
+    axis.scatter([0], [0], color='black')
+
+    axis = axes[1][0]
+    axis.set_title('jet distance from initial condition\nestimated period: {0}'.format(estimated_period))
+    for local_min_index in local_min_index_v:
+        axis.axvline(time[local_min_index])
+    axis.plot(time, jet_dist)
+
+    axis = axes[1][1]
+    axis.set_title('Hamiltonian w.r.t. time\nmin-to-max range: {0}'.format(np.max(H_v)-np.min(H_v)))
+    axis.plot(time, H_v)
+
+    frequencies = np.linspace(-40, 40, 40+40+1, dtype=int)
+    derivatives = np.array([0])
+    fp = fourier_parameterization.Planar(frequencies, derivatives, time[:estimated_period_time_index+1])
+    fc = np.einsum('fctx,tx->fc', fp.inverse_fourier_tensor, qv[:estimated_period_time_index,0:2])
+    reconstructed_q = np.einsum('tdfxc,fc->dtx', fp.fourier_tensor, fc)
+    assert reconstructed_q.shape[0] == 1
+    reconstructed_q = reconstructed_q[0,:,:]
+
+    max_expected_error = 1.0e-3
+    max_reconstruction_errors = np.max(np.abs(reconstructed_q-qv[:estimated_period_time_index,0:2]), axis=0)
+    print 'max_reconstruction_errors:', max_reconstruction_errors
+    if max_expected_error is not None:
+        assert np.all(max_reconstruction_errors <= max_expected_error), 'at least one component of max_reconstruction_errors ({0}) exceeded max_expected_error ({1})'.format(max_reconstruction_errors, max_expected_error)
+
+    axis = axes[0][2]
+    axis.set_title('reconstructed position\nmax reconstruction error: {0}'.format(np.max(max_reconstruction_errors)))
+    axis.plot(qv[:,0], qv[:,1], lw=5, color='green', alpha=0.2)
+    axis.scatter(reconstructed_q[:,0], reconstructed_q[:,1], s=1)
+    axis.set_aspect('equal')
+    axis.scatter([0], [0], color='black')
+
+    axis = axes[1][2]
+    axis.set_title('log abs of Fourier coefficients')
+    axis.semilogy(fp.frequencies, np.linalg.norm(fc, axis=1), 'o')
+    axis.semilogy(fp.frequencies, np.linalg.norm(fc, axis=1), lw=5, alpha=0.2)
+
+    fig.tight_layout()
+    filename = 'kepler.test.png'
+    plt.savefig(filename)
+    print('wrote "{0}"'.format(filename))
+    plt.close(fig)
+
