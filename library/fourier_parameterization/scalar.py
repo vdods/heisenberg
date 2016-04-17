@@ -153,10 +153,14 @@ class Scalar:
 
     @staticmethod
     def test2 ():
+        import matplotlib.pyplot as plt
         import scipy.linalg
         import symbolic as sy
         import sympy as sp
         import sys
+        import warnings
+
+        warnings.filterwarnings('ignore', module='matplotlib')
 
         sys.stdout.write('fourier_parameterization.Scalar.test2()\n')
 
@@ -224,11 +228,14 @@ class Scalar:
             # frequency T//2 in particular will just show up as 0, because it has nodes at every sample.
             highest_frequency = (T-1)//2
             frequencies = np.array(range(highest_frequency+1))
-            period = sp.symbols('period')
-            tau = 2*sp.pi
-            closed_time_interval = np.array(list(lerp(0, period, T+1)))
+            # period = sp.symbols('period')
+            # tau = 2*sp.pi
+            period = 10.0 # arbitrary
+            tau = 2*np.pi
+            # closed_time_interval = np.array(list(lerp(0, period, T+1)))
+            closed_time_interval = np.linspace(0.0, period, T+1)
 
-            fourier_parameterization = Scalar(frequencies, derivatives, closed_time_interval, dtype=object, tau=tau, cos=sp.cos, sin=sp.sin)
+            fourier_parameterization = Scalar(frequencies, derivatives, closed_time_interval, dtype=float, tau=tau, cos=np.cos, sin=np.sin)
 
             # print ''
             # # print 'fourier_parameterization.fourier_tensor:'
@@ -241,12 +248,14 @@ class Scalar:
             #     print ''
             # print ''
 
-            signal_endomorphism = tensor.contract('tdfc,fcT', fourier_parameterization.fourier_tensor, fourier_parameterization.inverse_fourier_tensor, output='tdT', dtype=object)
+            # signal_endomorphism = tensor.contract('tdfc,fcT', fourier_parameterization.fourier_tensor, fourier_parameterization.inverse_fourier_tensor, output='tdT', dtype=object)
+            signal_endomorphism = np.einsum('tdfc,fcT->tdT', fourier_parameterization.fourier_tensor, fourier_parameterization.inverse_fourier_tensor)
             assert signal_endomorphism.shape == (T,D,T)
-            signal_endomorphism = signal_endomorphism[:,0,:].astype(float)
+            signal_endomorphism = signal_endomorphism[:,0,:]
             # signal_endomorphism = np.vectorize(sp.simplify)(signal_endomorphism)
 
-            eigenvalues = scipy.linalg.eigh(signal_endomorphism, eigvals_only=True)
+            # The eigenvectors are the columns.
+            eigenvalues,eigenvectors = scipy.linalg.eigh(signal_endomorphism)
 
             # print 'signal_endomorphism:'
             # print signal_endomorphism
@@ -262,6 +271,21 @@ class Scalar:
 
             sys.stdout.write('passed.\n')
 
+            if actual_zero_eigenvalues == 1:
+                zero_eigenvalue_filter = np.abs(eigenvalues) < 1.0e-12
+                assert sum(zero_eigenvalue_filter) == 1
+                zero_eigenvalue_index = list(zero_eigenvalue_filter).index(True)
+                assert np.abs(eigenvalues[zero_eigenvalue_index]) < 1.0e-12
+                return {
+                    'T':T,
+                    'period':period,
+                    'highest_frequency':highest_frequency,
+                    'signal_domain':fourier_parameterization.half_open_time_interval,
+                    'eigenvector':eigenvectors[:,zero_eigenvalue_index],
+                }
+            else:
+                return None
+
         if True:
             for F in xrange(1,6):
                 test_spectrum_endomorphism(np.array(range(F+1)))
@@ -273,8 +297,29 @@ class Scalar:
             test_spectrum_endomorphism(np.array([0,3,4]))
 
         if True:
+            zero_eigenvector_dv = []
             for T in xrange(4,16):
-                test_signal_endomorphism(T)
+                d = test_signal_endomorphism(T)
+                if d is not None:
+                    zero_eigenvector_dv.append(d)
+
+            row_count = len(zero_eigenvector_dv)
+            col_count = 1
+            fig,axes = plt.subplots(row_count, col_count, squeeze=False, figsize=(5*col_count, 3*row_count))
+
+            for zero_eigenvector_index,zero_eigenvector_d in enumerate(zero_eigenvector_dv):
+                axis = axes[zero_eigenvector_index][0]
+                axis.set_title('zero eigenvector for T: {0}\nhighest frequency: {1}'.format(zero_eigenvector_d['T'], zero_eigenvector_d['highest_frequency']))
+                signal_domain = zero_eigenvector_d['signal_domain']
+                eigenvector = zero_eigenvector_d['eigenvector']
+                axis.plot(signal_domain, eigenvector)
+                axis.set_xlim(0.0, zero_eigenvector_d['period'])
+
+            fig.tight_layout()
+            filename = 'fourier_parameterization.scalar.test2.png'
+            plt.savefig(filename, bbox_inches='tight')
+            print 'wrote "{0}"'.format(filename)
+            plt.close(fig)
 
     @staticmethod
     def test3 ():
