@@ -552,10 +552,10 @@ class Planar:
 
     @staticmethod
     def run_all_unit_tests ():
-        # Planar.test1()
-        # Planar.test2()
-        # Planar.test3()
-        # Planar.test4()
+        Planar.test1()
+        Planar.test2()
+        Planar.test3()
+        Planar.test4()
         Planar.test5()
 
 if __name__ == '__main__':
