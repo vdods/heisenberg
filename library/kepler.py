@@ -9,20 +9,100 @@ import symbolic
 import sympy
 import tensor
 
-class KeplerProblemContext:
-    def __init__ (self, T=100, F=10, use_constraint=True):
-        # Dimension of configuration space Q
-        self.X = X = 2
-        # Number of derivatives in phase space (2, i.e. position and velocity)
-        self.D = D = 2
+class KeplerProblemSymbolicContext:
+    def __init__ (self, configuration_space_dimension, use_constraint=True):
+        """
+        Use sympy to define various functions and automatically compute their derivatives, crunching
+        them down to (probably efficient) Python lambda functions.
+        """
+
+        assert configuration_space_dimension > 0
+        self.X = X = configuration_space_dimension
         # Indicates if the constraint should be used or not.
         self.use_constraint = use_constraint
 
-        self.generate_functions()
+        # q is position
+        q = symbolic.tensor('q', (X,))
+        # v is velocity
+        v = symbolic.tensor('v', (X,))
+        # g is gravitational constant
+        g = symbolic.variable('g')
+        # lm is the lagrange multiplier
+        lm = symbolic.variable('lm')
+        # qv is the q and v variables in one array
+        self.qv = qv = np.array(list(q) + list(v))
+        # P is all variables
+        self.P = P = np.array(list(q) + list(v) + [g, lm])
 
+        # U is potential energy
+        # U = -g / sympy.sqrt(np.sum(np.square(q)))
+        U = -1 / sympy.sqrt(np.sum(np.square(q)))
+        # K is kinetic energy -- NOTE: There is unit mass, so the momentum is the same as the velocity.
+        # This fact is used in defining the Hamiltonian vector field.
+        K = np.sum(np.square(v)) / 2
+        # H is total energy (Hamiltonian)
+        H = K + U
+        # L is the difference in energy (Lagrangian)
+        L = K - U
+        # H_0 is the constant value which defines the constraint (that the Hamiltonian must equal that at all times)
+        self.H_0 = H_0 = -1.8
+        # This is the constraint.  The extra division is used to act as a metric on the lagrange multiplier coordinate.
+        C = (H - H_0)**2 / 2 / 100
+
+        # Construct the Hamiltonian vector field of H.
+        dH = symbolic.D(H, qv)
+        # Construct the symplectic form on phase space.
+        omega = np.zeros((2*X,2*X), dtype=np.int)
+        omega[0:X,X:2*X] =  np.eye(X,X)
+        omega[X:2*X,0:X] = -np.eye(X,X)
+        # Symplectic gradient of H, aka the Hamiltonian vector field.
+        X_H = tensor.contract('ij,j', omega, dH, dtype=object)
+
+        # DL = symbolic.D(L, P)
+        # # DH = symbolic.D(H, P)
+        # DC = symbolic.D(C, P)
+
+        # This is the integrand of the action functional
+        Lambda_integrand = L #+ lm*C
+        # This is the integrand of the first variation of the action
+        DLambda_integrand = symbolic.D(Lambda_integrand, P)
+        # This is the integrand for the constraint functional
+        C_integrand = C
+
+        # Solving the constrained optimization problem by minimizing the norm squared of DLambda.
+        # DDLambda_integrand = symbolic.D(DLambda_integrand, P)
+        Obj_integrand = (np.sum(np.square(DLambda_integrand))/2)#.simplify()
+        DObj_integrand = symbolic.D(Obj_integrand, P)
+        # print 'Obj_integrand =', Obj_integrand
+        # print ''
+        # print 'DObj_integrand =', DObj_integrand
+        # print ''
+
+        replacement_d = {'dtype=object':'dtype=float'}
+
+        # self.L = symbolic.lambdify(L, P, replacement_d=replacement_d)
+        # self.DL = symbolic.lambdify(DL, P, replacement_d=replacement_d)
+        # self.DDL = symbolic.lambdify(DDL, P, replacement_d=replacement_d)
+        # self.H = symbolic.lambdify(H, P, replacement_d=replacement_d)
+        # self.DH = symbolic.lambdify(DH, P, replacement_d=replacement_d)
+
+        self.H = symbolic.lambdify(H, P, replacement_d=replacement_d)
+        self.X_H = symbolic.lambdify(X_H, qv, replacement_d=replacement_d)
+        self.Lambda_integrand = symbolic.lambdify(Lambda_integrand, P, replacement_d=replacement_d)
+        self.DLambda_integrand = symbolic.lambdify(DLambda_integrand, P, replacement_d=replacement_d)
+        self.Obj_integrand = symbolic.lambdify(Obj_integrand, P, replacement_d=replacement_d)
+        self.DObj_integrand = symbolic.lambdify(DObj_integrand, P, replacement_d=replacement_d)
+        self.C_integrand = symbolic.lambdify(C_integrand, P, replacement_d=replacement_d)
+
+class KeplerProblemContext(KeplerProblemSymbolicContext):
+    def __init__ (self, closed_time_interval, frequencies, use_constraint=True):
+        # Call superclass constructor.
+        KeplerProblemSymbolicContext.__init__(self, 2, use_constraint=use_constraint)
+
+        # Number of derivatives in phase space (2, i.e. position and velocity)
+        self.D = D = 2
         # self.fourier_curve_parameterization = FourierCurveParameterization(period=1.0, F=F, T=T, D=D)
-        period = 1.0
-        self.fourier_curve_parameterization = fourier_parameterization.Planar(np.array(range(-F,F+1)), np.array(range(D)), np.linspace(0.0, period, T+1))
+        self.fourier_curve_parameterization = fourier_parameterization.Planar(frequencies, np.array(range(D)), closed_time_interval)
         # self.riemann_sum_factor = self.fourier_curve_parameterization.period / self.fourier_curve_parameterization.T
 
         # 2 indicates that there are two coefficients for each (cos,sin) pair
@@ -66,89 +146,6 @@ class KeplerProblemContext:
         # altogether, and will no longer be views into euler_lagrange_form_buffer.
         fd_fc,fd_g,fd_lm = self.frequency_domain_views(frequency_domain_parameters)
         return frequency_domain_parameters,fd_fc,fd_g,fd_lm
-
-    def generate_functions (self, X=2):
-        """
-        Use sympy to define various functions and automatically compute their derivatives, crunching
-        them down to (probably efficient) Python lambda functions.
-
-        X is the dimension of the configuration space.
-        """
-
-        assert X > 0
-        self.X = X
-
-        # q is position
-        q = symbolic.tensor('q', (X,))
-        # v is velocity
-        v = symbolic.tensor('v', (X,))
-        # g is gravitational constant
-        g = symbolic.variable('g')
-        # lm is the lagrange multiplier
-        lm = symbolic.variable('lm')
-        # qv is the q and v variables in one array
-        self.qv = qv = np.array(list(q) + list(v))
-        # P is all variables
-        self.P = P = np.array(list(q) + list(v) + [g, lm])
-
-        # U is potential energy
-        # U = -g / sympy.sqrt(np.sum(np.square(q)))
-        U = -1 / sympy.sqrt(np.sum(np.square(q)))
-        # K is kinetic energy -- NOTE: There is unit mass, so the momentum is the same as the velocity.
-        # This fact is used in defining the Hamiltonian vector field.
-        K = np.sum(np.square(v)) / 2
-        # H is total energy (Hamiltonian)
-        H = K + U
-        # L is the difference in energy (Lagrangian)
-        L = K - U
-        # H_0 is the constant value which defines the constraint (that the Hamiltonian must equal that at all times)
-        self.H_0 = H_0 = -1.8
-        # This is the constraint.  The extra division is used to act as a metric on the lagrange multiplier coordinate.
-        C = (H - H_0)**2 / 2 / 100
-
-        # Construct the Hamiltonian vector field of H.
-        dH = symbolic.D(H, qv)
-        omega = np.zeros((2*X,2*X), dtype=np.int)
-        omega[0:X,X:2*X] =  np.eye(X,X)
-        omega[X:2*X,0:X] = -np.eye(X,X)
-        # Symplectic gradient of H, aka the Hamiltonian vector field.
-        X_H = tensor.contract('ij,j', omega, dH, dtype=object)
-
-        # DL = symbolic.D(L, P)
-        # # DH = symbolic.D(H, P)
-        # DC = symbolic.D(C, P)
-
-        # This is the integrand of the action functional
-        Lambda_integrand = L #+ lm*C
-        # This is the integrand of the first variation of the action
-        DLambda_integrand = symbolic.D(Lambda_integrand, P)
-        # This is the integrand for the constraint functional
-        C_integrand = C
-
-        # Solving the constrained optimization problem by minimizing the norm squared of DLambda.
-        # DDLambda_integrand = symbolic.D(DLambda_integrand, P)
-        Obj_integrand = (np.sum(np.square(DLambda_integrand))/2)#.simplify()
-        DObj_integrand = symbolic.D(Obj_integrand, P)
-        # print 'Obj_integrand =', Obj_integrand
-        # print ''
-        # print 'DObj_integrand =', DObj_integrand
-        # print ''
-
-        replacement_d = {'dtype=object':'dtype=float'}
-
-        # self.L = symbolic.lambdify(L, P, replacement_d=replacement_d)
-        # self.DL = symbolic.lambdify(DL, P, replacement_d=replacement_d)
-        # self.DDL = symbolic.lambdify(DDL, P, replacement_d=replacement_d)
-        # self.H = symbolic.lambdify(H, P, replacement_d=replacement_d)
-        # self.DH = symbolic.lambdify(DH, P, replacement_d=replacement_d)
-
-        self.H = symbolic.lambdify(H, P, replacement_d=replacement_d)
-        self.X_H = symbolic.lambdify(X_H, qv, replacement_d=replacement_d)
-        self.Lambda_integrand = symbolic.lambdify(Lambda_integrand, P, replacement_d=replacement_d)
-        self.DLambda_integrand = symbolic.lambdify(DLambda_integrand, P, replacement_d=replacement_d)
-        self.Obj_integrand = symbolic.lambdify(Obj_integrand, P, replacement_d=replacement_d)
-        self.DObj_integrand = symbolic.lambdify(DObj_integrand, P, replacement_d=replacement_d)
-        self.C_integrand = symbolic.lambdify(C_integrand, P, replacement_d=replacement_d)
 
     def time_domain_views (self, time_domain_parameters):
         """
@@ -294,11 +291,11 @@ if __name__ == '__main__':
 
     warnings.filterwarnings('ignore', module='matplotlib')
 
-    kpc = KeplerProblemContext()
+    kpsc = KeplerProblemSymbolicContext(2, use_constraint=False)
 
     time = np.linspace(0.0, 6.0, 20000)
     qv_0 = np.array([1.5, 0.0, 0.0, 0.5])
-    qv = scipy.integrate.odeint(lambda qv,t:kpc.X_H(qv), qv_0, time)
+    qv = scipy.integrate.odeint(lambda qv,t:kpsc.X_H(qv), qv_0, time)
 
     # TODO: Use distance squared, then fit a parabola near the min and solve
     # for a better approximation of the min using subsample accuracy.
@@ -333,7 +330,7 @@ if __name__ == '__main__':
     # Re-run the ODE integrator using the estimated period.
     time = np.linspace(0.0, estimated_period, 10001)
     # qv_0 is unchanged.
-    qv = scipy.integrate.odeint(lambda qv,t:kpc.X_H(qv), qv_0, time)
+    qv = scipy.integrate.odeint(lambda qv,t:kpsc.X_H(qv), qv_0, time)
 
     # Re-sample time and qv to be sparser.
     time = time[::10]
@@ -345,7 +342,7 @@ if __name__ == '__main__':
 
     # estimated_period = time[estimated_period_time_index]
 
-    H_v = np.apply_along_axis(kpc.H, 1, np.hstack((qv, np.zeros((qv.shape[0],2), dtype=float))))
+    H_v = np.apply_along_axis(kpsc.H, 1, np.hstack((qv, np.zeros((qv.shape[0],2), dtype=float))))
 
     row_count = 2
     col_count = 3
@@ -379,6 +376,20 @@ if __name__ == '__main__':
     # fc = np.einsum('fctx,tx->fc', fp.inverse_fourier_tensor, qv[:estimated_period_time_index,0:2])
     fp = fourier_parameterization.Planar(frequencies, derivatives, time)
     fc = np.einsum('fctx,tx->fc', fp.inverse_fourier_tensor, qv[:,0:2])
+
+    pickle_filename = 'kepler.pickle'
+    with open(pickle_filename, 'wb') as f:
+        import pickle
+        pickle.dump(
+            {
+                'frequencies':fp.frequencies,
+                'period':fp.period,
+                'fourier_coefficient_tensor':fc
+            },
+            f
+        )
+        print 'wrote "{0}"'.format(pickle_filename)
+
     reconstructed_q = np.einsum('tdfxc,fc->dtx', fp.fourier_tensor, fc)
     assert reconstructed_q.shape[0] == 1
     reconstructed_q = reconstructed_q[0,:,:]
