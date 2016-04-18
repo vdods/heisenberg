@@ -287,28 +287,63 @@ class KeplerProblemContext:
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
+    import polynomial
     import scipy.integrate
+    import scipy.signal
     import warnings
 
     warnings.filterwarnings('ignore', module='matplotlib')
 
     kpc = KeplerProblemContext()
 
-    time = np.linspace(0.0, 6.0, 1000)
+    time = np.linspace(0.0, 6.0, 20000)
     qv_0 = np.array([1.5, 0.0, 0.0, 0.5])
     qv = scipy.integrate.odeint(lambda qv,t:kpc.X_H(qv), qv_0, time)
 
     # TODO: Use distance squared, then fit a parabola near the min and solve
     # for a better approximation of the min using subsample accuracy.
-    jet_dist = np.linalg.norm(qv - qv_0, axis=1)
-    local_min_index_v = filter(lambda i:jet_dist[i-1] > jet_dist[i] and jet_dist[i] < jet_dist[i+1], xrange(1,len(jet_dist)-2))
-    print('locally minimizing jet-distances:')
+    jet_dist_squared = np.sum(np.square(qv - qv_0), axis=1)
+    local_min_index_v = filter(lambda i:jet_dist_squared[i-1] > jet_dist_squared[i] and jet_dist_squared[i] < jet_dist_squared[i+1], xrange(1,len(jet_dist_squared)-2))
+    print('locally minimizing jet-distances-squared:')
     for local_min_index in local_min_index_v:
-        print('    index: {0:3}, time: {1:17}, jet_dist: {2:17}'.format(local_min_index, time[local_min_index], jet_dist[local_min_index]))
+        print('    index: {0:3}, time: {1:17}, jet_dist_squared: {2:17}'.format(local_min_index, time[local_min_index], jet_dist_squared[local_min_index]))
     assert len(local_min_index_v) > 0
     assert local_min_index_v[0] > 0
     estimated_period_time_index = local_min_index_v[0]
-    estimated_period = time[estimated_period_time_index]
+    assert 5 < estimated_period_time_index < len(time)-5
+    if True:
+        # Subtracting the center of the time window is necessary for the polynomial fit to be numerically stable.
+        time_offset = time[estimated_period_time_index]
+        time_window = time[estimated_period_time_index-5:estimated_period_time_index+6] - time_offset
+        jet_dist_squared_window = jet_dist_squared[estimated_period_time_index-5:estimated_period_time_index+6]
+        samples = np.vstack((time_window, jet_dist_squared_window)).T
+        # Fit a quadratic polynomial
+        coefficients = polynomial.fit(samples, 2)
+        quadratically_approximated = np.vectorize(polynomial.python_function_from_coefficients(coefficients))(time_window)
+        max_abs_approximation_error = np.max(np.abs(quadratically_approximated - jet_dist_squared_window))
+        print 'max_abs_approximation_error for jet_dist_squared near minimum:', max_abs_approximation_error
+        assert coefficients[2] > 0.0
+        # Solve for the critical point, adding back in the time offset that was subtracted.
+        estimated_period = -0.5 * coefficients[1] / coefficients[2] + time_offset
+        print 'estimated_period:', estimated_period
+
+    # Save the old time for plotting.
+    old_time = time
+
+    # Re-run the ODE integrator using the estimated period.
+    time = np.linspace(0.0, estimated_period, 10001)
+    # qv_0 is unchanged.
+    qv = scipy.integrate.odeint(lambda qv,t:kpc.X_H(qv), qv_0, time)
+
+    # Re-sample time and qv to be sparser.
+    time = time[::10]
+    assert len(time) == 1001
+    qv = qv[::10,:]
+    assert qv.shape == (1001,4)
+    qv = qv[:-1,:]
+    assert qv.shape == (1000,4)
+
+    # estimated_period = time[estimated_period_time_index]
 
     H_v = np.apply_along_axis(kpc.H, 1, np.hstack((qv, np.zeros((qv.shape[0],2), dtype=float))))
 
@@ -331,23 +366,25 @@ if __name__ == '__main__':
     axis = axes[1][0]
     axis.set_title('jet distance from initial condition\nestimated period: {0}'.format(estimated_period))
     for local_min_index in local_min_index_v:
-        axis.axvline(time[local_min_index])
-    axis.plot(time, jet_dist)
+        axis.axvline(old_time[local_min_index])
+    axis.plot(old_time, jet_dist_squared)
 
     axis = axes[1][1]
     axis.set_title('Hamiltonian w.r.t. time\nmin-to-max range: {0}'.format(np.max(H_v)-np.min(H_v)))
-    axis.plot(time, H_v)
+    axis.plot(time[:-1], H_v)
 
     frequencies = np.linspace(-40, 40, 40+40+1, dtype=int)
     derivatives = np.array([0])
-    fp = fourier_parameterization.Planar(frequencies, derivatives, time[:estimated_period_time_index+1])
-    fc = np.einsum('fctx,tx->fc', fp.inverse_fourier_tensor, qv[:estimated_period_time_index,0:2])
+    # fp = fourier_parameterization.Planar(frequencies, derivatives, time[:estimated_period_time_index+1])
+    # fc = np.einsum('fctx,tx->fc', fp.inverse_fourier_tensor, qv[:estimated_period_time_index,0:2])
+    fp = fourier_parameterization.Planar(frequencies, derivatives, time)
+    fc = np.einsum('fctx,tx->fc', fp.inverse_fourier_tensor, qv[:,0:2])
     reconstructed_q = np.einsum('tdfxc,fc->dtx', fp.fourier_tensor, fc)
     assert reconstructed_q.shape[0] == 1
     reconstructed_q = reconstructed_q[0,:,:]
 
     max_expected_error = 1.0e-3
-    max_reconstruction_errors = np.max(np.abs(reconstructed_q-qv[:estimated_period_time_index,0:2]), axis=0)
+    max_reconstruction_errors = np.max(np.abs(reconstructed_q-qv[:,0:2]), axis=0)
     print 'max_reconstruction_errors:', max_reconstruction_errors
     if max_expected_error is not None:
         assert np.all(max_reconstruction_errors <= max_expected_error), 'at least one component of max_reconstruction_errors ({0}) exceeded max_expected_error ({1})'.format(max_reconstruction_errors, max_expected_error)
