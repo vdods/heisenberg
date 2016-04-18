@@ -1,8 +1,14 @@
+import itertools
 import numpy as np
 
 def geometric (x, degree):
     """Returns the geometric series (1, x, x**2, ..., x**degree) as a numpy.ndarray."""
     return np.fromiter((x**d for d in xrange(degree+1)), type(x), count=degree+1)
+
+def python_function_from_coefficients (coefficients):
+    def python_function (x):
+        return np.dot(coefficients, geometric(x,len(coefficients)-1))
+    return python_function
 
 def fit (samples, degree, sample_weights=None):
     """
