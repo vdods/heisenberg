@@ -1,6 +1,22 @@
 import numpy as np
 import random
 
+class BlindGradientDescent:
+    def __init__ (self, obj, Dobj, initial_parameters, learning_rate):
+        self.obj = obj
+        self.Dobj = Dobj
+        self.learning_rate = learning_rate
+        self.obj_history_v = [obj(initial_parameters)]
+        self.__next_step = np.ndarray((len(initial_parameters),), dtype=float)
+
+    def compute_next_step (self, current_parameters, compute_obj=False):
+        step_direction = self.Dobj(current_parameters)
+        self.__next_step[:] = current_parameters - self.learning_rate*step_direction
+        if compute_obj:
+            obj_next_step = self.obj(self.__next_step)
+            self.obj_history_v.append(obj_next_step)
+        return self.__next_step
+
 class GradientDescent:
     def __init__ (self, obj, Dobj, initial_parameters, learning_rate_v):
         self.obj = obj
