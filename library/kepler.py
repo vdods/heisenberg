@@ -71,8 +71,11 @@ class KeplerProblemSymbolicContext:
 
         # Solving the constrained optimization problem by minimizing the norm squared of DLambda.
         # DDLambda_integrand = symbolic.D(DLambda_integrand, P)
-        Obj_integrand = (np.sum(np.square(DLambda_integrand))/2)#.simplify()
-        DObj_integrand = symbolic.D(Obj_integrand, P)
+        # Obj_integrand = (np.sum(np.square(DLambda_integrand))/2)#.simplify()
+        # DObj_integrand = symbolic.D(Obj_integrand, P)
+        assert not use_constraint
+        Obj_integrand = Lambda_integrand
+        DObj_integrand = DLambda_integrand
         # print 'Obj_integrand =', Obj_integrand
         # print ''
         # print 'DObj_integrand =', DObj_integrand
@@ -99,11 +102,10 @@ class KeplerProblemContext(KeplerProblemSymbolicContext):
         # Call superclass constructor.
         KeplerProblemSymbolicContext.__init__(self, 2, use_constraint=use_constraint)
 
+        X = self.X
         # Number of derivatives in phase space (2, i.e. position and velocity)
         self.D = D = 2
-        # self.fourier_curve_parameterization = FourierCurveParameterization(period=1.0, F=F, T=T, D=D)
         self.fourier_curve_parameterization = fourier_parameterization.Planar(frequencies, np.array(range(D)), closed_time_interval)
-        # self.riemann_sum_factor = self.fourier_curve_parameterization.period / self.fourier_curve_parameterization.T
 
         # 2 indicates that there are two coefficients for each (cos,sin) pair
         self.position_velocity_shape      = position_velocity_shape      = (X,D)
@@ -113,30 +115,6 @@ class KeplerProblemContext(KeplerProblemSymbolicContext):
 
         self.time_domain_parameter_count      = time_domain_parameter_count      = multiindex.prod(position_velocity_shape) + multiindex.prod(gravitational_constant_shape) + multiindex.prod(lagrange_multipliers_shape)
         self.frequency_domain_parameter_count = frequency_domain_parameter_count = multiindex.prod(fourier_coefficients_shape) + multiindex.prod(gravitational_constant_shape) + multiindex.prod(lagrange_multipliers_shape)
-
-        # self.frequency_domain_parameters = frequency_domain_parameters = np.ndarray((frequency_domain_parameter_count,), dtype=float)
-        # # Define names for the views.  Note that when assigning into the views, the
-        # # [:] notation is necessary, otherwise el_form_fourier_coefficients_part and
-        # # el_form_lagrange_multipliers_part will be reassigned to be different references
-        # # altogether, and will no longer be views into euler_lagrange_form_buffer.
-        # self.fc,self.g,self.lm = fc,g,lm = self.frequency_domain_views(self.frequency_domain_parameters)
-
-        # fc.fill(0.0)
-        # fc[self.fourier_curve_parameterization.index_of_frequency(0),0] = 0.1 # constant offset in x
-        # fc[self.fourier_curve_parameterization.index_of_frequency(1),0] = 1.0 # cos for x
-        # # fc[self.fourier_curve_parameterization.index_of_frequency(1),1] = 1.0 # sin for y
-
-        # g[0] = 1.0
-
-        # lm[0] = 0.0
-
-        # # Defining this here avoids allocation in compute_euler_lagrange_form.
-        # self.euler_lagrange_form_buffer = np.ndarray((frequency_domain_parameter_count,), dtype=float)
-        # # Define names for the views.  Note that when assigning into the views, the
-        # # [:] notation is necessary, otherwise el_form_fourier_coefficients_part and
-        # # el_form_lagrange_multipliers_part will be reassigned to be different references
-        # # altogether, and will no longer be views into euler_lagrange_form_buffer.
-        # self.el_form_fc,self.el_form_g,self.el_form_lm = self.frequency_domain_views(self.euler_lagrange_form_buffer)
 
     def make_frequency_domain_parameters_and_views (self):
         frequency_domain_parameters = np.zeros((self.frequency_domain_parameter_count,), dtype=float)
@@ -216,13 +194,12 @@ class KeplerProblemContext(KeplerProblemSymbolicContext):
         return retval
 
     def Lambda (self, frequency_domain_parameters):
-        # return self.riemann_sum_factor * sum(self.Lambda_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters)) for t in xrange(self.fourier_curve_parameterization.T))
         return np.dot(
             self.fourier_curve_parameterization.half_open_time_interval_deltas,
-            np.array([
+            np.fromiter((
                 self.Lambda_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters))
                 for t in xrange(self.fourier_curve_parameterization.T)
-            ])
+            ), float, count=self.fourier_curve_parameterization.T)
         )
 
     def DLambda_at_time (self, t, frequency_domain_parameters):
@@ -234,25 +211,15 @@ class KeplerProblemContext(KeplerProblemSymbolicContext):
             batch_size = self.fourier_curve_parameterization.T
         else:
             batch_size = len(batch_t_v)
-
-        # return (self.fourier_curve_parameterization.period / batch_size) * sum(self.DLambda_at_time(t, frequency_domain_parameters) for t in batch_t_v)
-        # return self.riemann_sum_factor * sum(self.DLambda_at_time(t, frequency_domain_parameters) for t in batch_t_v)
-        return np.dot(
-            self.fourier_curve_parameterization.half_open_time_interval_deltas,
-            np.array([
-                self.DLambda_at_time(t, frequency_domain_parameters)
-                for t in batch_t_v
-            ])
-        )
+        return sum(self.fourier_curve_parameterization.half_open_time_interval_deltas[t]*self.DLambda_at_time(t,frequency_domain_parameters) for t in batch_t_v)
 
     def Obj (self, frequency_domain_parameters):
-        # return self.riemann_sum_factor * sum(self.Obj_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters)) for t in xrange(self.fourier_curve_parameterization.T))
         return np.dot(
             self.fourier_curve_parameterization.half_open_time_interval_deltas,
-            np.array([
+            np.fromiter((
                 self.Obj_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters))
                 for t in xrange(self.fourier_curve_parameterization.T)
-            ])
+            ), float, count=self.fourier_curve_parameterization.T)
         )
 
     def DObj_at_time (self, t, frequency_domain_parameters):
@@ -264,22 +231,15 @@ class KeplerProblemContext(KeplerProblemSymbolicContext):
             batch_size = self.fourier_curve_parameterization.T
         else:
             batch_size = len(batch_t_v)
-
-        # return (self.fourier_curve_parameterization.period / batch_size) * sum(self.DObj_at_time(t, frequency_domain_parameters) for t in batch_t_v)
-        # return self.riemann_sum_factor * sum(self.DObj_at_time(t, frequency_domain_parameters) for t in batch_t_v)
-        return np.dot(
-            self.fourier_curve_parameterization.half_open_time_interval_deltas,
-            np.array([self.DObj_at_time(t, frequency_domain_parameters) for t in batch_t_v])
-        )
+        return sum(self.fourier_curve_parameterization.half_open_time_interval_deltas[t]*self.DObj_at_time(t,frequency_domain_parameters) for t in batch_t_v)
 
     def C (self, frequency_domain_parameters):
-        # return self.riemann_sum_factor * sum(self.C_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters)) for t in xrange(self.fourier_curve_parameterization.T))
         return np.dot(
             self.fourier_curve_parameterization.half_open_time_interval_deltas,
-            np.array([
+            np.fromiter((
                 self.C_integrand(self.time_domain_parameters_at_t(t, frequency_domain_parameters))
                 for t in xrange(self.fourier_curve_parameterization.T)
-            ])
+            ), float, count=self.fourier_curve_parameterization.T)
         )
 
 if __name__ == '__main__':
