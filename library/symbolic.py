@@ -28,9 +28,9 @@ def multiindex_iterator (shape, melt_1_tuple=False):
     Note that if len(shape) is 0, then the iterable sequence will be a single, empty tuple.
     """
     if len(shape) == 1 and melt_1_tuple:
-        return xrange(shape[0])
+        return range(shape[0])
     else:
-        return itertools.product(*map(xrange, shape))
+        return itertools.product(*map(range, shape))
 
 def variable (name):
     """
@@ -83,7 +83,7 @@ def lambdify (F, X, replacement_d={}, print_stuff=False):
     you'll need to specify what they each map to in replacement_d.  Also, the np.array will have dtype=object
     unless changed explicitly.  For example,
 
-        replacement_d={'array':'np.array', 'dtype=object','dtype=float', 'cos':'np.cos'}
+        replacement_d={'array':'np.array', 'dtype=object':'dtype=float', 'cos':'np.cos'}
 
     Note: this uses eval, so it's probably very insecure.
     """
@@ -96,25 +96,25 @@ def lambdify (F, X, replacement_d={}, print_stuff=False):
         function_source_code = 'lambda {0}:{1}'.format(repr(X), repr(F))
     # Function domain is 1-tensor or higher and function codomain is 0-tensor and 
     elif m == 0:
-        Y = np.array([variable('Y[{0}]'.format(','.join(itertools.imap(str,I)))) for I in multiindex_iterator(np.shape(X))]).reshape(np.shape(X))
+        Y = np.array([variable('Y[{0}]'.format(','.join(map(str,I)))) for I in multiindex_iterator(np.shape(X))]).reshape(np.shape(X))
         subs_v = [(X[I],Y[I]) for I in multiindex_iterator(np.shape(X))]
         function_source_code = 'lambda Y:{0}'.format(repr(F.subs(subs_v)))
     # Function domain is 1-tensor or higher and function codomain is 1-tensor or higher
     else:
-        Y = np.array([variable('Y[{0}]'.format(','.join(itertools.imap(str,I)))) for I in multiindex_iterator(np.shape(X))]).reshape(np.shape(X))
+        Y = np.array([variable('Y[{0}]'.format(','.join(map(str,I)))) for I in multiindex_iterator(np.shape(X))]).reshape(np.shape(X))
         subs_v = [(X[I],Y[I]) for I in multiindex_iterator(np.shape(X))]
         G = np.array([F[I].subs(subs_v) for I in multiindex_iterator(np.shape(F))]).reshape(np.shape(F))
         function_source_code = 'lambda Y:{0}'.format(repr(G))
 
-    for from_string,to_string in replacement_d.iteritems():
+    for from_string,to_string in replacement_d.items():
         function_source_code = function_source_code.replace(from_string, to_string)
     if print_stuff:
-        print 'function_source_code =', function_source_code
+        print('function_source_code =', function_source_code)
 
     compiled_function = eval(function_source_code)
-    if print_stuff:
-        print 'function constants:', compiled_function.func_code.co_consts
-        print 'disassembled function code:\n', dis.dis(compiled_function.func_code.co_code)
+    # if print_stuff:
+    #     print('function constants:', compiled_function.func_code.co_consts)
+    #     print('disassembled function code:\n', dis.dis(compiled_function.func_code.co_code))
     return compiled_function
 
 if __name__ == '__main__':
@@ -125,14 +125,14 @@ if __name__ == '__main__':
     y_ = lambdify(y, x)
     for x_ in np.linspace(0.0, 10.0, 123):
         assert y_(x_) == x_**(1/7)
-    print ''
+    print('')
 
     v = tensor('v', (3,))
     f = np.sum(np.square(v))
     f_ = lambdify(f, v)
     for v_ in itertools.product(*map(np.linspace, [-1.0]*len(v), [1.0]*len(v), [23]*len(v))):
-        assert f_(v_) == sum(v_[i]**2 for i in xrange(len(v)))
-    print ''
+        assert f_(v_) == sum(v_[i]**2 for i in range(len(v)))
+    print('')
 
     phi = v / sympy.sqrt(np.sum(np.square(v)))
     phi_ = lambdify(phi, v)
@@ -141,21 +141,21 @@ if __name__ == '__main__':
         # Avoid divide by zero or near zero.
         if norm_v_ < 1.0e-10:
             continue
-        # assert all(phi_(v_) == np.array([v_[i] / norm_v_ for i in xrange(len(v))]))
-        max_abs_error = np.max(np.abs(phi_(v_) - np.array([v_[i] / norm_v_ for i in xrange(len(v))])))
+        # assert all(phi_(v_) == np.array([v_[i] / norm_v_ for i in range(len(v))]))
+        max_abs_error = np.max(np.abs(phi_(v_) - np.array([v_[i] / norm_v_ for i in range(len(v))])))
         assert max_abs_error == 0.0, 'v_ = {0}, max_abs_error = {1}'.format(v_, max_abs_error)
-    print ''
+    print('')
 
     M = tensor('M', (2,3))
     A = M.T.dot(M)
     A_ = lambdify(A, M)
-    for _ in xrange(1000):
+    for _ in range(1000):
         M_ = np.random.randn(2,3)
         max_abs_error = np.max(np.abs(A_(M_) - M_.T.dot(M_)))
         assert max_abs_error < 1.0e-14, 'M_ = {0}, max_abs_error = {1}'.format(M_, max_abs_error)
-    print ''
+    print('')
 
-    print 'passed all tests'
+    print('passed all tests')
 
     sys.exit(0)
 

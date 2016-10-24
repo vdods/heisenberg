@@ -132,12 +132,12 @@ if __name__ == '__main__':
     overview_fig,overview_axes = plt.subplots(row_count, col_count, squeeze=False, figsize=(8*col_count,8*row_count))
     plot_stuff(pc, fdp, fd_fc, overview_fig, overview_axes[0], 'pre-optimization')
 
-    bsgc = gradient_descent.BatchedStochasticGradientComputer(pc.DLambda, pc.fourier_curve_parameterization.T)#, pc.frequency_domain_parameter_count)
-    # bsgc = gradient_descent.BatchedStochasticGradientComputer(pc.DLambda, pc.fourier_curve_parameterization.T, 20)#, pc.frequency_domain_parameter_count)
+    # bsgc = gradient_descent.BatchedStochasticGradientComputer(pc.DLambda, pc.fourier_curve_parameterization.T)#, pc.frequency_domain_parameter_count)
+    bsgc = gradient_descent.BatchedStochasticGradientComputer(pc.DLambda, pc.fourier_curve_parameterization.T, 20)#, pc.frequency_domain_parameter_count)
     # gd = gradient_descent.GradientDescent(pc.Lambda, bsgc.eval_gradient_on_current_batch, fdp, np.logspace(log_learning_rate_range[0], log_learning_rate_range[1], learning_rate_count))
     # gd = gradient_descent.GradientDescent(pc.Lambda, bsgc.eval_gradient_on_current_batch, fdp, np.logspace(-3.5,-6,9))
     # gd = gradient_descent.GradientDescent(pc.Lambda, bsgc.eval_gradient_on_current_batch, fdp, np.array([1.0e-6]))
-    gd = gradient_descent.BlindGradientDescent(pc.Lambda, bsgc.eval_gradient_on_current_batch, fdp, 1.0e-4)
+    gd = gradient_descent.BlindGradientDescent(pc.Lambda, bsgc.eval_gradient_on_current_batch, fdp, 3.0e-5)
 
     # TODO: Try stuff:
     # - Compute the Hessian of the objective function and use that as the Riemannian metric for the parameter
@@ -156,10 +156,10 @@ if __name__ == '__main__':
 
     try:
         row_index = 1
-        max_iteration_count = (row_count-1)*1000
+        max_iteration_count = (row_count-1)*2000
         print_progress_message(0, fdp, fd_lm)
         for iteration_index in xrange(max_iteration_count):
-            fdp[:] = gd.compute_next_step(fdp, (iteration_index+1)%10==0)
+            fdp[:] = gd.compute_next_step(fdp, (iteration_index+1)%1==0)
             bsgc.go_to_next_batch()
             # if (iteration_index+1)%100 == 0:
             #     # Reparameterize the Fourier curve by arclength

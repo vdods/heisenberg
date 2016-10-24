@@ -9,6 +9,8 @@ import symbolic
 import sympy
 import tensor
 
+# TODO: look at and use https://en.wikipedia.org/wiki/Elliptic_orbit
+
 class KeplerProblemSymbolicContext:
     def __init__ (self, configuration_space_dimension, use_constraint=True):
         """

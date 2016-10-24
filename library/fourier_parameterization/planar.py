@@ -3,6 +3,18 @@ import fourier_parameterization
 import numpy as np
 import tensor
 
+# Idea: See if a closed, simple curve defined by Fourier sum can produce a polynomial
+# whose zero level set is that curve.  Probably this would involve a transformation of
+# the terms cos(omega*n*t) and sin(omega*n*t) into sums of powers of cos(omega*t) and
+# sin(omega*t), and then replacing those with x and y.
+#
+# Conversely, given a polynomial whose zero level set is a closed curve, compute the
+# Fourier sum which parameterizes that curve.
+#
+# If this actually works, then perhaps approximations to those closed curves could be
+# made by fitting a polynomial of given degree to the function in a given region and
+# then computing the corresponding Fourier sum.
+
 # This could be faster, but for now, who cares.
 def discrete_integral (array):
     retval = np.ndarray((len(array)+1,), dtype=array.dtype)

@@ -69,3 +69,12 @@ def compute_coreys_flow_curve ():
     (Xs,Ts) = vector_field.compute_flow_curve(hamiltonian_vector_field, X_0, 0.0, period, sample_count)
     return Xs,Ts,period,sample_count
 
+if __name__ == '__main__':
+    X_v,t_v,period,sample_count = compute_coreys_flow_curve()
+
+    import matplotlib.pyplot as plt
+
+    plt.figure(1)
+    plt.plot(X_v[0,:], X_v[1,:])
+    plt.show()
+

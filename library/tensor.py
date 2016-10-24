@@ -347,8 +347,8 @@ def contract__run_unit_tests ():
                     sys.stdout.write('passed (caught expected exception {0}).\n'.format(repr(e)))
                     pass_count += 1
     if unit_test_count > 0:
-        print 'Summary: {0} unit tests, {1} passed, {2} failed, failure rate was {3}%'.format(unit_test_count, pass_count, fail_count, float(fail_count)*100.0/unit_test_count)
+        print('Summary: {0} unit tests, {1} passed, {2} failed, failure rate was {3}%'.format(unit_test_count, pass_count, fail_count, float(fail_count)*100.0/unit_test_count))
 
 if __name__ == '__main__':
-    print 'Because this module is being run as \'__main__\', the unit tests will be run.'
+    print('Because this module is being run as \'__main__\', the unit tests will be run.')
     contract__run_unit_tests()
