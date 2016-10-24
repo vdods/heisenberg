@@ -6,12 +6,14 @@ class BlindGradientDescent:
         self.obj = obj
         self.Dobj = Dobj
         self.learning_rate = learning_rate
+        self.parameter_history_v = [initial_parameters]
         self.obj_history_v = [obj(initial_parameters)]
         self.__next_step = np.ndarray((len(initial_parameters),), dtype=float)
 
     def compute_next_step (self, current_parameters, compute_obj=False):
         step_direction = self.Dobj(current_parameters)
         self.__next_step[:] = current_parameters - self.learning_rate*step_direction
+        self.parameter_history_v.append(self.__next_step)
         if compute_obj:
             obj_next_step = self.obj(self.__next_step)
             self.obj_history_v.append(obj_next_step)
