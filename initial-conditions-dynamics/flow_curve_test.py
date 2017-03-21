@@ -14,8 +14,9 @@ def hamiltonian (X, sqrt=np.sqrt, pi=np.pi):
     p_z = X[5]
     alpha = 2/pi
     # alpha = 1.0
+    beta = 16
     r_squared = x**2 + y**2
-    mu = r_squared**2 + 16*z**2
+    mu = r_squared**2 + beta*z**2
     P_x = p_x - y*p_z/2
     P_y = p_y + x*p_z/2
     return (P_x**2 + P_y**2)/2 - alpha/sqrt(mu)
@@ -45,7 +46,7 @@ def hamiltonian_vector_field (t, X):
                       0.5*x*P_y - 0.5*y*P_x, \
                      -0.5*P_y*p_z - alpha_times_mu_to_neg_three_halves*r*2.0*x, \
                       0.5*P_x*p_z - alpha_times_mu_to_neg_three_halves*r*2.0*y, \
-                     -16.0*alpha_times_mu_to_neg_three_halves*z],
+                     -beta*alpha_times_mu_to_neg_three_halves*z],
                      dtype=float)
 
 def initial_condition ():
