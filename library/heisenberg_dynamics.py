@@ -64,7 +64,7 @@ def compute_coreys_flow_curve ():
     period = 273.5
     sample_count = 2735
     X_0 = coreys_initial_condition()
-    print "Computing flow curve for time duration {0}, with {1} samples, from initial condition {2}.".format(period, sample_count, X_0)
+    print("Computing flow curve for time duration {0}, with {1} samples, from initial condition {2}.".format(period, sample_count, X_0))
     import vector_field
     (Xs,Ts) = vector_field.compute_flow_curve(hamiltonian_vector_field, X_0, 0.0, period, sample_count)
     return Xs,Ts,period,sample_count

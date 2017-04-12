@@ -2,8 +2,11 @@ import abc
 import itertools
 import library.gradient_descent
 import numpy as np
+import vorpy.symbolic as sym
 import scipy.integrate
 import scipy.linalg
+import sympy as sp
+import time
 
 """
 Notes
@@ -30,6 +33,49 @@ Define R_Omega to give point closest to Omega(q,p).  Then f_Omega is defined as
 and the gradient of f_Omega depends on the gradient of Omega and R_Omega.
 """
 
+def define_canonical_symplectic_form_and_inverse (*, configuration_space_dimension, dtype):
+    # If the tautological one-form on the cotangent bundle is
+    #   tau := p dq
+    # then the symplectic form is
+    #   omega := -dtau = -dq wedge dp
+    # which, in the coordinates (q_0, q_1, p_0, p_1), has the matrix
+    #   [  0  0 -1  0 ]
+    #   [  0  0  0 -1 ]
+    #   [  1  0  0  0 ]
+    #   [  0  1  0  0 ],
+    # or in matrix notation, with I denoting the 2x2 identity matrix,
+    #   [  0 -I ]
+    #   [  I  0 ],
+
+    assert configuration_space_dimension > 0
+
+    # Abbreviations
+    csd = configuration_space_dimension
+    psd = 2*csd
+
+    canonical_symplectic_form = np.ndarray((psd,psd), dtype=dtype)
+
+    # Fill the whole thing with zeros.
+    canonical_symplectic_form.fill(dtype(0))
+
+    # Upper right block diagonal is -1, lower left block diagonal is 1.
+    for i in range(csd):
+        canonical_symplectic_form[i,csd+i] = dtype(-1)
+        canonical_symplectic_form[csd+i,i] = dtype( 1)
+
+    canonical_symplectic_form_inverse = -canonical_symplectic_form
+
+    return canonical_symplectic_form,canonical_symplectic_form_inverse
+
+def symplectic_gradient_of (F, X, *, canonical_symplectic_form_inverse=None, dtype=None):
+    assert len(X)%2 == 0, 'X must be a phase space element, which in particular means it must be even dimensional.'
+
+    if canonical_symplectic_form_inverse is None:
+        assert dtype is not None, 'If canonical_symplectic_form_inverse is None, then dtype must not be None.'
+        _,canonical_symplectic_form_inverse = define_canonical_symplectic_form_and_inverse(configuration_space_dimension=X.shape[0]//2, dtype=dtype)
+
+    return np.dot(canonical_symplectic_form_inverse, sym.D(F,X))
+
 class DynamicsContext(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def configuration_space_dimension (self):
@@ -53,7 +99,24 @@ class HeisenbergDynamicsContext(DynamicsContext):
     def configuration_space_dimension (self):
         return 3
 
-    def hamiltonian (self, X):
+    # def hamiltonian (self, X):
+    #     assert len(X) == 6, "X must be a 6-vector"
+    #     x = X[0]
+    #     y = X[1]
+    #     z = X[2]
+    #     p_x = X[3]
+    #     p_y = X[4]
+    #     p_z = X[5]
+    #     # alpha = 2.0/np.pi
+    #     alpha = 1.0
+    #     r_squared = x**2 + y**2
+    #     mu = r_squared**2 + 16.0*z**2
+    #     P_x = p_x - 0.5*y*p_z
+    #     P_y = p_y + 0.5*x*p_z
+    #     return 0.5*(P_x**2 + P_y**2) - alpha/np.sqrt(mu)
+
+    # This is the hamiltonian (energy) function.
+    def hamiltonian (self, X, sqrt=np.sqrt, pi=np.pi):
         assert len(X) == 6, "X must be a 6-vector"
         x = X[0]
         y = X[1]
@@ -61,19 +124,21 @@ class HeisenbergDynamicsContext(DynamicsContext):
         p_x = X[3]
         p_y = X[4]
         p_z = X[5]
-        # alpha = 2.0/np.pi
-        alpha = 1.0
+        alpha = 2/pi
+        # alpha = 1.0
+        beta = 16
         r_squared = x**2 + y**2
-        mu = r_squared**2 + 16.0*z**2
-        P_x = p_x - 0.5*y*p_z
-        P_y = p_y + 0.5*x*p_z
-        return 0.5*(P_x**2 + P_y**2) - alpha/np.sqrt(mu)
+        mu = r_squared**2 + beta*z**2
+        P_x = p_x - y*p_z/2
+        P_y = p_y + x*p_z/2
+        return (P_x**2 + P_y**2)/2 - alpha/sqrt(mu)
+
 
     # \omega^-1 * dH (i.e. the symplectic gradient of H) is the hamiltonian vector field for this system.
     # X is the list of coordinates [x, y, z, p_x, p_y, p_z].
     # t is the time at which to evaluate the flow.  This particular vector field is independent of time.
     #
-    # If the tautological one-form is
+    # If the tautological one-form on the cotangent bundle is
     #   tau := p dq
     # then the symplectic form is
     #   omega := -dtau = -dq wedge dp
@@ -99,7 +164,36 @@ class HeisenbergDynamicsContext(DynamicsContext):
     #   [  dH/dp ]
     #   [ -dH/dq ],
     # which is Hamilton's equations.
-    def hamiltonian_vector_field (self, X, t):
+
+    # def hamiltonian_vector_field (self, X, t):
+    #     assert len(X) == 6, "must have 6 coordinates"
+    #     x = X[0]
+    #     y = X[1]
+    #     z = X[2]
+    #     p_x = X[3]
+    #     p_y = X[4]
+    #     p_z = X[5]
+    #     P_x = p_x - 0.5*y*p_z
+    #     P_y = p_y + 0.5*x*p_z
+    #     r = x**2 + y**2
+    #     beta = 1.0/16.0
+    #     mu = r**2 + beta*z**2
+    #     # alpha = 2.0/math.pi
+    #     alpha = 1.0
+    #     alpha_times_mu_to_neg_three_halves = alpha*mu**(-1.5)
+    #     return np.array(
+    #         [
+    #             P_x,
+    #             P_y,
+    #             0.5*x*P_y - 0.5*y*P_x,
+    #             -0.5*P_y*p_z - alpha_times_mu_to_neg_three_halves*r*2.0*x,
+    #             0.5*P_x*p_z - alpha_times_mu_to_neg_three_halves*r*2.0*y,
+    #             -16.0*alpha_times_mu_to_neg_three_halves*z
+    #         ],
+    #         dtype=float
+    #     )
+
+    def hamiltonian_vector_field (self, t, X): # NOTE: t comes first, because of the convention of scipy.integrate.ode
         assert len(X) == 6, "must have 6 coordinates"
         x = X[0]
         y = X[1]
@@ -110,36 +204,53 @@ class HeisenbergDynamicsContext(DynamicsContext):
         P_x = p_x - 0.5*y*p_z
         P_y = p_y + 0.5*x*p_z
         r = x**2 + y**2
-        beta = 1.0/16.0
+        # beta = 1.0/16.0
+        beta = 16.0
         mu = r**2 + beta*z**2
-        # alpha = 2.0/math.pi
-        alpha = 1.0
+        alpha = 2.0/np.pi
+        # alpha = 1.0
         alpha_times_mu_to_neg_three_halves = alpha*mu**(-1.5)
         return np.array(
             [
-                P_x,
-                P_y,
-                0.5*x*P_y - 0.5*y*P_x,
-                -0.5*P_y*p_z - alpha_times_mu_to_neg_three_halves*r*2.0*x,
-                0.5*P_x*p_z - alpha_times_mu_to_neg_three_halves*r*2.0*y,
-                -16.0*alpha_times_mu_to_neg_three_halves*z
+                P_x, \
+                P_y, \
+                 0.5*x*P_y - 0.5*y*P_x, \
+                -0.5*P_y*p_z - alpha_times_mu_to_neg_three_halves*r*2.0*x, \
+                 0.5*P_x*p_z - alpha_times_mu_to_neg_three_halves*r*2.0*y, \
+                -beta*alpha_times_mu_to_neg_three_halves*z
             ],
             dtype=float
         )
 
+    # @staticmethod
+    # def initial_condition ():
+    #     #for quasi-periodic use [1, 1, 4*3^(.5),0, 0] and t_0=273.5
+    #     (p_theta, r_0, z_0, p_r_0, p_z_0) = (1.0, 1.0, 4.0*3.0**0.5, 0.0, 0.0)
+    #     #this is for alpha=1 and theta=0
+    #     x_0 = r_0
+    #     y_0 = 0.0
+    #     z_0 = z_0
+    #     p_x_0 = p_r_0
+    #     p_y_0 = p_theta/r_0
+    #     p_z_0 = p_z_0
+    #     X_0 = np.array([x_0, y_0, z_0, p_x_0, p_y_0, p_z_0], dtype=float)
+    #     # print "X_0 = {0}".format(X_0)
+    #     return X_0
     @staticmethod
-    def coreys_initial_condition ():
-        #for quasi-periodic use [1, 1, 4*3^(.5),0, 0] and t_0=273.5
-        (p_theta, r_0, z_0, p_r_0, p_z_0) = (1.0, 1.0, 4.0*3.0**0.5, 0.0, 0.0)
-        #this is for alpha=1 and theta=0
-        x_0 = r_0
-        y_0 = 0.0
-        z_0 = z_0
-        p_x_0 = p_r_0
-        p_y_0 = p_theta/r_0
-        p_z_0 = p_z_0
-        X_0 = np.array([x_0, y_0, z_0, p_x_0, p_y_0, p_z_0], dtype=float)
-        # print "X_0 = {0}".format(X_0)
+    def initial_condition ():
+        # alpha = 2/pi, beta = 16
+
+        # Symbolically solve H(1,0,0,0,1,p_z) = 0 for p_z.
+        p_z = sp.var('p_z')
+        zero = sp.Integer(0)
+        one = sp.Integer(1)
+        H = hamiltonian(np.array([one, zero, zero, zero, one, p_z], dtype=object), sqrt=sp.sqrt, pi=sp.pi)
+        print('H = {0}'.format(H))
+        p_z_solution = np.max(sp.solve(H, p_z))
+        print('p_z = {0}'.format(p_z_solution))
+        p_z_solution = float(p_z_solution)
+        X_0 = np.array([1.0, 0.0, 0.0, 0.0, 1.0, p_z_solution])
+
         return X_0
 
 class KeplerDynamicsContext(DynamicsContext):
@@ -149,7 +260,7 @@ class KeplerDynamicsContext(DynamicsContext):
     def configuration_space_dimension (self):
         return 2
 
-    def hamiltonian (self, X, t):
+    def hamiltonian (self, X):
         # Assume the planet has unit mass.
         q = X[0:2]
         p = X[2:4]
@@ -170,7 +281,70 @@ class KeplerDynamicsContext(DynamicsContext):
             dtype=float
         )
 
-class NBodyDynamicsContext(DynamicsContext):
+# class NBodyDynamicsContext(DynamicsContext):
+#     def __init__ (self, *, mass_v, gravitational_constant):
+#         assert len(mass_v.shape) == 1
+#         assert mass_v.shape[0] > 0
+#         assert all(mass > 0.0 for mass in mass_v)
+#         assert gravitational_constant > 0.0
+
+#         self.__mass_v = mass_v
+#         self.__gravitational_constant = gravitational_constant
+
+#         self.n = mass_v.shape[0]
+#         self.__inverse_mass_v = 1.0 / mass_v
+#         self.__body_index_pair_v = [(i,j) for i,j in itertools.product(range(self.n), range(self.n)) if i < j]
+
+#     def configuration_space_dimension (self):
+#         return 2*self.n
+
+#     def hamiltonian (self, X):
+#         csd = self.configuration_space_dimension()
+#         q_v = X[:csd].reshape(self.n, 2) # positions
+#         p_v = X[csd:].reshape(self.n, 2) # momenta
+#         print(q_v)
+#         print(p_v)
+#         # Kinetic energy
+#         K = 0.5*np.dot(np.sum(np.square(p_v), axis=-1), self.__inverse_mass_v)
+#         # Potential energy
+#         V = -self.__gravitational_constant*sum(
+#             self.__mass_v[i]*self.__mass_v[j]*np.sum(np.square(q_v[i]-q_v[j]))**(-0.5)
+#             for i,j in self.__body_index_pair_v
+#         )
+#         # Total energy
+#         return K + V
+
+#     def hamiltonian_vector_field (self, X, t):
+#         # q = X[0:2]
+#         # p = X[2:4]
+#         # factor = -0.5*np.sum(np.square(q))**(-1.5) #*(1.0+self.sin_amplitude*np.sin(t*self.omega))
+#         # return np.array(
+#         #     [
+#         #         p[0],
+#         #         p[1],
+#         #         factor*q[0],
+#         #         factor*q[1]
+#         #     ],
+#         #     dtype=float
+#         # )
+#         csd = self.configuration_space_dimension()
+
+#         q_v = X[:csd].reshape(self.n, 2) # positions
+#         p_v = X[csd:].reshape(self.n, 2) # momenta
+#         retval = np.ndarray((self.phase_space_dimension(),), dtype=float)
+
+#         for i in range(self.n):
+#             retval[2*i:2*(i+1)]         = p_v[i]*self.__inverse_mass_v[i]
+#             retval[csd+2*i:csd+2*(i+1)] = sum(
+#                 self.__mass_v[i]*self.__mass_v[j]*np.sum(np.square(q_v[i]-q_v[j]))**(-1.5)*q_v[i]
+#                 for j in range(self.n)
+#                 if j != i
+#             )
+#         retval[csd:] *= -0.5*self.__gravitational_constant
+
+#         return retval
+
+class NBodyDynamicsContext:
     def __init__ (self, *, mass_v, gravitational_constant):
         assert len(mass_v.shape) == 1
         assert mass_v.shape[0] > 0
@@ -180,63 +354,50 @@ class NBodyDynamicsContext(DynamicsContext):
         self.__mass_v = mass_v
         self.__gravitational_constant = gravitational_constant
 
-        self.__n = mass_v.shape[0]
-        self.__inverse_mass_v = 1.0 / mass_v
-        self.__body_index_pair_v = [(i,j) for i,j in itertools.product(range(self.__n), range(self.__n)) if i < j]
+        self.n      = mass_v.shape[0]
+        self.csd    = csd = 2*self.n
+        self.psd    = psd = 2*csd
+
+        # Define symbolic variables to be used to define the various energy functions.
+        Q = sym.tensor('q', (self.n,2))                         # position variables, indexed as q[body_index, space_dim_index]
+        P = sym.tensor('p', (self.n,2))                         # momentum variables, indexed as q[body_index, space_dim_index]
+        X = np.concatenate((Q.reshape(csd), P.reshape(csd)))    # phase space variables
+
+        # Kinetic energy
+        K = sp.Rational(1,2)*sum(np.sum(np.square(p))/mass for p,mass in zip(P,mass_v))
+        # Potential energy
+        V = -gravitational_constant*sum(
+            mass_v[i]*mass_v[j]*np.sum(np.square(Q[i]-Q[j]))**sp.Rational(-1,2)
+            for i in range(self.n)
+            for j in range(i)
+        )
+        # Hamiltonian (total energy)
+        H = K + V
+        # H = H.simplify()
+        symplectic_gradient_of_H = symplectic_gradient_of(H, X, dtype=sp.Integer)
+        # symplectic_gradient_of_H = np.vectorize(sp.simplify)(symplectic_gradient_of_H)
+
+        # Lambdify the functions
+        replacement_d                       = {'array':'np.array', 'ndarray':'np.ndarray', 'dtype=object':'dtype=float'}
+        self.hamiltonian                    = sym.lambdified(H, X, replacement_d=replacement_d, verbose=True)
+        self.hamiltonian_vector_field_pure  = sym.lambdified(symplectic_gradient_of_H, X, replacement_d=replacement_d, verbose=True)
+        self.hamiltonian_vector_field       = lambda X,t : self.hamiltonian_vector_field_pure(X)
 
     def configuration_space_dimension (self):
-        return 2*self.__n
+        return self.csd
 
-    def hamiltonian (self, X, t):
-        q_v = X[:self.__n].reshape(self.__n, 2) # positions
-        p_v = X[self.__n:].reshape(self.__n, 2) # momenta
-        # Kinetic energy
-        K = 0.5*np.dot(np.sum(np.square(p_v), axis=-1), self.__inverse_mass_v)
-        # Potential energy
-        V = -self.__gravitational_constant*sum(
-            self.__mass_v[i]*self.__mass_v[j]*np.sum(np.square(q_v[i]-q_v[v]))**(-0.5)
-            for i,j in self.__body_index_pair_v
-        )
-        # Total energy
-        return K + V
-
-    def hamiltonian_vector_field (self, X, t):
-        # q = X[0:2]
-        # p = X[2:4]
-        # factor = -0.5*np.sum(np.square(q))**(-1.5) #*(1.0+self.sin_amplitude*np.sin(t*self.omega))
-        # return np.array(
-        #     [
-        #         p[0],
-        #         p[1],
-        #         factor*q[0],
-        #         factor*q[1]
-        #     ],
-        #     dtype=float
-        # )
-        csd = self.phase_space_dimension()
-
-        q_v = X[:csd].reshape(self.__n, 2) # positions
-        p_v = X[csd:].reshape(self.__n, 2) # momenta
-        retval = np.ndarray((self.phase_space_dimension(),), dtype=float)
-
-        for i in range(self.__n):
-            retval[2*i:2*(i+1)]         = p_v[i]*self.__inverse_mass_v[i]
-            retval[csd+2*i:csd+2*(i+1)] = sum(
-                self.__mass_v[i]*self.__mass_v[j]*np.sum(np.square(q_v[i]-q_v[j]))**(-1.5)
-                for i,j in self.__body_index_pair_v
-            )
-        retval[csd:] *= -0.5*self.__gravitational_constant
-
-        return retval
+    def phase_space_dimension (self):
+        return self.psd
 
 class ShootingMethodObjective:
-    def __init__ (self, *, dynamics_context, X_0, t_v):
+    def __init__ (self, *, dynamics_context, X_0, t_max, t_delta):
         self.__dynamics_context     = dynamics_context
         self.X_0                    = X_0
         self.__X_v                  = None
-        self.t_v                    = t_v
-        self.__s_v                  = None
-        self.__s_global_min_index   = None
+        self.t_max                  = t_max
+        self.t_delta                = t_delta
+        self.__Q_v                  = None
+        self.__Q_global_min_index   = None
         self.__objective            = None
 
     def configuration_space_dimension (self):
@@ -245,65 +406,77 @@ class ShootingMethodObjective:
     def flow_curve (self):
         if self.__X_v is None:
             # Compute the flow curve using X_0 as initial condition
-            self.__X_v = scipy.integrate.odeint(lambda X,t:self.__dynamics_context.hamiltonian_vector_field(X,t), self.X_0, self.t_v, full_output=False)
+
+            # Taken from http://stackoverflow.com/questions/16973036/odd-scipy-ode-integration-error
+            ode = scipy.integrate.ode(hamiltonian_vector_field)
+            ode.set_integrator('vode', nsteps=500, method='bdf') # This seems faster than dopri5
+            # ode.set_integrator('dopri5', nsteps=500)
+            ode.set_initial_value(X_0, t_0)
+
+            # self.__X_v = scipy.integrate.odeint(lambda X,t:self.__dynamics_context.hamiltonian_vector_field(X,t), self.X_0, self.t_v, full_output=False)
+
+            start_time = time.time()
+
+            t_v = [t_0]
+            X_v_as_list = [X_0]
+            while ode.successful() and ode.t < t_max:
+                ode.integrate(ode.t + t_delta)
+                # print(ode.t)
+                t_v.append(ode.t)
+                X_v_as_list.append(ode.y)
+
+            print('integration took {0} seconds'.format(time.time() - start_time))
+
+            self.__t_v = t_v
+            self.__X_v = X_v = np.copy(X_v_as_list)
+
             # print('infodict:')
             # print(infodict)
         return self.__X_v
 
+    # def flow_curve (self):
+    #     if self.__X_v is None:
+    #         # Compute the flow curve using X_0 as initial condition
+    #         self.__X_v = scipy.integrate.odeint(lambda X,t:self.__dynamics_context.hamiltonian_vector_field(X,t), self.X_0, self.t_v, full_output=False)
+    #         # print('infodict:')
+    #         # print(infodict)
+    #     return self.__X_v
+
     def squared_distance_function (self):
-        if self.__s_v is None:
+        if self.__Q_v is None:
             X_0 = self.X_0
             X_v = self.flow_curve()
             # Let s denote squared distance function s(t) := 1/2 |X_0 - flow_of_X_0(t))|^2
-            self.__s_v = 0.5 * np.sum(np.square(X_v - X_0), axis=-1)
-        return self.__s_v
+            self.__Q_v = 0.5 * np.sum(np.square(X_v - X_0), axis=-1)
+        return self.__Q_v
 
     def objective (self):
         if self.__objective is None:
-            self.compute_s_global_min_index_and_objective()
+            self.compute_Q_global_min_index_and_objective()
         return self.__objective
 
     def s_global_min_index (self):
-        if self.__s_global_min_index is None:
-            self.compute_s_global_min_index_and_objective()
-        return self.__s_global_min_index
+        if self.__Q_global_min_index is None:
+            self.compute_Q_global_min_index_and_objective()
+        return self.__Q_global_min_index
 
-    # def compute_f_and_R (t_v, X_v):
     def __call__ (self):
-        # if self.__objective is None:
-        #     # X_0 = self.X_0
-        #     # X_v = self.flow_curve()
-        #     # s_v = self.squared_distance_function()
-
-        #     # local_min_index_v   = [i for i in range(1,len(s_v)-1) if s_v[i-1] > s_v[i] and s_v[i] < s_v[i+1]]
-        #     # s_local_min_v       = [s_v[i] for i in local_min_index_v]
-        #     # try:
-        #     #     s_local_min_min_index   = np.argmin(s_local_min_v)
-        #     #     self.s_global_min_index = s_global_min_index = local_min_index_v[s_local_min_min_index]
-        #     #     self.__objective        = s_v[s_global_min_index]
-        #     # except ValueError:
-        #     #     self.s_global_min_index = None
-        #     #     self.__objective        = np.inf
-        #     self.compute_s_global_min_index_and_objective()
-        # return self.__objective#,R
         return self.objective()
 
-    def compute_s_global_min_index_and_objective (self):
-        X_0 = self.X_0
-        X_v = self.flow_curve()
-        s_v = self.squared_distance_function()
+    def compute_Q_global_min_index_and_objective (self):
+        X_0               = self.X_0
+        X_v               = self.flow_curve()
+        self.__Q_v = Q_v  = self.squared_distance_function()
 
-        local_min_index_v   = [i for i in range(1,len(s_v)-1) if s_v[i-1] > s_v[i] and s_v[i] < s_v[i+1]]
-        s_local_min_v       = [s_v[i] for i in local_min_index_v]
+        local_min_index_v = [i for i in range(1,len(Q_v)-1) if Q_v[i-1] > Q_v[i] and Q_v[i] < Q_v[i+1]]
+        Q_local_min_v     = [Q_v[i] for i in local_min_index_v]
         try:
-            s_local_min_min_index       = np.argmin(s_local_min_v)
-            self.__s_global_min_index   = _s_global_min_index = local_min_index_v[s_local_min_min_index]
+            s_local_min_min_index       = np.argmin(Q_local_min_v)
+            self.__Q_global_min_index   = _Q_global_min_index = local_min_index_v[s_local_min_min_index]
         except ValueError:
-            # self.__s_global_min_index   = None
-            # self.__objective            = np.inf
             # If there was no local min, then use the last time value
-            self.__s_global_min_index = len(s_v)-1
-        self.__objective            = s_v[self.__s_global_min_index]            
+            self.__Q_global_min_index = len(Q_v)-1
+        self.__objective            = Q_v[self.__Q_global_min_index]
 
 def evaluate_shooting_method_objective (dynamics_context, X_0, t_v):
     return ShootingMethodObjective(dynamics_context=dynamics_context, X_0=X_0, t_v=t_v)()
@@ -348,6 +521,8 @@ def make_time_array (*, t_max, t_count):
 
 def draw_arrow (axis, basepoint, direction, *args, **kwargs):
     direction_norm = np.linalg.norm(direction)
+    # axis.plot([basepoint[0]+direction[0]], [basepoint[1]+direction[1]], 'o', markersize=0.1, *args, **kwargs)
+    print('in draw_arrow: basepoint = {0}, direction={1}, direction_norm = {2}'.format(basepoint, direction, direction_norm))
     axis.arrow(basepoint[0], basepoint[1], 0.9*direction[0], 0.9*direction[1], head_width=0.05*direction_norm, head_length=0.1*direction_norm, *args, **kwargs)
     arrowhead_point = basepoint + direction
     return arrowhead_point
@@ -355,27 +530,59 @@ def draw_arrow (axis, basepoint, direction, *args, **kwargs):
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
-    # X_0 = HeisenbergDynamicsContext.coreys_initial_condition()
+    # X_0 = HeisenbergDynamicsContext.initial_condition()
 
+    dynamics_name = 'heisenberg'
 
-    dynamics_context = KeplerDynamicsContext()
-    # X_0 = np.array([1.0, 0.0, 0.0, 0.5]) # closed
-    X_0 = np.array([1.0, 0.0, 0.0, 2.0]) # open
-    t_v = make_time_array(t_max=6.0, t_count=4000)
-    optimization_epsilon = 0.001
-    position_slice_v = [slice(0,2)]
-    momentum_slice_v = [slice(2,4)]
-
-
-    # dynamics_context = NBodyDynamicsContext([1.0, 1.0])
-    # X_0 = np.array([
-    #      1.0,  0.0,
-    #     -1.0,  0.0,
-    #      0.0,  1.0,
-    #      0.0, -1.0,
-    # ])
-    # t_v = make_time_array(t_max=10.0, t_count=4000)
-    # optimization_epsilon = 0.001
+    if dynamics_name == 'kepler':
+        dynamics_context = KeplerDynamicsContext()
+        # X_0 = np.array([1.0, 0.0, 0.0, 0.5]) # closed
+        X_0 = np.array([1.0, 0.0, 0.0, 2.0]) # open
+        t_v = make_time_array(t_max=6.0, t_count=4000)
+        optimization_epsilon = 0.001
+        position_slice_v = [slice(0,2)]
+        momentum_slice_v = [slice(2,4)]
+    elif dynamics_name == '2-body':
+        dynamics_context = NBodyDynamicsContext(mass_v=np.array([1.0, 1.0]), gravitational_constant=1.0)
+        X_0 = np.array([
+             1.0,  0.0,
+            -1.0,  0.0,
+             0.0,  0.1,
+             0.0, -0.1,
+        ])
+        t_v = make_time_array(t_max=10.0, t_count=4000)
+        optimization_epsilon = 0.0001
+        position_slice_v = [slice(2*i,2*(i+1)) for i in range(dynamics_context.n)]
+        csd = dynamics_context.configuration_space_dimension()
+        momentum_slice_v = [slice(csd+2*i,csd+2*(i+1)) for i in range(dynamics_context.n)]
+    elif dynamics_name == '3-body':
+        dynamics_context = NBodyDynamicsContext(mass_v=np.array([1.0, 1.0, 1.0]), gravitational_constant=1.0)
+        omega = 2.0*np.pi/3.0
+        s = 0.2
+        X_0 = np.array([
+             np.cos(0*omega), np.sin(0*omega),
+             np.cos(1*omega), np.sin(1*omega),
+             np.cos(2*omega), np.sin(2*omega),
+            -np.sin(0*omega)*s, np.cos(0*omega)*s,
+            -np.sin(1*omega)*s, np.cos(1*omega)*s,
+            -np.sin(2*omega)*s, np.cos(2*omega)*s,
+        ])
+        # X_0 = np.array([
+        #      1.0,  0.0,
+        #     -1.0,  0.0,
+        #      0.0,  0.0,
+        #      0.0,  0.1,
+        #      0.0, -0.1,
+        #      0.0,  0.0,
+        # ])
+        t_v = make_time_array(t_max=10.0, t_count=4000)
+        optimization_epsilon = 0.000001
+        position_slice_v = [slice(2*i,2*(i+1)) for i in range(dynamics_context.n)]
+        csd = dynamics_context.configuration_space_dimension()
+        momentum_slice_v = [slice(csd+2*i,csd+2*(i+1)) for i in range(dynamics_context.n)]
+    elif dynamics_name == 'heisenberg':
+        dynamics_context = HeisenbergDynamicsContext()
+        X_0 = HeisenbergDynamicsContext.initial_condition()
 
     row_count = 1
     col_count = 3
@@ -400,7 +607,9 @@ if __name__ == '__main__':
             draw_arrow(axis, arrowhead_point, Dobj[momentum_slice], color='blue')
 
         print('shooting_method_objective.s_global_min_index() = {0}'.format(shooting_method_objective.s_global_min_index()))
+        t_closest = t_v[shooting_method_objective.s_global_min_index()]
         X_closest = X_v[shooting_method_objective.s_global_min_index()]
+        print('t_closest = {0}'.format(t_closest))
         print('X_closest = {0}'.format(X_closest))
 
         for i,(position_slice,momentum_slice) in enumerate(zip(position_slice_v,momentum_slice_v)):

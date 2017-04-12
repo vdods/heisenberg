@@ -29,10 +29,10 @@ def compute_Fourier_coefficients_of (Xs, Ts):
 
     import itertools
     # Really the norm should be taken via the norm defined by a Riemann sum that involves Ft.dts_for_average.
-    print "|reconstructed_Ws - Ws|^2 = {0}".format(linalg_util.ComplexVectorNormSquared((reconstructed_Ws - Ws)/len(Ft.sample_times)))
+    print("|reconstructed_Ws - Ws|^2 = {0}".format(linalg_util.ComplexVectorNormSquared((reconstructed_Ws - Ws)/len(Ft.sample_times))))
     diffs = [linalg_util.ComplexNormSquared(reconstructed_W - W) for (reconstructed_W,W) in itertools.izip(reconstructed_Ws,Ws)]
     max_diff = max(diffs)
-    print "max_diff = {0}".format(max_diff)
+    print("max_diff = {0}".format(max_diff))
 
 def main ():
     import heisenberg_dynamics
@@ -42,11 +42,11 @@ def main ():
     # identically zero.  Do this by computing the max of the norm of the energy.
     Hs = [heisenberg_dynamics.hamiltonian(X) for X in Xs]
     max_abs_H = max(abs(H) for H in Hs)
-    print 'max_abs_H = {0}'.format(max_abs_H)
+    print('max_abs_H = {0}'.format(max_abs_H))
 
     # Plot the curve to the file
     import plotty
-    plotty.plotty_2d_points(Xs, save_to_file='dynamics_rk4.png')
+    plotty.plotty_2d_points(Xs, save_to_file='dynamics_rk4_x.png')
 
     pickle_curve_positions(Xs, Ts, period)
 
