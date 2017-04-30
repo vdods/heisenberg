@@ -230,16 +230,16 @@ def apply_along_axes (func, input_axis_v, input_array, *args, output_axis_v=None
     # print('')
     return retval
 
-def __test__apply_across_axes__compare_with__apply_across_axis ():
+def __test__apply_along_axes__compare_with__apply_across_axis ():
     rng = np.random.RandomState(42)
     a = rng.randn(4,5,6,7)
     assert np.all(apply_along_axes(np.sum, [0], a) == np.apply_along_axis(np.sum, 0, a))
     assert np.all(apply_along_axes(np.sum, [1], a) == np.apply_along_axis(np.sum, 1, a))
     assert np.all(apply_along_axes(np.sum, [2], a) == np.apply_along_axis(np.sum, 2, a))
     assert np.all(apply_along_axes(np.sum, [3], a) == np.apply_along_axis(np.sum, 3, a))
-    print('__test__apply_across_axes__compare_with__apply_across_axis passed.')
+    print('__test__apply_along_axes__compare_with__apply_across_axis passed.')
 
-def __test__apply_across_axes ():
+def __test__apply_along_axes ():
     def symmetric_square (m):
         return np.einsum('ij,kj->ik', m, m)
 
@@ -271,10 +271,10 @@ def __test__apply_across_axes ():
                         # print('multislice = {0}'.format(multislice))
                         assert is_symmetric(result[multislice])
 
-    print('__test__apply_across_axes passed.')
+    print('__test__apply_along_axes passed.')
 
 if __name__ == '__main__':
     __test__is_subsequence_of_nondecreasing_sequence()
     __test__index_map_inverse()
-    __test__apply_across_axes__compare_with__apply_across_axis()
-    __test__apply_across_axes()
+    __test__apply_along_axes__compare_with__apply_across_axis()
+    __test__apply_along_axes()
