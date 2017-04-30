@@ -25,9 +25,10 @@ References
     https://en.wikipedia.org/wiki/Energy_drift
 """
 
-def symplectic_integrator_split_hamiltonian (*, initial_coordinates, dK_dp, dV_dq, t_v, c_v, d_v, return_intermediates=False):
+def symplectic_integrate_split_hamiltonian (*, initial_coordinates, dK_dp, dV_dq, t_v, c_v, d_v, return_intermediates=False):
     """
-    This function computes a single timestep of the symplectic integrator defined by (c_v, d_v).
+    This function computes multiple timesteps of the symplectic integrator defined by (c_v, d_v);
+    see https://en.wikipedia.org/wiki/Symplectic_integrator for the definitions of these values.
 
     Let N denote the dimension of the configuration space (i.e. the number of components of the q coordinate).
 
@@ -64,6 +65,12 @@ def symplectic_integrator_split_hamiltonian (*, initial_coordinates, dK_dp, dV_d
         each integrator step starting with initial_coordinates.  If return_intermediates is False, then I is 1.  If
         return_intermediates is True, then I is 2*order, and the intermediate coordinates (corresponding
         to each c_v[i] and d_v[i] update) are also stored.
+
+    TODO: Allow initial_coordinates (and the arguments to dK_dp and dV_dq) be tensor-valued.
+    TODO: Perhaps even allow initial_coordinates to be a vector of many different initial coordinates,
+          so that multiple integral curves can be computed in parallel.
+    TODO: Run some more experiments with return_intermediates and then probably get rid of it (so far,
+          experiments show it's not terribly useful)
     """
 
     assert np.shape(initial_coordinates)[0] == 2
@@ -108,8 +115,8 @@ def symplectic_integrator_split_hamiltonian (*, initial_coordinates, dK_dp, dV_d
 
     return integrated_coordinates
 
-def symplectic_euler_method_split_hamiltonian (*, initial_coordinates, dK_dp, dV_dq, t_v, return_intermediates=False):
-    return symplectic_integrator_split_hamiltonian(
+def symplectic_integrate_euler_method_split_hamiltonian (*, initial_coordinates, dK_dp, dV_dq, t_v, return_intermediates=False):
+    return symplectic_integrate_split_hamiltonian(
         initial_coordinates=initial_coordinates,
         dK_dp=dK_dp,
         dV_dq=dV_dq,
@@ -119,8 +126,8 @@ def symplectic_euler_method_split_hamiltonian (*, initial_coordinates, dK_dp, dV
         return_intermediates=return_intermediates
     )
 
-def symplectic_verlet_method_split_hamiltonian (*, initial_coordinates, dK_dp, dV_dq, t_v, return_intermediates=False):
-    return symplectic_integrator_split_hamiltonian(
+def symplectic_integrate_verlet_method_split_hamiltonian (*, initial_coordinates, dK_dp, dV_dq, t_v, return_intermediates=False):
+    return symplectic_integrate_split_hamiltonian(
         initial_coordinates=initial_coordinates,
         dK_dp=dK_dp,
         dV_dq=dV_dq,
@@ -130,8 +137,8 @@ def symplectic_verlet_method_split_hamiltonian (*, initial_coordinates, dK_dp, d
         return_intermediates=return_intermediates
     )
 
-def symplectic_ruth3_method_split_hamiltonian (*, initial_coordinates, dK_dp, dV_dq, t_v, return_intermediates=False):
-    return symplectic_integrator_split_hamiltonian(
+def symplectic_integrate_ruth3_method_split_hamiltonian (*, initial_coordinates, dK_dp, dV_dq, t_v, return_intermediates=False):
+    return symplectic_integrate_split_hamiltonian(
         initial_coordinates=initial_coordinates,
         dK_dp=dK_dp,
         dV_dq=dV_dq,
@@ -141,7 +148,7 @@ def symplectic_ruth3_method_split_hamiltonian (*, initial_coordinates, dK_dp, dV
         return_intermediates=return_intermediates
     )
 
-def symplectic_ruth4_method_split_hamiltonian (*, initial_coordinates, dK_dp, dV_dq, t_v, return_intermediates=False):
+def symplectic_integrate_ruth4_method_split_hamiltonian (*, initial_coordinates, dK_dp, dV_dq, t_v, return_intermediates=False):
     cbrt_2 = 2.0**(1.0/3.0)
     b = 2.0 - cbrt_2
     c_0 = c_3 = 0.5/b
@@ -149,7 +156,7 @@ def symplectic_ruth4_method_split_hamiltonian (*, initial_coordinates, dK_dp, dV
     d_0 = d_2 = 1.0/b
     d_1 = -cbrt_2/b
     d_3 = 0.0
-    return symplectic_integrator_split_hamiltonian(
+    return symplectic_integrate_split_hamiltonian(
         initial_coordinates=initial_coordinates,
         dK_dp=dK_dp,
         dV_dq=dV_dq,
@@ -222,14 +229,20 @@ if __name__ == '__main__':
             H_v_reshaped = H_v.reshape(T*I)
 
             axis = axis_v[0]
-            axis.set_title('{0} : phase space'.format(result_name))
+            axis.set_title('phase space\nmethod: {0}'.format(result_name))
             axis.set_aspect('equal')
             axis.plot(qp_v_reshaped[:,0], qp_v_reshaped[:,1])
 
+            min_H = np.min(H_v_reshaped)
+            max_H = np.max(H_v_reshaped)
+            range_H = max_H - min_H
+
             axis = axis_v[1]
-            axis.set_title('{0} : Hamiltonian'.format(result_name))
+            axis.set_title('Hamiltonian; range = {0:.2e}\nmethod: {1}'.format(range_H, result_name))
             # axis.plot(t_v, H_v_reshaped)
             axis.plot(H_v_reshaped)
+            axis.axhline(min_H, color='green')
+            axis.axhline(max_H, color='green')
 
             # sqd_v = np.sum(np.square(qp_v_reshaped - qp_v_reshaped[0]), axis=-1)
 
@@ -243,10 +256,10 @@ if __name__ == '__main__':
         return_intermediates = False
 
         add_result('standard odeint', t_v, scipy.integrate.odeint(Pendulum.X_H, qp_0.reshape((2,)), t_v).reshape(len(t_v),1,2,Pendulum.N))
-        add_result('symplectic Euler', t_v, symplectic_euler_method_split_hamiltonian(initial_coordinates=qp_0, dK_dp=Pendulum.dK_dp, dV_dq=Pendulum.dV_dq, t_v=t_v, return_intermediates=return_intermediates))
-        add_result('symplectic Verlet', t_v, symplectic_verlet_method_split_hamiltonian(initial_coordinates=qp_0, dK_dp=Pendulum.dK_dp, dV_dq=Pendulum.dV_dq, t_v=t_v, return_intermediates=return_intermediates))
-        add_result('symplectic Ruth3', t_v, symplectic_ruth3_method_split_hamiltonian(initial_coordinates=qp_0, dK_dp=Pendulum.dK_dp, dV_dq=Pendulum.dV_dq, t_v=t_v, return_intermediates=return_intermediates))
-        add_result('symplectic Ruth4', t_v, symplectic_ruth4_method_split_hamiltonian(initial_coordinates=qp_0, dK_dp=Pendulum.dK_dp, dV_dq=Pendulum.dV_dq, t_v=t_v, return_intermediates=return_intermediates))
+        add_result('symplectic Euler', t_v, symplectic_integrate_euler_method_split_hamiltonian(initial_coordinates=qp_0, dK_dp=Pendulum.dK_dp, dV_dq=Pendulum.dV_dq, t_v=t_v, return_intermediates=return_intermediates))
+        add_result('symplectic Verlet', t_v, symplectic_integrate_verlet_method_split_hamiltonian(initial_coordinates=qp_0, dK_dp=Pendulum.dK_dp, dV_dq=Pendulum.dV_dq, t_v=t_v, return_intermediates=return_intermediates))
+        add_result('symplectic Ruth3', t_v, symplectic_integrate_ruth3_method_split_hamiltonian(initial_coordinates=qp_0, dK_dp=Pendulum.dK_dp, dV_dq=Pendulum.dV_dq, t_v=t_v, return_intermediates=return_intermediates))
+        add_result('symplectic Ruth4', t_v, symplectic_integrate_ruth4_method_split_hamiltonian(initial_coordinates=qp_0, dK_dp=Pendulum.dK_dp, dV_dq=Pendulum.dV_dq, t_v=t_v, return_intermediates=return_intermediates))
 
         assert len(result_name_v) == len(result_d)
 
