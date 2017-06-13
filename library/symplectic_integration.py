@@ -156,35 +156,49 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     import scipy.integrate
 
-    def test_stuff ():
-        class Pendulum:
-            N = 1
+    class PendulumNd:
+        """
+        Defines the various geometric-mechanical structures of a spherical pendulum in arbitrary dimension.
 
-            @staticmethod
-            def H (coordinates):
-                """coordinates is np.array([[q],[p]]), where q and p are the pendular angle and momentum respectively."""
-                return 0.5*coordinates[1,0]**2 - np.cos(coordinates[0,0])
+        Coordinates are assumed to have shape (2,N), i.e. np.array([q,p]), where q and p are the vector-valued
+        pendular angle and momentum respectively.  The angle coordinates are assumed to be normal coordinates
+        with origin denoting the downward, stable equilibrium position.  The potential energy function is the
+        vertical position of the pendular mass.
+        """
 
-            @staticmethod
-            def dK_dp (p):
-                return p
+        @staticmethod
+        def K (p):
+            return 0.5*np.sum(np.square(p))
 
-            @staticmethod
-            def dV_dq (q):
-                return np.sin(q)
+        @staticmethod
+        def V (q):
+            # np.linalg.norm(q) gives the angle from the vertical axis
+            return np.cos(np.linalg.norm(q))
 
-            @staticmethod
-            def X_H (coordinates, *args): # args is assumed to be the time coordinate and other ignored args
-                return np.array([coordinates[1], -np.sin(coordinates[0])])
+        @staticmethod
+        def H (coordinates):
+            q = coordinates[0,:]
+            p = coordinates[1,:]
+            return PendulumNd.K(p) - PendulumNd.V(q)
 
-            @staticmethod
-            def apply_H (coordinates):
-                assert coordinates.shape[-1] == Pendulum.N
-                assert coordinates.shape[-2] == 2
-                retval = np.ndarray(coordinates.shape[:-2], dtype=coordinates.dtype)
-                for I in itertools.product(*[range(s) for s in retval.shape]):
-                    retval[I] = Pendulum.H(coordinates[I])
-                return retval
+        @staticmethod
+        def dK_dp (p):
+            return p
+
+        @staticmethod
+        def dV_dq (q):
+            norm_q = np.linalg.norm(q)
+            return np.sin(norm_q)/norm_q * q
+
+        @staticmethod
+        def X_H (coordinates, *args): # args is assumed to be the time coordinate and other ignored args
+            q = coordinates[0,:]
+            p = coordinates[1,:]
+            # This is the symplectic gradient of H.
+            return np.array((PendulumNd.dK_dp(p), -PendulumNd.dV_dq(q)))
+
+    def test_using_PendulumNd (N):
+        can_plot_phase_space = N == 1
 
         result_name_v = []
         result_d = {}
@@ -197,7 +211,7 @@ if __name__ == '__main__':
             result_d[result_name] = {
                 't_v':t_v,
                 'qp_v':qp_v,
-                'H_v':Pendulum.apply_H(qp_v),
+                'H_v':vorpy.apply_along_axes(PendulumNd.H, (-2,-1), qp_v, output_axis_v=(), func_output_shape=()),
             }
 
         def plot_result (result_name, axis_v):
@@ -207,56 +221,65 @@ if __name__ == '__main__':
             qp_v = result['qp_v']
             H_v = result['H_v']
 
-            T = qp_v.shape[0]
-
-            # This is to get rid of the last axis, which has size 1, and therefore can be canonically reshaped away
-            # via the canonical identification between 1-vectors and scalars.
-            qp_v_reshaped = qp_v.reshape(T, 2)
-
-            axis = axis_v[0]
-            axis.set_title('phase space\nmethod: {0}'.format(result_name))
-            axis.set_aspect('equal')
-            axis.plot(qp_v_reshaped[:,0], qp_v_reshaped[:,1])
-
             min_H = np.min(H_v)
             max_H = np.max(H_v)
             range_H = max_H - min_H
 
-            axis = axis_v[1]
+            axis = axis_v[0]
             axis.set_title('Hamiltonian; range = {0:.2e}\nmethod: {1}'.format(range_H, result_name))
             axis.plot(t_v, H_v)
-            #axis.plot(H_v)
             axis.axhline(min_H, color='green')
             axis.axhline(max_H, color='green')
 
-            # sqd_v = np.sum(np.square(qp_v_reshaped - qp_v_reshaped[0]), axis=-1)
+            sqd_v = vorpy.apply_along_axes(lambda x:np.sum(np.square(x)), (-2,-1), qp_v - qp_v[0])
 
-            # axis = axis_v[2]
-            # axis.set_title('{0} : sq dist from initial'.format(result_name))
-            # axis.semilogy(t_v, sqd_v)
+            axis = axis_v[1]
+            axis.set_title('{0} : sq dist from initial'.format(result_name))
+            axis.semilogy(t_v, sqd_v)
 
-        # t_v = np.linspace(0.0, 10.0, 5000)
+            # We can only directly plot the phase space if the configuration space is 1-dimensional.
+            if can_plot_phase_space:
+                T = qp_v.shape[0]
+
+                # This is to get rid of the last axis, which has size 1, and therefore can be canonically reshaped away
+                # via the canonical identification between 1-vectors and scalars.
+                qp_v_reshaped = qp_v.reshape(T, 2)
+
+                axis = axis_v[2]
+                axis.set_title('phase space\nmethod: {0}'.format(result_name))
+                axis.set_aspect('equal')
+                axis.plot(qp_v_reshaped[:,0], qp_v_reshaped[:,1])
+
         t_v = np.linspace(0.0, 30.0, 1500)
-        qp_0 = np.array([[np.pi/2.0], [0.0]])
+        qp_0 = np.zeros((2,N), dtype=float)
+        qp_0[0,0] = np.pi/2.0
 
-        add_result('standard odeint', t_v, scipy.integrate.odeint(Pendulum.X_H, qp_0.reshape((2,)), t_v).reshape(len(t_v),2,Pendulum.N))
-        add_result('symplectic Euler', t_v, symplectic_integrate_split_hamiltonian(initial_coordinates=qp_0, t_v=t_v, dK_dp=Pendulum.dK_dp, dV_dq=Pendulum.dV_dq, coefficients=predefined_method_coefficients.euler))
-        add_result('symplectic Verlet', t_v, symplectic_integrate_split_hamiltonian(initial_coordinates=qp_0, t_v=t_v, dK_dp=Pendulum.dK_dp, dV_dq=Pendulum.dV_dq, coefficients=predefined_method_coefficients.verlet))
-        add_result('symplectic Ruth3', t_v, symplectic_integrate_split_hamiltonian(initial_coordinates=qp_0, t_v=t_v, dK_dp=Pendulum.dK_dp, dV_dq=Pendulum.dV_dq, coefficients=predefined_method_coefficients.ruth3))
-        add_result('symplectic Ruth4', t_v, symplectic_integrate_split_hamiltonian(initial_coordinates=qp_0, t_v=t_v, dK_dp=Pendulum.dK_dp, dV_dq=Pendulum.dV_dq, coefficients=predefined_method_coefficients.ruth4))
+        # scipy.integrate.odeint expects the phase space coordinate to have shape (2*N,), not (2,N).
+        # This function adapts between those two conventions.
+        def X_H_adapted_for_odeint (coordinates_as_1_tensor, *args):
+            qp = coordinates_as_1_tensor.reshape(2,-1)      # -1 will cause reshape to infer the value of N.
+            return PendulumNd.X_H(qp, *args).reshape(-1)    # -1 will cause reshape to produce a 1-tensor.
+
+        add_result('standard odeint', t_v, scipy.integrate.odeint(X_H_adapted_for_odeint, qp_0.reshape(-1), t_v).reshape(len(t_v),2,-1))
+        add_result('symplectic Euler', t_v, symplectic_integrate_split_hamiltonian(initial_coordinates=qp_0, t_v=t_v, dK_dp=PendulumNd.dK_dp, dV_dq=PendulumNd.dV_dq, coefficients=predefined_method_coefficients.euler))
+        add_result('symplectic Verlet', t_v, symplectic_integrate_split_hamiltonian(initial_coordinates=qp_0, t_v=t_v, dK_dp=PendulumNd.dK_dp, dV_dq=PendulumNd.dV_dq, coefficients=predefined_method_coefficients.verlet))
+        add_result('symplectic Ruth3', t_v, symplectic_integrate_split_hamiltonian(initial_coordinates=qp_0, t_v=t_v, dK_dp=PendulumNd.dK_dp, dV_dq=PendulumNd.dV_dq, coefficients=predefined_method_coefficients.ruth3))
+        add_result('symplectic Ruth4', t_v, symplectic_integrate_split_hamiltonian(initial_coordinates=qp_0, t_v=t_v, dK_dp=PendulumNd.dK_dp, dV_dq=PendulumNd.dV_dq, coefficients=predefined_method_coefficients.ruth4))
 
         assert len(result_name_v) == len(result_d)
 
         row_count = len(result_name_v)
-        col_count = 2
+        col_count = 3 if can_plot_phase_space else 2
         fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(8*col_count, 8*row_count))
 
         for result_name,axis_v in zip(result_name_v,axis_vv):
             plot_result(result_name, axis_v)
 
         fig.tight_layout()
-        filename = 'symplectic_integration.png'
+        filename = 'symplectic_integration.Pendulum{0}d.png'.format(N)
         plt.savefig(filename)
         print('wrote to file "{0}"'.format(filename))
 
-    test_stuff()
+    test_using_PendulumNd(1)
+    test_using_PendulumNd(2)
+    test_using_PendulumNd(3)
