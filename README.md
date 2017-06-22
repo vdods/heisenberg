@@ -28,3 +28,8 @@ components.
 -   [github-specific markdown info](https://help.github.com/articles/github-flavored-markdown)
 -   [general markdown info](https://help.github.com/articles/markdown-basics)
 -   [live, web-based markdown editor/viewer](http://www.markdownviewer.com/)
+
+#### To-Do List
+
+-   Clean up source and place old/experimental source code in clearly separate directory.
+-   Create "turn-key" examples which replicate research by running a single command.

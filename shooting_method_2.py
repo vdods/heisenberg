@@ -2,11 +2,11 @@ import abc
 import itertools
 import library.monte_carlo
 import numpy as np
-import vorpy.symbolic as sym
 import scipy.integrate
 import scipy.linalg
 import sympy as sp
 import time
+import vorpy.symbolic
 
 """
 Notes
@@ -33,7 +33,6 @@ Define R_Omega to give point closest to Omega(q,p).  Then f_Omega is defined as
 and the gradient of f_Omega depends on the gradient of Omega and R_Omega.
 
 TODO
--   Plot the 'closest approach' point on the curve
 -   Use energy-conserving integrator
 -   The 7 fold solution is super close to closing, and the optimization doesn't improve much.
     Perturb it (but keep it zero-energy) and see if the optimizer can close it back up.
@@ -88,7 +87,7 @@ def symplectic_gradient_of (F, X, *, canonical_symplectic_form_inverse=None, dty
         assert dtype is not None, 'If canonical_symplectic_form_inverse is None, then dtype must not be None.'
         _,canonical_symplectic_form_inverse = define_canonical_symplectic_form_and_inverse(configuration_space_dimension=X.shape[0]//2, dtype=dtype)
 
-    return np.dot(canonical_symplectic_form_inverse, sym.D(F,X))
+    return np.dot(canonical_symplectic_form_inverse, vorpy.symbolic.D(F,X))
 
 def quadratic_min (f_v):
     assert len(f_v) == 3, 'require 3 values'
