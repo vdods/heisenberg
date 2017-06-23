@@ -592,7 +592,24 @@ if __name__ == '__main__':
         os.mkdir('shooting_method_3/abortive')
 
     # Set numpy to print floats with full precision in scientific notation.
-    np.set_printoptions(formatter={'float':lambda x:'{0:.17e}'.format(x)})
+    def float_formatter (x):
+        return '{0:.17e}'.format(x)
+
+    np.set_printoptions(formatter={'float':float_formatter})
+
+    def ndarray_as_single_line_string (A):
+        """
+        Normally a numpy.ndarray will be printed with spaces separating the elements
+        and newlines separating the rows.  This function does the same but with commas
+        separating elements and rows.  There should be no spaces in the returned string.
+        """
+        if len(A.shape) == 0:
+            return float_formatter(A)
+        else:
+            return '[' + ','.join(ndarray_as_single_line_string(a) for a in A) + ']'
+
+    def construct_filename (*, obj, t_delta, t_max, initial_condition):
+        return 'obj:{0}.t_delta:{1}.t_max:{2}.initial_condition:{3}.png'.format(obj, t_delta, t_max, ndarray_as_single_line_string(initial_condition))
 
     def plot_stuff (*, axis_v, smo, name):
         flow_curve = smo.flow_curve()
@@ -662,7 +679,7 @@ if __name__ == '__main__':
                 plot_stuff(axis_v=axis_vv[0], smo=smo_0, name='initial')
 
                 fig.tight_layout()
-                filename = 'shooting_method_3/abortive/obj:{0}.t_delta:{1}.t_max:{2}.qp_0:{3}.png'.format(smo_0.objective(), t_delta, t_max, qp_0)
+                filename = os.path.join('shooting_method_3/abortive', construct_filename(obj=smo_0.objective(), t_delta=t_delta, t_max=t_max, initial_condition=qp_0))
                 plt.savefig(filename)
                 print('wrote to file "{0}"'.format(filename))
                 plt.close(fig) # VERY important to do this -- otherwise your memory will slowly fill up!
@@ -700,10 +717,6 @@ if __name__ == '__main__':
 
         print('qp_0 = {0}'.format(qp_0))
         print('qp_opt = {0}'.format(qp_opt))
-        #print('flow_curve_0[0] = {0}'.format(flow_curve_0[0]))
-        #print('flow_curve_0[-1] = {0}'.format(flow_curve_0[-1]))
-        #print('flow_curve_opt[0] = {0}'.format(flow_curve_opt[0]))
-        #print('flow_curve_opt[-1] = {0}'.format(flow_curve_opt[-1]))
 
         row_count = 2
         col_count = 6
@@ -717,7 +730,7 @@ if __name__ == '__main__':
         axis.semilogy(optimizer.obj_history_v)
 
         fig.tight_layout()
-        filename = 'shooting_method_3/obj:{0}.t_delta:{1}.t_max:{2}.qp_opt:{3}.png'.format(smo_opt.objective(), t_delta, t_max, qp_opt)
+        filename = os.path.join('shooting_method_3', construct_filename(obj=smo_opt.objective(), t_delta=t_delta, t_max=t_max, initial_condition=qp_opt))
         plt.savefig(filename)
         print('wrote to file "{0}"'.format(filename))
         plt.close(fig) # VERY important to do this -- otherwise your memory will slowly fill up!
