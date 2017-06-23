@@ -216,6 +216,10 @@ class HeisenbergDynamicsContext(DynamicsContext):
         return cls.K(qp) + cls.V(qp)
 
     @classmethod
+    def J (cls, qp):
+        return qp[0,0]*qp[1,0] + qp[0,1]*qp[1,1] + 2*qp[0,2]*qp[1,2]
+
+    @classmethod
     def dH_dq (cls, q, p):
         assert np.all(np.isfinite(q))
         assert np.all(np.isfinite(p))
@@ -311,8 +315,150 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
     def beta (cls):
         return 16.0
 
+    @classmethod
+    def initial_condition_preimage (cls):
+        #return np.array((0.46200237, 0.0, 0.97966453))
+        #return np.array((4.62385150336783013e-01, -5.02075714050898860e-04, 9.80340082913902178e-01))
+
+        # from
+        # qp_opt = [[4.62167379391418609e-01 0.00000000000000000e+00 0.00000000000000000e+00]
+        #           [-4.67440934052728782e-04 9.80312987653756296e-01 6.32317054716479721e+00]]
+        return np.array((4.62167379391418609e-01, -4.67440934052728782e-04, 9.80312987653756296e-01))
+
+    def __init__ (self):
+        # Symbolically solve H(qp) = 0 for qp[1,2].
+        X = vorpy.symbolic.tensor('X', (4,))
+        zero = sp.Integer(0)
+        qp = np.array(
+            (
+                (X[0], zero, zero),
+                (X[1], X[2], X[3]),
+            ),
+            dtype=object
+        )
+        H = HeisenbergDynamicsContext_Symbolic.H(qp)
+        print('H(qp) = {0}'.format(H))
+        p_z = qp[1,2] # Momentum for z coordinate
+        p_z_solution_v = sp.solve(H, p_z)
+        print('len(p_z_solution_v) = {0}'.format(len(p_z_solution_v)))
+        #print('p_z_solution_v = {0}'.format(p_z_solution_v))
+        # Just take the last solution.
+        p_z_solution = p_z_solution_v[-1]
+        #print('p_z_solution = {0}'.format(p_z_solution))
+
+        self.symbolic_embedding_domain = X[:3]
+        self.symbolic_embedding = np.array(
+            (
+                (X[0], zero,         zero),
+                (X[1], X[2], p_z_solution),
+            ),
+            dtype=object
+        )
+        self.embedding = vorpy.symbolic.lambdified(
+            self.symbolic_embedding,
+            self.symbolic_embedding_domain,
+            replacement_d={
+                'array'         :'np.array',
+                'ndarray'       :'np.ndarray',
+                'dtype=object'  :'dtype=float',
+                'sqrt'          :'np.sqrt',
+                'pi'            :'np.pi',
+            },
+            verbose=True
+        )
+
+    #@classmethod
+    #def initial_condition_preimage (cls):
+        ##return np.array((0.5, 1.0)) # original
+        ##return np.array((0.46307038, 0.9807273)) # once optimized
+        ##return np.array((0.4613605, 0.98053092)) # twice optimized
+        #return np.array((0.46200237, 0.97966453)) # thrice optimized
+
+    #def __init__ (self):
+        ## Symbolically solve H(qp) = 0 for qp[1,2].
+        #X = vorpy.symbolic.tensor('X', (3,))
+        #zero = sp.Integer(0)
+        #qp = np.array(
+            #(
+                #(X[0], zero, zero),
+                #(zero, X[1], X[2]),
+            #),
+            #dtype=object
+        #)
+        #H = HeisenbergDynamicsContext_Symbolic.H(qp)
+        #print('H(qp) = {0}'.format(H))
+        #p_z = qp[1,2] # Momentum for z coordinate
+        #p_z_solution_v = sp.solve(H, p_z)
+        #print('len(p_z_solution_v) = {0}'.format(len(p_z_solution_v)))
+        ##print('p_z_solution_v = {0}'.format(p_z_solution_v))
+        ## Just take the last solution.
+        #p_z_solution = p_z_solution_v[-1]
+        ##print('p_z_solution = {0}'.format(p_z_solution))
+
+        #self.symbolic_embedding_domain = X[:2]
+        #self.symbolic_embedding = np.array(
+            #(
+                #(X[0], zero,         zero),
+                #(zero, X[1], p_z_solution),
+            #),
+            #dtype=object
+        #)
+        #self.embedding = vorpy.symbolic.lambdified(
+            #self.symbolic_embedding,
+            #self.symbolic_embedding_domain,
+            #replacement_d={
+                #'array'         :'np.array',
+                #'ndarray'       :'np.ndarray',
+                #'dtype=object'  :'dtype=float',
+                #'sqrt'          :'np.sqrt',
+                #'pi'            :'np.pi',
+            #},
+            #verbose=True
+        #)
+
+    #@classmethod
+    #def initial_condition_preimage (cls):
+        ##return np.array((0.5, 0.0, 0.0, 0.0, 1.0)) # original
+        #return np.array((5.00647217e-01, 1.02238132e-03, -2.18960185e-04, 1.39439904e-03, 9.99489776e-01))
+
+    #def __init__ (self):
+        ## Symbolically solve H(qp) = 0 for qp[1,2].
+        #X = vorpy.symbolic.tensor('X', (6,))
+        #qp = X.reshape(2,3)
+        #H = HeisenbergDynamicsContext_Symbolic.H(qp)
+        #print('H(qp) = {0}'.format(H))
+        #p_z = qp[1,2] # Momentum for z coordinate
+        #p_z_solution_v = sp.solve(H, p_z)
+        #print('len(p_z_solution_v) = {0}'.format(len(p_z_solution_v)))
+        ##print('p_z_solution_v = {0}'.format(p_z_solution_v))
+        ## Just take the last solution.
+        #p_z_solution = p_z_solution_v[-1]
+        ##print('p_z_solution = {0}'.format(p_z_solution))
+
+        #self.symbolic_embedding_domain = X[:5]
+        #self.symbolic_embedding = np.array(
+            #(
+                #(X[0], X[1],         X[2]),
+                #(X[3], X[4], p_z_solution),
+            #),
+            #dtype=object
+        #)
+        #self.embedding = vorpy.symbolic.lambdified(
+            #self.symbolic_embedding,
+            #self.symbolic_embedding_domain,
+            #replacement_d={
+                #'array'         :'np.array',
+                #'ndarray'       :'np.ndarray',
+                #'dtype=object'  :'dtype=float',
+                #'sqrt'          :'np.sqrt',
+                #'pi'            :'np.pi',
+            #},
+            #verbose=True
+        #)
+
 class ShootingMethodObjective:
     def __init__ (self, *, dynamics_context, qp_0, t_max, t_delta):
+        #print('ShootingMethodObjective.__init__(); H(qp_0) = {0}'.format(dynamics_context.H(qp_0)))
         self.__dynamics_context     = dynamics_context
         self.qp_0                   = qp_0
         self.__qp_v                 = None
@@ -348,7 +494,8 @@ class ShootingMethodObjective:
 
             t_v = np.arange(0.0, self.t_max, self.t_delta)
             order = 2
-            omega = vorpy.symplectic_integration.nonseparable_hamiltonian.heuristic_estimate_for_omega(delta=self.t_delta, order=order, c=10.0)
+            #omega = vorpy.symplectic_integration.nonseparable_hamiltonian.heuristic_estimate_for_omega(delta=self.t_delta, order=order, c=10.0)
+            omega = 250*np.pi
             qp_v = vorpy.symplectic_integration.nonseparable_hamiltonian.integrate(
                 initial_coordinates=self.qp_0,
                 t_v=t_v,
@@ -403,11 +550,13 @@ class ShootingMethodObjective:
         try:
             Q_local_min_min_index       = np.argmin(Q_local_min_v)
             self.__Q_global_min_index   = _Q_global_min_index = local_min_index_v[Q_local_min_min_index]
-            if False:
+            if True:
+                # Fit a quadratic function to the 3 points centered on the argmin in order to have
+                # sub-sample accuracy when calculating the objective function value.
                 assert 1 <= _Q_global_min_index < len(Q_v)-1
                 self.__objective        = quadratic_min(Q_v[_Q_global_min_index-1:_Q_global_min_index+2])
                 # Some tests show this discrepancy to be on the order of 1.0e-9
-                print('self.__objective - Q_v[_Q_global_min_index] = {0}'.format(self.__objective - Q_v[_Q_global_min_index]))
+                #print('self.__objective - Q_v[_Q_global_min_index] = {0}'.format(self.__objective - Q_v[_Q_global_min_index]))
             else:
                 self.__objective        = Q_v[_Q_global_min_index]
         except ValueError:
@@ -420,83 +569,167 @@ def evaluate_shooting_method_objective (dynamics_context, qp_0, t_max, t_delta):
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
+    import os
+    import sys
 
-    dynamics_context = HeisenbergDynamicsContext_Numeric()
-    qp_0 = HeisenbergDynamicsContext_Symbolic.initial_condition()
-    print('solved-for initial conditions:')
-    print(qp_0)
-    t_max = 60.0
-    t_delta = 0.01
-    smo_0 = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=t_delta)
-    flow_curve_0 = smo_0.flow_curve()
+    def print_usage_and_exit_with_error ():
+        print('Usage: {0} <integer-value-random-seed>'.format(sys.argv[0]))
+        sys.exit(-1)
 
-    optimizer = library.monte_carlo.MonteCarlo(lambda qp_0:evaluate_shooting_method_objective(dynamics_context, qp_0, t_max, t_delta), qp_0, 1.0e-12, 1.0e-5, 12345)
-    try:
-        # for i in range(10000):
-        #for i in range(100):
-        for i in range(0):
-            optimizer.compute_next_step()
-            print('i = {0}, obj = {1}'.format(i, optimizer.obj_history_v[-1]))
-    except KeyboardInterrupt:
-        print('got KeyboardInterrupt -- halting optimization')
+    if len(sys.argv) == 2:
+        try:
+            random_seed = int(sys.argv[1])
+        except Exception as e:
+            print('error {0} while trying to parse <integer-value-random-seed> "{1}"'.format(e, sys.argv[1]))
+            print_usage_and_exit_with_error()
+    else:
+        print_usage_and_exit_with_error()
 
-    qp_opt = optimizer.parameter_history_v[-1]
-    smo_opt = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_opt, t_max=t_max, t_delta=t_delta)
-    flow_curve_opt = smo_opt.flow_curve()
+    if not os.path.exists('shooting_method_3/'):
+        os.mkdir('shooting_method_3')
 
-    print('qp_0 = {0}'.format(qp_0))
-    print('qp_opt = {0}'.format(qp_opt))
-    print('flow_curve_0[0] = {0}'.format(flow_curve_0[0]))
-    print('flow_curve_0[-1] = {0}'.format(flow_curve_0[-1]))
-    print('flow_curve_opt[0] = {0}'.format(flow_curve_opt[0]))
-    print('flow_curve_opt[-1] = {0}'.format(flow_curve_opt[-1]))
+    if not os.path.exists('shooting_method_3/abortive'):
+        os.mkdir('shooting_method_3/abortive')
+
+    # Set numpy to print floats with full precision in scientific notation.
+    np.set_printoptions(formatter={'float':lambda x:'{0:.17e}'.format(x)})
 
     def plot_stuff (*, axis_v, smo, name):
         flow_curve = smo.flow_curve()
         print('flow_curve.shape = {0}'.format(flow_curve.shape))
 
         axis = axis_v[0]
-        axis.set_title('{0} curve'.format(name))
+        axis.set_title('{0} curve xy-position'.format(name))
+        axis.plot(0, 0, 'o', color='black')
         axis.plot(flow_curve[:,0,0], flow_curve[:,0,1])
         axis.plot(flow_curve[0,0,0], flow_curve[0,0,1], 'o', color='green', alpha=0.5)
         axis.plot(flow_curve[smo.Q_global_min_index(),0,0], flow_curve[smo.Q_global_min_index(),0,1], 'o', color='red', alpha=0.5)
         axis.set_aspect('equal')
 
         axis = axis_v[1]
-        axis.set_title('squared distance')
+        axis.set_title('{0} curve xy-momentum'.format(name))
+        axis.plot(flow_curve[:,1,0], flow_curve[:,1,1])
+        axis.plot(flow_curve[0,1,0], flow_curve[0,1,1], 'o', color='green', alpha=0.5)
+        axis.plot(flow_curve[smo.Q_global_min_index(),1,0], flow_curve[smo.Q_global_min_index(),1,1], 'o', color='red', alpha=0.5)
+        axis.set_aspect('equal')
+
+        axis = axis_v[2]
+        axis.set_title('squared distance to initial condition')
         axis.semilogy(smo.t_v(), smo.squared_distance_function())
         axis.axvline(smo.t_v()[smo.Q_global_min_index()], color='green')
 
-        axis = axis_v[2]
-        axis.set_title('curve energy')
-        axis.plot(smo.t_v(), vorpy.apply_along_axes(HeisenbergDynamicsContext_Numeric.H, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=()))
+        axis = axis_v[3]
+        axis.set_title('abs(H) (should stay close to 0)')
+        axis.semilogy(smo.t_v(), np.abs(vorpy.apply_along_axes(HeisenbergDynamicsContext_Numeric.H, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=())))
 
-    row_count = 2
-    col_count = 4
-    fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(15*col_count,15*row_count))
+        J_v = vorpy.apply_along_axes(HeisenbergDynamicsContext_Numeric.J, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=())
+        mean_J_v = np.mean(J_v)
+        J_v -= mean_J_v
 
-    # axis = axis_vv[0][0]
-    # axis.set_title('initial curve')
-    # axis.plot(flow_curve_0[:,0], flow_curve_0[:,1])
-    # axis.set_aspect('equal')
+        axis = axis_v[4]
+        axis.set_title('abs(J - mean(J)) (should be close to 0)\nmean(J) = {0}'.format(mean_J_v))
+        axis.semilogy(smo.t_v(), np.abs(J_v))
 
-    plot_stuff(axis_v=axis_vv[0], smo=smo_0, name='initial')
-    plot_stuff(axis_v=axis_vv[1], smo=smo_opt, name='optimized')
+    dynamics_context = HeisenbergDynamicsContext_Numeric()
+    #qp_0 = HeisenbergDynamicsContext_Symbolic.initial_condition()
 
-    axis = axis_vv[0][3]
-    axis.set_title('objective function history')
-    axis.semilogy(optimizer.obj_history_v)
+    #X_0 = HeisenbergDynamicsContext_Numeric.initial_condition_preimage()
 
-    # axis = axis_vv[1][0]
-    # axis.set_title('optimized curve')
-    # axis.plot(flow_curve_opt[:,0], flow_curve_opt[:,1])
-    # axis.set_aspect('equal')
+    rng = np.random.RandomState(random_seed)
 
-    # axis = axis_vv[1][2]
-    # axis.set_title('energy of optimized curve')
-    # axis.plot(smo_opt.t_v(), np.apply_along_axis(HeisenbergDynamicsContext.hamiltonian, 1, flow_curve_opt))
+    def try_random_initial_condition ():
+        X_0 = rng.randn(*HeisenbergDynamicsContext_Numeric.initial_condition_preimage().shape)
+        # NOTE: This somewhat biases the generation of random initial conditions
+        X_0[0] = np.exp(X_0[0]) # So we never get negative values
+        X_0[2] = np.abs(X_0[2]) # So we only bother pointing upward
+        qp_0 = dynamics_context.embedding(X_0)
+        print('randomly generated initial condition preimage: X_0:')
+        print(X_0)
+        #print('embedding of randomly generated initial condition preimage: qp_0:')
+        #print(qp_0)
+        t_delta = 0.001
+        t_max = 5.0
+        # TODO: Pick a large-ish t_max, then cluster the local mins, and then from the lowest cluster,
+        # pick the corresponding to the lowest time value, and then make t_max 15% larger than that.
+        while True:
+            if t_max > 50:
+                print('t_max ({0}) was raised too many times before nearly closing up -- aborting'.format(t_max))
 
-    fig.tight_layout()
-    filename = 'shooting_method_3.png'
-    plt.savefig(filename)
-    print('wrote to file "{0}"'.format(filename))
+                row_count = 1
+                col_count = 5
+                fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(15*col_count,15*row_count))
+
+                plot_stuff(axis_v=axis_vv[0], smo=smo_0, name='initial')
+
+                fig.tight_layout()
+                filename = 'shooting_method_3/abortive/obj:{0}.t_delta:{1}.t_max:{2}.qp_0:{3}.png'.format(smo_0.objective(), t_delta, t_max, qp_0)
+                plt.savefig(filename)
+                print('wrote to file "{0}"'.format(filename))
+                plt.close(fig) # VERY important to do this -- otherwise your memory will slowly fill up!
+
+                return
+            smo_0 = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=t_delta)
+            print('smo_0.objective() = {0}'.format(smo_0.objective()))
+            if smo_0.objective() < 1.0e-1:
+                break
+            else:
+                t_max *= 1.5
+                print('curve did not nearly close up -- retrying with higher t_max: {0}'.format(t_max))
+        flow_curve_0 = smo_0.flow_curve()
+
+        optimizer = library.monte_carlo.MonteCarlo(
+            obj=lambda qp_0:evaluate_shooting_method_objective(dynamics_context, qp_0, t_max, t_delta),
+            initial_parameters=X_0,
+            inner_radius=1.0e-12,
+            outer_radius=1.0e-1,
+            rng_seed=random_seed,
+            embedding=dynamics_context.embedding
+        )
+        try:
+            # for i in range(10000):
+            for i in range(1000):
+            #for i in range(0):
+                optimizer.compute_next_step()
+                print('i = {0}, obj = {1}'.format(i, optimizer.obj_history_v[-1]))
+        except KeyboardInterrupt:
+            print('got KeyboardInterrupt -- halting optimization, but will still plot current results')
+
+        qp_opt = optimizer.embedded_parameter_history_v[-1]
+        smo_opt = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_opt, t_max=t_max, t_delta=t_delta)
+        flow_curve_opt = smo_opt.flow_curve()
+
+        print('qp_0 = {0}'.format(qp_0))
+        print('qp_opt = {0}'.format(qp_opt))
+        #print('flow_curve_0[0] = {0}'.format(flow_curve_0[0]))
+        #print('flow_curve_0[-1] = {0}'.format(flow_curve_0[-1]))
+        #print('flow_curve_opt[0] = {0}'.format(flow_curve_opt[0]))
+        #print('flow_curve_opt[-1] = {0}'.format(flow_curve_opt[-1]))
+
+        row_count = 2
+        col_count = 6
+        fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(15*col_count,15*row_count))
+
+        plot_stuff(axis_v=axis_vv[0], smo=smo_0, name='initial')
+        plot_stuff(axis_v=axis_vv[1], smo=smo_opt, name='optimized')
+
+        axis = axis_vv[0][-1]
+        axis.set_title('objective function history')
+        axis.semilogy(optimizer.obj_history_v)
+
+        fig.tight_layout()
+        filename = 'shooting_method_3/obj:{0}.t_delta:{1}.t_max:{2}.qp_opt:{3}.png'.format(smo_opt.objective(), t_delta, t_max, qp_opt)
+        plt.savefig(filename)
+        print('wrote to file "{0}"'.format(filename))
+        plt.close(fig) # VERY important to do this -- otherwise your memory will slowly fill up!
+
+    try:
+        while True:
+            try:
+                try_random_initial_condition()
+            except Exception as e:
+                print('encountered exception during try_random_initial_condition; skipping.  exception was')
+                print(e)
+                pass
+    except KeyboardInterrupt:
+        print('got KeyboardInterrupt -- exiting program')
+        sys.exit(0)
