@@ -686,14 +686,14 @@ class OptionParser:
         self.op.add_option(
             '--dt',
             dest='dt',
-            #default='0.001',
+            default='0.001',
             type='float',
             help='Specifies the timestep for the curve integration.'
         )
         self.op.add_option(
             '--max-time',
             dest='max_time',
-            #default='20.0',
+            default='50.0',
             type='float',
             help='Specifies the max time to integrate the curve to.'
         )
@@ -750,13 +750,16 @@ class OptionParser:
             print('required option --max-time was not specified.')
             self.op.print_help()
             return None,None
-        elif num_initial_conditions_specified != 1:
-            print('must specify exactly one of --initial-3preimage or --initial, but {0} of those were specified.'.format(num_initial_conditions_specified))
+        elif options.seed is None and num_initial_conditions_specified != 1:
+            print('if --search-using-seed is not specified, then you must specify exactly one of --initial-2preimage or --initial-3preimage or --initial, but {0} of those were specified.'.format(num_initial_conditions_specified))
             self.op.print_help()
             return None,None
 
+        # No initial conditions are needed if --search-using-seed was specified.
+        if options.seed is not None:
+            pass
         # Attempt to parse initial conditions.  Upon success, the attribute options.qp_0 should exist.
-        if options.initial_2preimage is not None:
+        elif options.initial_2preimage is not None:
             try:
                 options.initial_2preimage = OptionParser.__csv_as_ndarray(OptionParser.__pop_brackets_off_of(options.initial_2preimage), float)
                 expected_shape = (2,)
@@ -825,14 +828,15 @@ def search_using_seed (dynamics_context, options):
     rng = np.random.RandomState(options.seed)
 
     def try_random_initial_condition ():
-        X_0 = rng.randn(*HeisenbergDynamicsContext_Numeric.initial_condition_preimage().shape)
+        #X_0 = rng.randn(*HeisenbergDynamicsContext_Numeric.initial_condition_preimage().shape)
+        X_0 = rng.randn(2)
         # NOTE: This somewhat biases the generation of random initial conditions
-        X_0[0] = np.exp(X_0[0]) # So we never get negative values
-        X_0[2] = np.abs(X_0[2]) # So we only bother pointing upward
+        #X_0[0] = np.exp(X_0[0]) # So we never get negative values
+        X_0[1] = np.abs(X_0[1]) # So we only bother pointing upward
 
         #X_0 = np.array([4.53918797113298744e-01,-6.06738228528062038e-04,1.75369725636529949e+00])
 
-        qp_0 = dynamics_context.embedding(X_0)
+        qp_0 = dynamics_context.embedding2(X_0)
         print('randomly generated initial condition preimage: X_0:')
         print(X_0)
         #print('embedding of randomly generated initial condition preimage: qp_0:')
@@ -849,8 +853,8 @@ def search_using_seed (dynamics_context, options):
             else:
                 t_max *= 1.5
                 print('curve did not nearly close up -- retrying with higher t_max: {0}'.format(t_max))
-            if t_max > 50:
-                print('t_max ({0}) was raised too many times before nearly closing up -- aborting'.format(t_max))
+            if t_max > options.max_time:
+                print('t_max ({0}) was raised too many times, exceeding --max-time value of {1}, before nearly closing up -- aborting'.format(t_max, options.max_time))
 
                 orbit_plot = OrbitPlot(row_count=1, extra_col_count=0)
                 #row_count = 1
