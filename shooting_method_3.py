@@ -624,6 +624,7 @@ class OrbitPlot:
 
     def plot_curve (self, *, curve_description, axis_v, smo):
         flow_curve = smo.flow_curve()
+        abs_H_v = np.abs(vorpy.apply_along_axes(HeisenbergDynamicsContext_Numeric.H, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=()))
 
         axis = axis_v[0]
         axis.set_title('{0} curve xy-position'.format(curve_description))
@@ -651,16 +652,17 @@ class OrbitPlot:
         axis.plot(smo.t_v(), flow_curve[:,1,2])
 
         axis = axis_v[4]
-        axis.set_title('abs(H) (should stay close to 0)')
-        axis.semilogy(smo.t_v(), np.abs(vorpy.apply_along_axes(HeisenbergDynamicsContext_Numeric.H, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=())))
+        axis.set_title('abs(H) (should stay close to 0); max(abs(H)) = {0:.2e}'.format(np.max(abs_H_v)))
+        axis.semilogy(smo.t_v(), abs_H_v)
 
         J_v = vorpy.apply_along_axes(HeisenbergDynamicsContext_Numeric.J, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=())
         mean_J_v = np.mean(J_v)
         J_v -= mean_J_v
+        abs_J_minus_mean_J = np.abs(J_v)
 
         axis = axis_v[5]
-        axis.set_title('abs(J - mean(J)) (should be close to 0)\nmean(J) = {0}'.format(mean_J_v))
-        axis.semilogy(smo.t_v(), np.abs(J_v))
+        axis.set_title('abs(J - mean(J)) (should be close to 0)\nmean(J) = {0}; max(abs(J - mean(J))) = {1:.2e}'.format(mean_J_v, np.max(abs_J_minus_mean_J)))
+        axis.semilogy(smo.t_v(), abs_J_minus_mean_J)
 
         axis = axis_v[6]
         axis.set_title('squared distance to initial condition')
