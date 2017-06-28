@@ -44,6 +44,8 @@ TODO
 
     Also, we must guarantee that the period computation picks analogous points on the curve,
     meaning that they come from similar time values (and not e.g. several loops later in time).
+-   k-fold symmetry -- make the closest-approach-map measure from a 2pi/k-rotated phase space point
+    in order to more efficiently find k-fold symmetric curves.
 """
 
 def define_canonical_symplectic_form_and_inverse (*, configuration_space_dimension, dtype):
@@ -567,56 +569,17 @@ class ShootingMethodObjective:
 def evaluate_shooting_method_objective (dynamics_context, qp_0, t_max, t_delta):
     return ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=t_delta)()
 
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    import os
-    import sys
+class OrbitPlot:
+    def __init__ (self, *, row_count, extra_col_count):
+        row_count = 1
+        col_count = 7+extra_col_count
+        self.fig,self.axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(15*col_count,15*row_count))
 
-    def print_usage_and_exit_with_error ():
-        print('Usage: {0} <integer-value-random-seed>'.format(sys.argv[0]))
-        sys.exit(-1)
-
-    if len(sys.argv) == 2:
-        try:
-            random_seed = int(sys.argv[1])
-        except Exception as e:
-            print('error {0} while trying to parse <integer-value-random-seed> "{1}"'.format(e, sys.argv[1]))
-            print_usage_and_exit_with_error()
-    else:
-        print_usage_and_exit_with_error()
-
-    if not os.path.exists('shooting_method_3/'):
-        os.mkdir('shooting_method_3')
-
-    if not os.path.exists('shooting_method_3/abortive'):
-        os.mkdir('shooting_method_3/abortive')
-
-    # Set numpy to print floats with full precision in scientific notation.
-    def float_formatter (x):
-        return '{0:.17e}'.format(x)
-
-    np.set_printoptions(formatter={'float':float_formatter})
-
-    def ndarray_as_single_line_string (A):
-        """
-        Normally a numpy.ndarray will be printed with spaces separating the elements
-        and newlines separating the rows.  This function does the same but with commas
-        separating elements and rows.  There should be no spaces in the returned string.
-        """
-        if len(A.shape) == 0:
-            return float_formatter(A)
-        else:
-            return '[' + ','.join(ndarray_as_single_line_string(a) for a in A) + ']'
-
-    def construct_filename (*, obj, t_delta, t_max, initial_condition):
-        return 'obj:{0}.t_delta:{1}.t_max:{2}.initial_condition:{3}.png'.format(obj, t_delta, t_max, ndarray_as_single_line_string(initial_condition))
-
-    def plot_stuff (*, axis_v, smo, name):
+    def plot_curve (self, *, curve_description, axis_v, smo):
         flow_curve = smo.flow_curve()
-        print('flow_curve.shape = {0}'.format(flow_curve.shape))
 
         axis = axis_v[0]
-        axis.set_title('{0} curve xy-position'.format(name))
+        axis.set_title('{0} curve xy-position'.format(curve_description))
         axis.plot(0, 0, 'o', color='black')
         axis.plot(flow_curve[:,0,0], flow_curve[:,0,1])
         axis.plot(flow_curve[0,0,0], flow_curve[0,0,1], 'o', color='green', alpha=0.5)
@@ -624,18 +587,23 @@ if __name__ == '__main__':
         axis.set_aspect('equal')
 
         axis = axis_v[1]
-        axis.set_title('{0} curve xy-momentum'.format(name))
+        axis.set_title('{0} curve z-position'.format(curve_description))
+        axis.axhline(0, color='black')
+        axis.plot(smo.t_v(), flow_curve[:,0,2])
+
+        axis = axis_v[2]
+        axis.set_title('{0} curve xy-momentum'.format(curve_description))
         axis.plot(flow_curve[:,1,0], flow_curve[:,1,1])
         axis.plot(flow_curve[0,1,0], flow_curve[0,1,1], 'o', color='green', alpha=0.5)
         axis.plot(flow_curve[smo.Q_global_min_index(),1,0], flow_curve[smo.Q_global_min_index(),1,1], 'o', color='red', alpha=0.5)
         axis.set_aspect('equal')
 
-        axis = axis_v[2]
-        axis.set_title('squared distance to initial condition')
-        axis.semilogy(smo.t_v(), smo.squared_distance_function())
-        axis.axvline(smo.t_v()[smo.Q_global_min_index()], color='green')
-
         axis = axis_v[3]
+        axis.set_title('{0} curve z-momentum'.format(curve_description))
+        axis.axhline(0, color='black')
+        axis.plot(smo.t_v(), flow_curve[:,1,2])
+
+        axis = axis_v[4]
         axis.set_title('abs(H) (should stay close to 0)')
         axis.semilogy(smo.t_v(), np.abs(vorpy.apply_along_axes(HeisenbergDynamicsContext_Numeric.H, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=())))
 
@@ -643,22 +611,162 @@ if __name__ == '__main__':
         mean_J_v = np.mean(J_v)
         J_v -= mean_J_v
 
-        axis = axis_v[4]
+        axis = axis_v[5]
         axis.set_title('abs(J - mean(J)) (should be close to 0)\nmean(J) = {0}'.format(mean_J_v))
         axis.semilogy(smo.t_v(), np.abs(J_v))
 
-    dynamics_context = HeisenbergDynamicsContext_Numeric()
-    #qp_0 = HeisenbergDynamicsContext_Symbolic.initial_condition()
+        axis = axis_v[6]
+        axis.set_title('squared distance to initial condition')
+        axis.semilogy(smo.t_v(), smo.squared_distance_function())
+        axis.axvline(smo.t_v()[smo.Q_global_min_index()], color='green')
 
-    #X_0 = HeisenbergDynamicsContext_Numeric.initial_condition_preimage()
+    def plot_and_clear (self, *, filename):
+        self.fig.tight_layout()
+        plt.savefig(filename)
+        print('wrote to file "{0}"'.format(filename))
+        # VERY important to do this -- otherwise your memory will slowly fill up!
+        # Not sure which one is actually sufficient
+        plt.clf()
+        plt.close(self.fig)
+        del self.fig
+        del self.axis_vv
 
-    rng = np.random.RandomState(random_seed)
+import optparse
+
+class OptionParser:
+    def __init__ (self):
+        self.op = optparse.OptionParser()
+        self.op.add_option(
+            '--dt',
+            dest='dt',
+            #default='0.001',
+            type='float',
+            help='Specifies the timestep for the curve integration.'
+        )
+        self.op.add_option(
+            '--max-time',
+            dest='max_time',
+            #default='20.0',
+            type='float',
+            help='Specifies the max time to integrate the curve to.'
+        )
+        self.op.add_option(
+            '--initial-3preimage',
+            dest='initial_3preimage',
+            type='string',
+            help='Specifies the preimage of the initial conditions with respect to the [x,p_x,p_y] |-> [[x,y,z],[p_x,p_y,p_z]] embedding.  Should have the form [x,y,z], where each of x,y,z are floating point literals.'
+        )
+        self.op.add_option(
+            '--initial',
+            dest='initial',
+            type='string',
+            help='Specifies the initial conditions [[x,y,z],[p_x,p_y,p_z]], where each of x,y,z,p_x,p_y,p_z are floating point literals.'
+        )
+        self.op.add_option(
+            '--search-using-seed',
+            dest='seed',
+            type='int',
+            help='Specifies the seed to use in numpy RNG for random search of preimage initial conditions.'
+        )
+
+    @staticmethod
+    def __pop_brackets_off_of (string):
+        if len(string) < 2:
+            raise ValueError('string must be at least 2 chars long')
+        elif string[0] != '[' or string[-1] != ']':
+            raise ValueError('string must begin with [ and end with ]')
+        return string[1:-1]
+
+    @staticmethod
+    def __csv_as_ndarray (string, dtype):
+        return np.array([dtype(token) for token in string.split(',')])
+
+    def parse_argv_and_validate (self, argv, dynamics_context):
+        options,args = self.op.parse_args()
+
+        num_initial_conditions_specified = sum([
+            options.initial_3preimage is not None,
+            options.initial is not None
+        ])
+        if options.dt is None:
+            print('required option --dt was not specified.')
+            self.op.print_help()
+            return None,None
+        elif options.max_time is None:
+            print('required option --max-time was not specified.')
+            self.op.print_help()
+            return None,None
+        elif num_initial_conditions_specified != 1:
+            print('must specify exactly one of --initial-3preimage or --initial, but {0} of those were specified.'.format(num_initial_conditions_specified))
+            self.op.print_help()
+            return None,None
+
+        # Attempt to parse initial conditions.  Upon success, the attribute options.qp_0 should exist.
+        if options.initial_3preimage is not None:
+            try:
+                options.initial_3preimage = OptionParser.__csv_as_ndarray(OptionParser.__pop_brackets_off_of(options.initial_3preimage), float)
+                expected_shape = (3,)
+                if options.initial_3preimage.shape != expected_shape:
+                    raise ValueError('--initial_3preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_3preimage.shape, expected_shape))
+                options.qp_0 = dynamics_context.embedding(options.initial_3preimage)
+            except ValueError as e:
+                print('error parsing --initial_3preimage value: {0}'.format(str(e)))
+                self.op.print_help()
+                return None,None
+        elif options.initial is not None:
+            try:
+                row_string_v = OptionParser.__pop_brackets_off_of(options.initial)
+                options.initial = np.array(tuple(OptionParser.__csv_as_ndarray(OptionParser.__pop_brackets_off_of(row_string), float) for row_string in row_string_v))
+                expected_shape = (2,3)
+                if options.initial.shape != expected_shape:
+                    raise ValueError('--initial value had the wrong number of components (got {0} but expected {1}).'.format(options.initial.shape, expected_shape))
+                options.qp_0 = options.initial
+            except ValueError as e:
+                print('error parsing --initial value: {0}'.format(str(e)))
+                self.op.print_help()
+                return None,None
+        else:
+            assert False, 'this should never happen'
+
+        return options,args
+
+# Set numpy to print floats with full precision in scientific notation.
+def float_formatter (x):
+    return '{0:.17e}'.format(x)
+
+def ndarray_as_single_line_string (A):
+    """
+    Normally a numpy.ndarray will be printed with spaces separating the elements
+    and newlines separating the rows.  This function does the same but with commas
+    separating elements and rows.  There should be no spaces in the returned string.
+    """
+    if len(A.shape) == 0:
+        return float_formatter(A)
+    else:
+        return '[' + ','.join(ndarray_as_single_line_string(a) for a in A) + ']'
+
+def construct_filename (*, obj, t_delta, t_max, initial_condition):
+    return 'obj:{0}.t_delta:{1}.t_max:{2}.initial_condition:{3}.png'.format(obj, t_delta, t_max, ndarray_as_single_line_string(initial_condition))
+
+def search_using_seed (dynamics_context, options):
+    if not os.path.exists('shooting_method_3/'):
+        os.mkdir('shooting_method_3')
+
+    if not os.path.exists('shooting_method_3/abortive'):
+        os.mkdir('shooting_method_3/abortive')
+
+    np.set_printoptions(formatter={'float':float_formatter})
+
+    rng = np.random.RandomState(options.seed)
 
     def try_random_initial_condition ():
         X_0 = rng.randn(*HeisenbergDynamicsContext_Numeric.initial_condition_preimage().shape)
         # NOTE: This somewhat biases the generation of random initial conditions
         X_0[0] = np.exp(X_0[0]) # So we never get negative values
         X_0[2] = np.abs(X_0[2]) # So we only bother pointing upward
+
+        #X_0 = np.array([4.53918797113298744e-01,-6.06738228528062038e-04,1.75369725636529949e+00])
+
         qp_0 = dynamics_context.embedding(X_0)
         print('randomly generated initial condition preimage: X_0:')
         print(X_0)
@@ -669,22 +777,6 @@ if __name__ == '__main__':
         # TODO: Pick a large-ish t_max, then cluster the local mins, and then from the lowest cluster,
         # pick the corresponding to the lowest time value, and then make t_max 15% larger than that.
         while True:
-            if t_max > 50:
-                print('t_max ({0}) was raised too many times before nearly closing up -- aborting'.format(t_max))
-
-                row_count = 1
-                col_count = 5
-                fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(15*col_count,15*row_count))
-
-                plot_stuff(axis_v=axis_vv[0], smo=smo_0, name='initial')
-
-                fig.tight_layout()
-                filename = os.path.join('shooting_method_3/abortive', construct_filename(obj=smo_0.objective(), t_delta=t_delta, t_max=t_max, initial_condition=qp_0))
-                plt.savefig(filename)
-                print('wrote to file "{0}"'.format(filename))
-                plt.close(fig) # VERY important to do this -- otherwise your memory will slowly fill up!
-
-                return
             smo_0 = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=t_delta)
             print('smo_0.objective() = {0}'.format(smo_0.objective()))
             if smo_0.objective() < 1.0e-1:
@@ -692,6 +784,36 @@ if __name__ == '__main__':
             else:
                 t_max *= 1.5
                 print('curve did not nearly close up -- retrying with higher t_max: {0}'.format(t_max))
+            if t_max > 50:
+                print('t_max ({0}) was raised too many times before nearly closing up -- aborting'.format(t_max))
+
+                orbit_plot = OrbitPlot(row_count=1, extra_col_count=0)
+                #row_count = 1
+                #col_count = 7
+                #fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(15*col_count,15*row_count))
+
+                #plot_stuff(axis_v=axis_vv[0], smo=smo_0, name='initial')
+                orbit_plot.plot_curve(curve_description='initial', axis_v=orbit_plot.axis_vv[0], smo=smo_0)
+
+                #fig.tight_layout()
+                #filename = os.path.join('shooting_method_3/abortive', construct_filename(obj=smo_0.objective(), t_delta=t_delta, t_max=t_max, initial_condition=qp_0))
+                #plt.savefig(filename)
+                #print('wrote to file "{0}"'.format(filename))
+                #plt.close(fig) # VERY important to do this -- otherwise your memory will slowly fill up!
+
+                orbit_plot.plot_and_clear(
+                    filename=os.path.join(
+                        'shooting_method_3/abortive',
+                        construct_filename(
+                            obj=smo_0.objective(),
+                            t_delta=t_delta,
+                            t_max=t_max,
+                            initial_condition=qp_0
+                        )
+                    )
+                )
+
+                return
         flow_curve_0 = smo_0.flow_curve()
 
         optimizer = library.monte_carlo.MonteCarlo(
@@ -718,31 +840,120 @@ if __name__ == '__main__':
         print('qp_0 = {0}'.format(qp_0))
         print('qp_opt = {0}'.format(qp_opt))
 
-        row_count = 2
-        col_count = 6
-        fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(15*col_count,15*row_count))
+        #row_count = 2
+        #col_count = 8
+        #fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(15*col_count,15*row_count))
+        orbit_plot = OrbitPlot(row_count=2, extra_col_count=1)
 
-        plot_stuff(axis_v=axis_vv[0], smo=smo_0, name='initial')
-        plot_stuff(axis_v=axis_vv[1], smo=smo_opt, name='optimized')
+        #plot_stuff(axis_v=axis_vv[0], smo=smo_0, name='initial')
+        #plot_stuff(axis_v=axis_vv[1], smo=smo_opt, name='optimized')
+        orbit_plot.plot_curve(curve_description='initial', axis_v=orbit_plot.axis_vv[0], smo=smo_0)
+        orbit_plot.plot_curve(curve_description='optimized', axis_v=orbit_plot.axis_vv[1], smo=smo_opt)
 
-        axis = axis_vv[0][-1]
+        axis = orbit_plot.axis_vv[0][-1]
         axis.set_title('objective function history')
         axis.semilogy(optimizer.obj_history_v)
 
-        fig.tight_layout()
-        filename = os.path.join('shooting_method_3', construct_filename(obj=smo_opt.objective(), t_delta=t_delta, t_max=t_max, initial_condition=qp_opt))
-        plt.savefig(filename)
-        print('wrote to file "{0}"'.format(filename))
-        plt.close(fig) # VERY important to do this -- otherwise your memory will slowly fill up!
+        #fig.tight_layout()
+        #filename = os.path.join('shooting_method_3', construct_filename(obj=smo_opt.objective(), t_delta=t_delta, t_max=t_max, initial_condition=qp_opt))
+        #plt.savefig(filename)
+        #print('wrote to file "{0}"'.format(filename))
+        #plt.close(fig) # VERY important to do this -- otherwise your memory will slowly fill up!
+        orbit_plot.plot_and_clear(
+            filename=os.path.join(
+                'shooting_method_3',
+                construct_filename(
+                    obj=smo_opt.objective(),
+                    t_delta=t_delta,
+                    t_max=t_max,
+                    initial_condition=qp_opt
+                )
+            )
+        )
 
     try:
         while True:
             try:
                 try_random_initial_condition()
             except Exception as e:
-                print('encountered exception during try_random_initial_condition; skipping.  exception was')
-                print(e)
+                print('encountered exception during try_random_initial_condition; skipping.  exception was: {0}'.format(e))
                 pass
     except KeyboardInterrupt:
         print('got KeyboardInterrupt -- exiting program')
         sys.exit(0)
+
+
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+    import os
+    import sys
+
+    dynamics_context = HeisenbergDynamicsContext_Numeric()
+
+    option_parser = OptionParser()
+    options,args = option_parser.parse_argv_and_validate(sys.argv, dynamics_context)
+    if options is None:
+        sys.exit(-1)
+
+    print('options: {0}'.format(options))
+    print('args   : {0}'.format(args))
+
+    if options.seed is not None:
+        search_using_seed(dynamics_context, options)
+    else:
+        if not os.path.exists('shooting_method_3.custom_plot/'):
+            os.mkdir('shooting_method_3.custom_plot')
+
+        # Plot given curve
+        smo = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=options.qp_0, t_max=options.max_time, t_delta=options.dt)
+        print('smo.objective() = {0}'.format(smo.objective()))
+
+        orbit_plot = OrbitPlot(row_count=1, extra_col_count=0)
+        orbit_plot.plot_curve(curve_description='curve', axis_v=orbit_plot.axis_vv[0], smo=smo)
+        orbit_plot.plot_and_clear(
+            filename=os.path.join(
+                'shooting_method_3.custom_plot',
+                construct_filename(
+                    obj=smo.objective(),
+                    t_delta=options.dt,
+                    t_max=options.max_time,
+                    initial_condition=options.qp_0
+                )
+            )
+        )
+
+
+    #def print_usage_and_exit_with_error ():
+        #print('Usage: {0} <integer-value-random-seed>'.format(sys.argv[0]))
+        #sys.exit(-1)
+
+    ## TEMP HACK: If there are 4 args (meaning 3 parameters), then use those 3 params as preimage of
+    ## initial conditions and run a single integration and plot.
+    #if len(sys.argv) == 4:
+        #print('got 3 arguments; using as 3 coordinates in preimage of initial conditions to integrate and plot.')
+        #orbit_plot = OrbitPlot(row_count=1, extra_col_count=0)
+        #X_0 = np.array([float(arg) for arg in sys.argv[1:]])
+        #print('preimage initial condition: X_0:')
+        #print(X_0)
+        #qp_0 = dynamics_context.embedding(X_0)
+        #print('initial condition: qp_0: ')
+        #print(qp_0)
+
+        #t_delta = 0.001
+        #t_max = 50.0
+
+        #smo = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=t_delta)
+        #print('smo.objective() = {0}'.format(smo.objective()))
+        #flow_curve_0 = smo_0.flow_curve()
+
+
+
+    #if len(sys.argv) == 2:
+        #try:
+            #random_seed = int(sys.argv[1])
+        #except Exception as e:
+            #print('error {0} while trying to parse <integer-value-random-seed> "{1}"'.format(e, sys.argv[1]))
+            #print_usage_and_exit_with_error()
+    #else:
+        #print_usage_and_exit_with_error()
+
