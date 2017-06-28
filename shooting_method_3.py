@@ -640,13 +640,13 @@ class OrbitPlot:
         axis.semilogy(smo.t_v(), abs_H_v)
 
         J_v = vorpy.apply_along_axes(HeisenbergDynamicsContext_Numeric.J, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=())
-        mean_J_v = np.mean(J_v)
-        J_v -= mean_J_v
-        abs_J_minus_mean_J = np.abs(J_v)
+        J_0 = J_v[0]
+        J_v -= J_0
+        abs_J_minus_J_0 = np.abs(J_v)
 
         axis = axis_v[5]
-        axis.set_title('abs(J - mean(J)) (should be close to 0)\nmean(J) = {0}; max(abs(J - mean(J))) = {1:.2e}'.format(mean_J_v, np.max(abs_J_minus_mean_J)))
-        axis.semilogy(smo.t_v(), abs_J_minus_mean_J)
+        axis.set_title('abs(J - J_0) (should be close to 0)\nJ_0 = {0}; max(abs(J - J_0)) = {1:.2e}'.format(J_0, np.max(abs_J_minus_J_0)))
+        axis.semilogy(smo.t_v(), abs_J_minus_J_0)
 
         axis = axis_v[6]
         axis.set_title('squared distance to initial condition')
