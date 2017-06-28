@@ -713,7 +713,7 @@ class OptionParser:
             '--initial',
             dest='initial',
             type='string',
-            help='Specifies the initial conditions [[x,y,z],[p_x,p_y,p_z]], where each of x,y,z,p_x,p_y,p_z are floating point literals.'
+            help='Specifies the initial conditions [x,y,z,p_x,p_y,p_z], where each of x,y,z,p_x,p_y,p_z are floating point literals.'
         )
         self.op.add_option(
             '--search-using-seed',
@@ -725,9 +725,9 @@ class OptionParser:
     @staticmethod
     def __pop_brackets_off_of (string):
         if len(string) < 2:
-            raise ValueError('string must be at least 2 chars long')
+            raise ValueError('string (which is "{0}") must be at least 2 chars long'.format(string))
         elif string[0] != '[' or string[-1] != ']':
-            raise ValueError('string must begin with [ and end with ]')
+            raise ValueError('string (which is "{0}") must begin with [ and end with ]'.format(string))
         return string[1:-1]
 
     @staticmethod
@@ -783,12 +783,11 @@ class OptionParser:
                 return None,None
         elif options.initial is not None:
             try:
-                row_string_v = OptionParser.__pop_brackets_off_of(options.initial)
-                options.initial = np.array(tuple(OptionParser.__csv_as_ndarray(OptionParser.__pop_brackets_off_of(row_string), float) for row_string in row_string_v))
-                expected_shape = (2,3)
+                options.initial = OptionParser.__csv_as_ndarray(OptionParser.__pop_brackets_off_of(options.initial), float)
+                expected_shape = (6,)
                 if options.initial.shape != expected_shape:
                     raise ValueError('--initial value had the wrong number of components (got {0} but expected {1}).'.format(options.initial.shape, expected_shape))
-                options.qp_0 = options.initial
+                options.qp_0 = options.initial.reshape(2,3)
             except ValueError as e:
                 print('error parsing --initial value: {0}'.format(str(e)))
                 self.op.print_help()
