@@ -327,7 +327,50 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
         #           [-4.67440934052728782e-04 9.80312987653756296e-01 6.32317054716479721e+00]]
         return np.array((4.62167379391418609e-01, -4.67440934052728782e-04, 9.80312987653756296e-01))
 
-    def __init__ (self):
+    def __solve_for_embedding2 (self):
+        # Symbolically solve H(qp) = 0 for qp[1,2].
+        X = vorpy.symbolic.tensor('X', (3,))
+        zero = sp.Integer(0)
+        one = sp.Integer(1)
+        qp = np.array(
+            (
+                ( one, zero, zero),
+                (X[0], X[1], X[2]),
+            ),
+            dtype=object
+        )
+        H = HeisenbergDynamicsContext_Symbolic.H(qp)
+        print('H(qp) = {0}'.format(H))
+        p_z = qp[1,2] # Momentum for z coordinate
+        p_z_solution_v = sp.solve(H, p_z)
+        print('len(p_z_solution_v) = {0}'.format(len(p_z_solution_v)))
+        #print('p_z_solution_v = {0}'.format(p_z_solution_v))
+        # Just take the last solution.
+        p_z_solution = p_z_solution_v[-1]
+        #print('p_z_solution = {0}'.format(p_z_solution))
+
+        self.symbolic_embedding2_domain = X[:2]
+        self.symbolic_embedding2 = np.array(
+            (
+                ( one, zero,         zero),
+                (X[0], X[1], p_z_solution),
+            ),
+            dtype=object
+        )
+        self.embedding2 = vorpy.symbolic.lambdified(
+            self.symbolic_embedding2,
+            self.symbolic_embedding2_domain,
+            replacement_d={
+                'array'         :'np.array',
+                'ndarray'       :'np.ndarray',
+                'dtype=object'  :'dtype=float',
+                'sqrt'          :'np.sqrt',
+                'pi'            :'np.pi',
+            },
+            verbose=True
+        )
+
+    def __solve_for_embedding3 (self):
         # Symbolically solve H(qp) = 0 for qp[1,2].
         X = vorpy.symbolic.tensor('X', (4,))
         zero = sp.Integer(0)
@@ -348,17 +391,17 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
         p_z_solution = p_z_solution_v[-1]
         #print('p_z_solution = {0}'.format(p_z_solution))
 
-        self.symbolic_embedding_domain = X[:3]
-        self.symbolic_embedding = np.array(
+        self.symbolic_embedding3_domain = X[:3]
+        self.symbolic_embedding3 = np.array(
             (
                 (X[0], zero,         zero),
                 (X[1], X[2], p_z_solution),
             ),
             dtype=object
         )
-        self.embedding = vorpy.symbolic.lambdified(
-            self.symbolic_embedding,
-            self.symbolic_embedding_domain,
+        self.embedding3 = vorpy.symbolic.lambdified(
+            self.symbolic_embedding3,
+            self.symbolic_embedding3_domain,
             replacement_d={
                 'array'         :'np.array',
                 'ndarray'       :'np.ndarray',
@@ -368,6 +411,10 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
             },
             verbose=True
         )
+
+    def __init__ (self):
+        self.__solve_for_embedding2()
+        self.__solve_for_embedding3()
 
     #@classmethod
     #def initial_condition_preimage (cls):
@@ -651,10 +698,16 @@ class OptionParser:
             help='Specifies the max time to integrate the curve to.'
         )
         self.op.add_option(
+            '--initial-2preimage',
+            dest='initial_2preimage',
+            type='string',
+            help='Specifies the preimage of the initial conditions with respect to the [p_x,p_y] |-> [[x,y,z],[p_x,p_y,p_z]] embedding.  Should have the form [p_x,p_y], where each of p_x,p_y are floating point literals.'
+        )
+        self.op.add_option(
             '--initial-3preimage',
             dest='initial_3preimage',
             type='string',
-            help='Specifies the preimage of the initial conditions with respect to the [x,p_x,p_y] |-> [[x,y,z],[p_x,p_y,p_z]] embedding.  Should have the form [x,y,z], where each of x,y,z are floating point literals.'
+            help='Specifies the preimage of the initial conditions with respect to the [x,p_x,p_y] |-> [[x,y,z],[p_x,p_y,p_z]] embedding.  Should have the form [x,p_x,p_y], where each of x,y,z are floating point literals.'
         )
         self.op.add_option(
             '--initial',
@@ -685,6 +738,7 @@ class OptionParser:
         options,args = self.op.parse_args()
 
         num_initial_conditions_specified = sum([
+            options.initial_2preimage is not None,
             options.initial_3preimage is not None,
             options.initial is not None
         ])
@@ -702,13 +756,24 @@ class OptionParser:
             return None,None
 
         # Attempt to parse initial conditions.  Upon success, the attribute options.qp_0 should exist.
-        if options.initial_3preimage is not None:
+        if options.initial_2preimage is not None:
+            try:
+                options.initial_2preimage = OptionParser.__csv_as_ndarray(OptionParser.__pop_brackets_off_of(options.initial_2preimage), float)
+                expected_shape = (2,)
+                if options.initial_2preimage.shape != expected_shape:
+                    raise ValueError('--initial_2preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_2preimage.shape, expected_shape))
+                options.qp_0 = dynamics_context.embedding2(options.initial_2preimage)
+            except ValueError as e:
+                print('error parsing --initial_2preimage value: {0}'.format(str(e)))
+                self.op.print_help()
+                return None,None
+        elif options.initial_3preimage is not None:
             try:
                 options.initial_3preimage = OptionParser.__csv_as_ndarray(OptionParser.__pop_brackets_off_of(options.initial_3preimage), float)
                 expected_shape = (3,)
                 if options.initial_3preimage.shape != expected_shape:
                     raise ValueError('--initial_3preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_3preimage.shape, expected_shape))
-                options.qp_0 = dynamics_context.embedding(options.initial_3preimage)
+                options.qp_0 = dynamics_context.embedding3(options.initial_3preimage)
             except ValueError as e:
                 print('error parsing --initial_3preimage value: {0}'.format(str(e)))
                 self.op.print_help()
