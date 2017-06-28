@@ -309,6 +309,7 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
     def sqrt (cls, x):
         return np.sqrt(x)
 
+    # TODO: Replace with usage of new abstract 'pi' method
     @classmethod
     def alpha (cls):
         return 2.0/np.pi
@@ -340,10 +341,10 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
             dtype=object
         )
         H = HeisenbergDynamicsContext_Symbolic.H(qp)
-        print('H(qp) = {0}'.format(H))
+        #print('H(qp) = {0}'.format(H))
         p_z = qp[1,2] # Momentum for z coordinate
         p_z_solution_v = sp.solve(H, p_z)
-        print('len(p_z_solution_v) = {0}'.format(len(p_z_solution_v)))
+        #print('len(p_z_solution_v) = {0}'.format(len(p_z_solution_v)))
         #print('p_z_solution_v = {0}'.format(p_z_solution_v))
         # Just take the last solution.
         p_z_solution = p_z_solution_v[-1]
@@ -382,10 +383,10 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
             dtype=object
         )
         H = HeisenbergDynamicsContext_Symbolic.H(qp)
-        print('H(qp) = {0}'.format(H))
+        #print('H(qp) = {0}'.format(H))
         p_z = qp[1,2] # Momentum for z coordinate
         p_z_solution_v = sp.solve(H, p_z)
-        print('len(p_z_solution_v) = {0}'.format(len(p_z_solution_v)))
+        #print('len(p_z_solution_v) = {0}'.format(len(p_z_solution_v)))
         #print('p_z_solution_v = {0}'.format(p_z_solution_v))
         # Just take the last solution.
         p_z_solution = p_z_solution_v[-1]
@@ -522,24 +523,7 @@ class ShootingMethodObjective:
 
     def flow_curve (self):
         if self.__qp_v is None:
-            ## Compute the flow curve using X_0 as initial condition
-
-            ## Taken from http://stackoverflow.com/questions/16973036/odd-scipy-ode-integration-error
-            #ode = scipy.integrate.ode(self.__dynamics_context.hamiltonian_vector_field)
-            ## ode.set_integrator('vode', nsteps=500, method='bdf') # This seems faster than dopri5
-            ## ode.set_integrator('vode', nsteps=1000, method='bdf') # This seems faster than dopri5
-            #ode.set_integrator('dopri5', nsteps=500)
-            #ode.set_initial_value(self.X_0, 0.0)
-
-            start_time = time.time()
-
-            #t_v = [0.0]
-            #X_v_as_list = [self.X_0]
-            #while ode.successful() and ode.t < t_max:
-                #ode.integrate(ode.t + t_delta)
-                ## print(ode.t)
-                #t_v.append(ode.t)
-                #X_v_as_list.append(ode.y)
+            start_time = time.time() # TODO: Replace with Ticker usage
 
             t_v = np.arange(0.0, self.t_max, self.t_delta)
             order = 2
@@ -583,8 +567,8 @@ class ShootingMethodObjective:
             self.compute_Q_global_min_index_and_objective()
         return self.__Q_global_min_index
 
-    def closest_approach_point (self):
-        return self.flow_curve()[self.Q_global_min_index()]
+    #def closest_approach_point (self):
+        #return self.flow_curve()[self.Q_global_min_index()]
 
     def __call__ (self):
         return self.objective()
@@ -618,7 +602,7 @@ def evaluate_shooting_method_objective (dynamics_context, qp_0, t_max, t_delta):
 
 class OrbitPlot:
     def __init__ (self, *, row_count, extra_col_count):
-        row_count = 1
+        row_count = row_count
         col_count = 7+extra_col_count
         self.fig,self.axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(15*col_count,15*row_count))
 
@@ -718,10 +702,24 @@ class OptionParser:
             help='Specifies the initial conditions [x,y,z,p_x,p_y,p_z], where each of x,y,z,p_x,p_y,p_z are floating point literals.'
         )
         self.op.add_option(
-            '--search-using-seed',
+            '--seed',
             dest='seed',
             type='int',
-            help='Specifies the seed to use in numpy RNG for random search of preimage initial conditions.'
+            help='Specifies the seed to use for pseudorandom number generation.  Using the same seed should produce the same sequence of random numbers, and therefore provide reproducible program execution.'
+        )
+        self.op.add_option(
+            '--optimize-initial',
+            dest='optimize_initial',
+            action='store_true',
+            default=False,
+            help='Indicates that the specified initial condition (via whichever of the --initial... options) should be used as the starting point for an optimization to attempt to close the orbit.  Default value is False.'
+        )
+        self.op.add_option(
+            '--search',
+            dest='search',
+            action='store_true',
+            default=False,
+            help='Indicates that random initial conditions should be generated and for each, if a threshold is met, an optimization routine run to attempt to close the orbit.'
         )
 
     @staticmethod
@@ -748,17 +746,18 @@ class OptionParser:
             print('required option --dt was not specified.')
             self.op.print_help()
             return None,None
-        elif options.max_time is None:
+        if options.max_time is None:
             print('required option --max-time was not specified.')
             self.op.print_help()
             return None,None
-        elif options.seed is None and num_initial_conditions_specified != 1:
-            print('if --search-using-seed is not specified, then you must specify exactly one of --initial-2preimage or --initial-3preimage or --initial, but {0} of those were specified.'.format(num_initial_conditions_specified))
-            self.op.print_help()
-            return None,None
+        if not options.search:
+            if num_initial_conditions_specified != 1:
+                print('if --search is specified, then you must specify exactly one of --initial-2preimage or --initial-3preimage or --initial, but {0} of those were specified.'.format(num_initial_conditions_specified))
+                self.op.print_help()
+                return None,None
 
-        # No initial conditions are needed if --search-using-seed was specified.
-        if options.seed is not None:
+        # No initial conditions are needed if --search was specified.
+        if options.search:
             pass
         # Attempt to parse initial conditions.  Upon success, the attribute options.qp_0 should exist.
         elif options.initial_2preimage is not None:
@@ -817,7 +816,7 @@ def ndarray_as_single_line_string (A):
 def construct_filename (*, obj, t_delta, t_max, initial_condition):
     return 'obj:{0}.t_delta:{1}.t_max:{2}.initial_condition:{3}.png'.format(obj, t_delta, t_max, ndarray_as_single_line_string(initial_condition))
 
-def search_using_seed (dynamics_context, options):
+def search (dynamics_context, options):
     if not os.path.exists('shooting_method_3/'):
         os.mkdir('shooting_method_3')
 
@@ -825,8 +824,6 @@ def search_using_seed (dynamics_context, options):
         os.mkdir('shooting_method_3/abortive')
 
     np.set_printoptions(formatter={'float':float_formatter})
-
-    rng = np.random.RandomState(options.seed)
 
     def try_random_initial_condition ():
         #X_0 = rng.randn(*HeisenbergDynamicsContext_Numeric.initial_condition_preimage().shape)
@@ -968,18 +965,71 @@ if __name__ == '__main__':
     print('options: {0}'.format(options))
     print('args   : {0}'.format(args))
 
-    if options.seed is not None:
-        search_using_seed(dynamics_context, options)
+    rng = np.random.RandomState(options.seed)
+
+    if options.search:
+        search(dynamics_context, options)
     else:
         if not os.path.exists('shooting_method_3.custom_plot/'):
             os.mkdir('shooting_method_3.custom_plot')
 
         # Plot given curve
-        smo = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=options.qp_0, t_max=options.max_time, t_delta=options.dt)
-        print('smo.objective() = {0}'.format(smo.objective()))
+        qp_0 = options.qp_0
+        smo_0 = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=options.qp_0, t_max=options.max_time, t_delta=options.dt)
+        print('smo_0.objective() = {0}'.format(smo_0.objective()))
 
-        orbit_plot = OrbitPlot(row_count=1, extra_col_count=0)
-        orbit_plot.plot_curve(curve_description='curve', axis_v=orbit_plot.axis_vv[0], smo=smo)
+        if options.optimize_initial:
+            if options.initial_2preimage is not None:
+                X_0 = options.initial_2preimage
+                embedding = dynamics_context.embedding2
+            elif options.initial_3preimage is not None:
+                X_0 = options.initial_2preimage
+                embedding = dynamics_context.embedding3
+            else:
+                assert options.initial is not None
+                X_0 = options.qp_0
+                embedding = None
+
+            optimizer = library.monte_carlo.MonteCarlo(
+                obj=lambda qp_0:evaluate_shooting_method_objective(dynamics_context, qp_0, options.max_time, options.dt),
+                initial_parameters=X_0,
+                inner_radius=1.0e-12,
+                outer_radius=1.0e-1,
+                rng_seed=options.seed, # TODO: Make a single RNG that's used everywhere in the program.
+                embedding=embedding
+            )
+            try:
+                # for i in range(10000):
+                for i in range(1000):
+                    optimizer.compute_next_step()
+                    print('i = {0}, obj = {1}'.format(i, optimizer.obj_history_v[-1]))
+            except KeyboardInterrupt:
+                print('got KeyboardInterrupt -- halting optimization, but will still plot current results')
+
+            if options.initial is not None:
+                qp_opt = optimizer.parameter_history_v[-1]
+            else:
+                qp_opt = optimizer.embedded_parameter_history_v[-1]
+            smo_opt = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_opt, t_max=options.max_time, t_delta=options.dt)
+
+            print('qp_opt = {0}'.format(qp_opt))
+
+            orbit_plot = OrbitPlot(row_count=2, extra_col_count=1)
+            orbit_plot.plot_curve(curve_description='optimized', axis_v=orbit_plot.axis_vv[1], smo=smo_0)
+
+            axis = orbit_plot.axis_vv[0][-1]
+            axis.set_title('objective function history')
+            axis.semilogy(optimizer.obj_history_v)
+
+            qp = qp_opt
+            smo = smo_opt
+        else:
+            orbit_plot = OrbitPlot(row_count=1, extra_col_count=0)
+            qp = qp_0
+            smo = smo_0
+
+        orbit_plot.plot_curve(curve_description='initial', axis_v=orbit_plot.axis_vv[0], smo=smo_0)
+
         orbit_plot.plot_and_clear(
             filename=os.path.join(
                 'shooting_method_3.custom_plot',
@@ -987,43 +1037,7 @@ if __name__ == '__main__':
                     obj=smo.objective(),
                     t_delta=options.dt,
                     t_max=options.max_time,
-                    initial_condition=options.qp_0
+                    initial_condition=qp
                 )
             )
         )
-
-
-    #def print_usage_and_exit_with_error ():
-        #print('Usage: {0} <integer-value-random-seed>'.format(sys.argv[0]))
-        #sys.exit(-1)
-
-    ## TEMP HACK: If there are 4 args (meaning 3 parameters), then use those 3 params as preimage of
-    ## initial conditions and run a single integration and plot.
-    #if len(sys.argv) == 4:
-        #print('got 3 arguments; using as 3 coordinates in preimage of initial conditions to integrate and plot.')
-        #orbit_plot = OrbitPlot(row_count=1, extra_col_count=0)
-        #X_0 = np.array([float(arg) for arg in sys.argv[1:]])
-        #print('preimage initial condition: X_0:')
-        #print(X_0)
-        #qp_0 = dynamics_context.embedding(X_0)
-        #print('initial condition: qp_0: ')
-        #print(qp_0)
-
-        #t_delta = 0.001
-        #t_max = 50.0
-
-        #smo = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=t_delta)
-        #print('smo.objective() = {0}'.format(smo.objective()))
-        #flow_curve_0 = smo_0.flow_curve()
-
-
-
-    #if len(sys.argv) == 2:
-        #try:
-            #random_seed = int(sys.argv[1])
-        #except Exception as e:
-            #print('error {0} while trying to parse <integer-value-random-seed> "{1}"'.format(e, sys.argv[1]))
-            #print_usage_and_exit_with_error()
-    #else:
-        #print_usage_and_exit_with_error()
-
