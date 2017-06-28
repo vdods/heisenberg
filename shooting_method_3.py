@@ -855,19 +855,7 @@ def search (dynamics_context, options):
                 print('t_max ({0}) was raised too many times, exceeding --max-time value of {1}, before nearly closing up -- aborting'.format(t_max, options.max_time))
 
                 orbit_plot = OrbitPlot(row_count=1, extra_col_count=0)
-                #row_count = 1
-                #col_count = 7
-                #fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(15*col_count,15*row_count))
-
-                #plot_stuff(axis_v=axis_vv[0], smo=smo_0, name='initial')
                 orbit_plot.plot_curve(curve_description='initial', axis_v=orbit_plot.axis_vv[0], smo=smo_0)
-
-                #fig.tight_layout()
-                #filename = os.path.join('shooting_method_3/abortive', construct_filename(obj=smo_0.objective(), t_delta=t_delta, t_max=t_max, initial_condition=qp_0))
-                #plt.savefig(filename)
-                #print('wrote to file "{0}"'.format(filename))
-                #plt.close(fig) # VERY important to do this -- otherwise your memory will slowly fill up!
-
                 orbit_plot.plot_and_clear(
                     filename=os.path.join(
                         'shooting_method_3/abortive',
@@ -894,9 +882,8 @@ def search (dynamics_context, options):
         try:
             # for i in range(10000):
             for i in range(1000):
-            #for i in range(0):
                 optimizer.compute_next_step()
-                print('i = {0}, obj = {1}'.format(i, optimizer.obj_history_v[-1]))
+                print('i = {0}, obj = {1:.4e}'.format(i, optimizer.obj_history_v[-1]))
         except KeyboardInterrupt:
             print('got KeyboardInterrupt -- halting optimization, but will still plot current results')
 
@@ -907,13 +894,8 @@ def search (dynamics_context, options):
         print('qp_0 = {0}'.format(qp_0))
         print('qp_opt = {0}'.format(qp_opt))
 
-        #row_count = 2
-        #col_count = 8
-        #fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(15*col_count,15*row_count))
         orbit_plot = OrbitPlot(row_count=2, extra_col_count=1)
 
-        #plot_stuff(axis_v=axis_vv[0], smo=smo_0, name='initial')
-        #plot_stuff(axis_v=axis_vv[1], smo=smo_opt, name='optimized')
         orbit_plot.plot_curve(curve_description='initial', axis_v=orbit_plot.axis_vv[0], smo=smo_0)
         orbit_plot.plot_curve(curve_description='optimized', axis_v=orbit_plot.axis_vv[1], smo=smo_opt)
 
@@ -921,11 +903,6 @@ def search (dynamics_context, options):
         axis.set_title('objective function history')
         axis.semilogy(optimizer.obj_history_v)
 
-        #fig.tight_layout()
-        #filename = os.path.join('shooting_method_3', construct_filename(obj=smo_opt.objective(), t_delta=t_delta, t_max=t_max, initial_condition=qp_opt))
-        #plt.savefig(filename)
-        #print('wrote to file "{0}"'.format(filename))
-        #plt.close(fig) # VERY important to do this -- otherwise your memory will slowly fill up!
         orbit_plot.plot_and_clear(
             filename=os.path.join(
                 'shooting_method_3',
@@ -1002,7 +979,7 @@ if __name__ == '__main__':
                 # for i in range(10000):
                 for i in range(1000):
                     optimizer.compute_next_step()
-                    print('i = {0}, obj = {1}'.format(i, optimizer.obj_history_v[-1]))
+                    print('i = {0}, obj = {1:.4e}'.format(i, optimizer.obj_history_v[-1]))
             except KeyboardInterrupt:
                 print('got KeyboardInterrupt -- halting optimization, but will still plot current results')
 
