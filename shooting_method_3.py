@@ -666,7 +666,7 @@ class OrbitPlot:
         axis.plot(smo.t_v(), flow_curve[:,1,2])
 
         axis = axis_v[4]
-        axis.set_title('abs(H) (should stay close to 0)\nmax(abs(H)) = {0:.2e}, H_0 = {0:e}'.format(np.max(abs_H_v), H_v[0]))
+        axis.set_title('abs(H) (should stay close to 0)\nmax(abs(H)) = {0:.2e}, H_0 = {1:e}'.format(np.max(abs_H_v), H_v[0]))
         axis.semilogy(smo.t_v(), abs_H_v)
 
         J_v = vorpy.apply_along_axes(HeisenbergDynamicsContext_Numeric.J, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=())
