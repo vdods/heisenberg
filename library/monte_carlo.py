@@ -4,16 +4,19 @@ from . import random_radial
 
 class MonteCarlo:
     def __init__ (self, *, obj, initial_parameters, inner_radius, outer_radius, rng_seed, embedding=None):
-        self.shape                          = initial_parameters.shape
-        self.rng                            = np.random.RandomState(rng_seed)
-        self.obj                            = obj
-        self.inner_radius                   = inner_radius
-        self.outer_radius                   = outer_radius
-        self.parameter_history_v            = [initial_parameters]
-        self.embedding                      = embedding
-        self.obj_history_v                  = [obj(self.__embedded(initial_parameters))]
-        self.obj_min                        = self.obj_history_v[-1]
-        self.embedded_parameter_history_v   = None if self.embedding is None else [self.__embedded(initial_parameters)]
+        self.shape                              = initial_parameters.shape
+        self.rng                                = np.random.RandomState(rng_seed)
+        self.obj                                = obj
+        self.inner_radius                       = inner_radius
+        self.outer_radius                       = outer_radius
+        self.parameter_history_v                = [initial_parameters]
+        self.embedding                          = embedding
+        self.obj_history_v                      = [obj(self.__embedded(initial_parameters))]
+        self.obj_min                            = self.obj_history_v[-1]
+        if self.embedding is None:
+            self.embedded_parameter_history_v   = self.parameter_history_v
+        else:
+            self.embedded_parameter_history_v   = [self.__embedded(initial_parameters)]
 
     def __embedded (self, parameters):
         if self.embedding is None:
@@ -35,16 +38,16 @@ class MonteCarlo:
         obj_candidate = self.obj(current_parameter_embedding)
         # Return current_parameter if the obj was lower.
         if obj_candidate < self.obj_min:
-            print('-------------------------------- distance of update: {0}'.format(np.linalg.norm(random_perturbation)))
+            print('-------------------------------- distance of update: {0:e}'.format(np.linalg.norm(random_perturbation)))
             self.obj_min = obj_candidate
             self.parameter_history_v.append(current_parameter)
-            if self.embedded_parameter_history_v is not None:
+            if self.embedding is not None:
                 self.embedded_parameter_history_v.append(current_parameter_embedding)
             self.obj_history_v.append(obj_candidate)
         # Otherwise return the previous parameter
         else:
             self.parameter_history_v.append(previous_parameter)
-            if self.embedded_parameter_history_v is not None:
+            if self.embedding is not None:
                 self.embedded_parameter_history_v.append(previous_parameter_embedding)
             self.obj_history_v.append(self.obj_history_v[-1])
 
