@@ -467,7 +467,6 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
 
 class ShootingMethodObjective:
     def __init__ (self, *, dynamics_context, qp_0, t_max, t_delta):
-        #print('ShootingMethodObjective.__init__(); H(qp_0) = {0}'.format(dynamics_context.H(qp_0)))
         self.__dynamics_context     = dynamics_context
         self.qp_0                   = qp_0
         self.__t_v                  = None
@@ -532,9 +531,6 @@ class ShootingMethodObjective:
         if self.__Q_global_min_index is None:
             self.compute_t_min_and_objective()
         return self.__Q_global_min_index
-
-    #def closest_approach_point (self):
-        #return self.flow_curve()[self.Q_global_min_index()]
 
     def __call__ (self):
         return self.objective()
