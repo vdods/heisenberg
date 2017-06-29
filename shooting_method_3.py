@@ -697,6 +697,13 @@ class OptionParser:
     def __init__ (self):
         self.op = optparse.OptionParser()
         self.op.add_option(
+            '--optimization-iterations',
+            dest='optimization_iterations',
+            default=1000,
+            type='int',
+            help='Specifies the number of iterations to run the optimization for (if applicable).  Default is 1000.'
+        )
+        self.op.add_option(
             '--dt',
             dest='dt',
             default='0.001',
@@ -840,8 +847,8 @@ def ndarray_as_single_line_string (A):
     else:
         return '[' + ','.join(ndarray_as_single_line_string(a) for a in A) + ']'
 
-def construct_filename (*, obj, t_delta, t_max, initial_condition):
-    return 'obj:{0}.t_delta:{1}.t_max:{2}.initial_condition:{3}.png'.format(obj, t_delta, t_max, ndarray_as_single_line_string(initial_condition))
+def construct_filename (*, obj, t_delta, t_max, initial_condition, period):
+    return 'obj:{0:.4e}.t_delta:{1:.3e}.t_max:{2:.3e}.initial_condition:{3}.period:{4:.17e}.png'.format(obj, t_delta, t_max, ndarray_as_single_line_string(initial_condition), period)
 
 def search (dynamics_context, options):
     if not os.path.exists('shooting_method_3/'):
@@ -890,7 +897,8 @@ def search (dynamics_context, options):
                             obj=smo_0.objective(),
                             t_delta=t_delta,
                             t_max=t_max,
-                            initial_condition=qp_0
+                            initial_condition=qp_0,
+                            period=smo_0.t_min()
                         )
                     )
                 )
@@ -907,9 +915,10 @@ def search (dynamics_context, options):
             embedding=dynamics_context.embedding
         )
         try:
-            # for i in range(10000):
-            for i in range(1000):
+            actual_iteration_count = 0
+            for i in range(options.optimization_iterations):
                 optimizer.compute_next_step()
+                actual_iteration_count += 1
                 print('i = {0}, obj = {1:.17e}'.format(i, optimizer.obj_history_v[-1]))
         except KeyboardInterrupt:
             print('got KeyboardInterrupt -- halting optimization, but will still plot current results')
@@ -937,7 +946,8 @@ def search (dynamics_context, options):
                     obj=smo_opt.objective(),
                     t_delta=t_delta,
                     t_max=t_max,
-                    initial_condition=qp_opt
+                    initial_condition=qp_opt,
+                    period=smo_opt.t_min()
                 )
             )
         )
@@ -1003,9 +1013,10 @@ if __name__ == '__main__':
                 embedding=embedding
             )
             try:
-                # for i in range(10000):
-                for i in range(1000):
+                actual_iteration_count = 0
+                for i in range(options.optimization_iterations):
                     optimizer.compute_next_step()
+                    actual_iteration_count += 1
                     print('i = {0}, obj = {1:.17e}'.format(i, optimizer.obj_history_v[-1]))
             except KeyboardInterrupt:
                 print('got KeyboardInterrupt -- halting optimization, but will still plot current results')
@@ -1041,7 +1052,8 @@ if __name__ == '__main__':
                     obj=smo.objective(),
                     t_delta=options.dt,
                     t_max=options.max_time,
-                    initial_condition=qp
+                    initial_condition=qp,
+                    period=smo.t_min()
                 )
             )
         )
