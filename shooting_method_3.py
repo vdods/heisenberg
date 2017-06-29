@@ -218,15 +218,20 @@ class HeisenbergDynamicsContext(DynamicsContext):
 
     @classmethod
     @abc.abstractmethod
-    def alpha (cls):
-        """Return the alpha value occurring in the fundamental solution to the sub-Riemannian Laplacian."""
+    def pi (cls):
+        """Return the value pi."""
         pass
 
     @classmethod
-    @abc.abstractmethod
+    def alpha (cls):
+        """Return the alpha value occurring in the fundamental solution to the sub-Riemannian Laplacian."""
+        #return 2/cls.pi()
+        return cls.pi()/8
+
+    @classmethod
     def beta (cls):
         """Return the beta value occurring in the fundamental solution to the sub-Riemannian Laplacian."""
-        pass
+        return 16
 
 class HeisenbergDynamicsContext_Symbolic(HeisenbergDynamicsContext):
     @classmethod
@@ -234,13 +239,8 @@ class HeisenbergDynamicsContext_Symbolic(HeisenbergDynamicsContext):
         return sp.sqrt(x)
 
     @classmethod
-    def alpha (cls):
-        return 2/sp.pi
-        #return sp.pi/8
-
-    @classmethod
-    def beta (cls):
-        return sp.Integer(16)
+    def pi (cls):
+        return sp.pi
 
     @classmethod
     def initial_condition (cls):
@@ -273,15 +273,9 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
     def sqrt (cls, x):
         return np.sqrt(x)
 
-    # TODO: Replace with usage of new abstract 'pi' method
     @classmethod
-    def alpha (cls):
-        return 2.0/np.pi
-        #return np.pi/8.0
-
-    @classmethod
-    def beta (cls):
-        return 16.0
+    def pi (cls):
+        return np.pi
 
     @classmethod
     def initial_condition_preimage (cls):
