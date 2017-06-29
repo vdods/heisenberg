@@ -488,7 +488,9 @@ class ShootingMethodObjective:
             t_v = np.arange(0.0, self.t_max, self.t_delta)
             order = 2
             #omega = vorpy.symplectic_integration.nonseparable_hamiltonian.heuristic_estimate_for_omega(delta=self.t_delta, order=order, c=10.0)
-            omega = 250*np.pi
+            # Want 2*omega*t_delta = pi/2, meaning that omega = pi/(4*t_delta)
+            omega = np.pi/(4*self.t_delta)
+            assert np.allclose(2*omega*self.t_delta, np.pi/2)
             qp_v = vorpy.symplectic_integration.nonseparable_hamiltonian.integrate(
                 initial_coordinates=self.qp_0,
                 t_v=t_v,
