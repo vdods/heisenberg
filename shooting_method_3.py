@@ -110,6 +110,7 @@ def quadratic_min_time_parameterized (t_v, f_v):
     assert np.allclose(np.dot(T, q_v), f_v), 'q_v failed to solve intended equation T*q_v == f_v'
     # This is the critical point of q.
     t_min = -0.5*q_v[1]/q_v[2]
+    assert t_v[0] < t_min < t_v[-1], 't_min should be bounded by first and last t_v values because f_v[1] is a local min.'
     # This is the corresponding value q(t_min)
     q_min = np.dot(polynomial_basis_vector(t_min,2), q_v)
 
