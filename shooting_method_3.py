@@ -33,63 +33,9 @@ Define R_Omega to give point closest to Omega(q,p).  Then f_Omega is defined as
 and the gradient of f_Omega depends on the gradient of Omega and R_Omega.
 
 TODO
--   Use energy-conserving integrator
--   The 7 fold solution is super close to closing, and the optimization doesn't improve much.
-    Perturb it (but keep it zero-energy) and see if the optimizer can close it back up.
--   I think the period detection isn't fully correct for the following reason.  Often times
-    a curve will be quasi-periodic, or have a really high order of symmetry resulting in
-    a very high period.  Probably what we actually want to happen is that the first reasonable
-    candidate for period is selected, so that the symmetry order is relatively low, and the
-    optimizer then tries to close up that curve.
-
-    Also, we must guarantee that the period computation picks analogous points on the curve,
-    meaning that they come from similar time values (and not e.g. several loops later in time).
 -   k-fold symmetry -- make the closest-approach-map measure from a 2pi/k-rotated phase space point
     in order to more efficiently find k-fold symmetric curves.
 """
-
-def define_canonical_symplectic_form_and_inverse (*, configuration_space_dimension, dtype):
-    # If the tautological one-form on the cotangent bundle is
-    #   tau := p dq
-    # then the symplectic form is
-    #   omega := -dtau = -dq wedge dp
-    # which, in the coordinates (q_0, q_1, p_0, p_1), has the matrix
-    #   [  0  0 -1  0 ]
-    #   [  0  0  0 -1 ]
-    #   [  1  0  0  0 ]
-    #   [  0  1  0  0 ],
-    # or in matrix notation, with I denoting the 2x2 identity matrix,
-    #   [  0 -I ]
-    #   [  I  0 ],
-
-    assert configuration_space_dimension > 0
-
-    # Abbreviations
-    csd = configuration_space_dimension
-    psd = 2*csd
-
-    canonical_symplectic_form = np.ndarray((psd,psd), dtype=dtype)
-
-    # Fill the whole thing with zeros.
-    canonical_symplectic_form.fill(dtype(0))
-
-    # Upper right block diagonal is -1, lower left block diagonal is 1.
-    for i in range(csd):
-        canonical_symplectic_form[i,csd+i] = dtype(-1)
-        canonical_symplectic_form[csd+i,i] = dtype( 1)
-
-    canonical_symplectic_form_inverse = -canonical_symplectic_form
-
-    return canonical_symplectic_form,canonical_symplectic_form_inverse
-
-def symplectic_gradient_of (F, X, *, canonical_symplectic_form_inverse=None, dtype=None):
-    assert len(X)%2 == 0, 'X must be a phase space element, which in particular means it must be even dimensional.'
-
-    if canonical_symplectic_form_inverse is None:
-        assert dtype is not None, 'If canonical_symplectic_form_inverse is None, then dtype must not be None.'
-        _,canonical_symplectic_form_inverse = define_canonical_symplectic_form_and_inverse(configuration_space_dimension=X.shape[0]//2, dtype=dtype)
-
-    return np.dot(canonical_symplectic_form_inverse, vorpy.symbolic.D(F,X))
 
 def polynomial_basis_vector (generator, degree):
     return np.array([generator**i for i in range(degree+1)])
