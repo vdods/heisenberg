@@ -91,13 +91,29 @@ def symplectic_gradient_of (F, X, *, canonical_symplectic_form_inverse=None, dty
 
     return np.dot(canonical_symplectic_form_inverse, vorpy.symbolic.D(F,X))
 
-def quadratic_min (f_v):
-    assert len(f_v) == 3, 'require 3 values'
-    c = f_v[1]
-    b = 0.5*(f_v[2] - f_v[0])
-    a = 0.5*(f_v[2] + f_v[0]) - f_v[1]
-    x = -0.5*b/a
-    return a*x**2 + b*x + c
+def polynomial_basis_vector (generator, degree):
+    return np.array([generator**i for i in range(degree+1)])
+
+def quadratic_min_time_parameterized (t_v, f_v):
+    assert len(t_v) == len(f_v), 't_v must have same length as f_v'
+    assert all(t_i < t_j for t_i,t_j in zip(t_v[:-1],t_v[1:])), 't_v must be strictly increasing'
+    assert len(f_v) == 3, 'require 3 values and the middle value must be a local min'
+    assert f_v[0] > f_v[1] and f_v[1] < f_v[2]
+
+    # Solve for the coefficients of the quadratic q(t) := q_v[0]*t^0 + q_v[1]*t^1 + q_v[2]*t^2
+    # using the specified time values t_v and function values f_v;
+    #     q(t_v[0]) = f_v[0]
+    #     q(t_v[1]) = f_v[1]
+    #     q(t_v[2]) = f_v[2]
+    T = np.array([polynomial_basis_vector(t,2) for t in t_v])
+    q_v = np.linalg.solve(T, f_v)
+    assert np.allclose(np.dot(T, q_v), f_v), 'q_v failed to solve intended equation T*q_v == f_v'
+    # This is the critical point of q.
+    t_min = -0.5*q_v[1]/q_v[2]
+    # This is the corresponding value q(t_min)
+    q_min = np.dot(polynomial_basis_vector(t_min,2), q_v)
+
+    return t_min,q_min
 
 class DynamicsContext(metaclass=abc.ABCMeta):
     @classmethod
@@ -368,7 +384,7 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
                 'sqrt'          :'np.sqrt',
                 'pi'            :'np.pi',
             },
-            verbose=True
+            #verbose=True
         )
 
     def __solve_for_embedding3 (self):
@@ -410,7 +426,7 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
                 'sqrt'          :'np.sqrt',
                 'pi'            :'np.pi',
             },
-            verbose=True
+            #verbose=True
         )
 
     def __init__ (self):
@@ -511,11 +527,13 @@ class ShootingMethodObjective:
         #print('ShootingMethodObjective.__init__(); H(qp_0) = {0}'.format(dynamics_context.H(qp_0)))
         self.__dynamics_context     = dynamics_context
         self.qp_0                   = qp_0
+        self.__t_v                  = None
         self.__qp_v                 = None
         self.t_max                  = t_max
         self.t_delta                = t_delta
         self.__Q_v                  = None
         self.__Q_global_min_index   = None
+        self.__t_min                = None
         self.__objective            = None
 
     def configuration_space_dimension (self):
@@ -557,14 +575,19 @@ class ShootingMethodObjective:
             self.__Q_v = vorpy.apply_along_axes(lambda x:0.5*np.sum(np.square(x)), (-2,-1), (self.flow_curve() - self.qp_0,), output_axis_v=(), func_output_shape=())
         return self.__Q_v
 
+    def t_min (self):
+        if self.__t_min is None:
+            self.compute_t_min_and_objective()
+        return self.__t_min
+
     def objective (self):
         if self.__objective is None:
-            self.compute_Q_global_min_index_and_objective()
+            self.compute_t_min_and_objective()
         return self.__objective
 
     def Q_global_min_index (self):
         if self.__Q_global_min_index is None:
-            self.compute_Q_global_min_index_and_objective()
+            self.compute_t_min_and_objective()
         return self.__Q_global_min_index
 
     #def closest_approach_point (self):
@@ -573,9 +596,8 @@ class ShootingMethodObjective:
     def __call__ (self):
         return self.objective()
 
-    def compute_Q_global_min_index_and_objective (self):
-        #X_0                             = self.X_0
-        #X_v                             = self.flow_curve()
+    def compute_t_min_and_objective (self):
+        t_v                             = self.t_v()
         Q_v                             = self.squared_distance_function()
 
         local_min_index_v               = [i for i in range(1,len(Q_v)-1) if Q_v[i-1] > Q_v[i] and Q_v[i] < Q_v[i+1]]
@@ -587,14 +609,17 @@ class ShootingMethodObjective:
                 # Fit a quadratic function to the 3 points centered on the argmin in order to have
                 # sub-sample accuracy when calculating the objective function value.
                 assert 1 <= _Q_global_min_index < len(Q_v)-1
-                self.__objective        = quadratic_min(Q_v[_Q_global_min_index-1:_Q_global_min_index+2])
+                s                       = slice(_Q_global_min_index-1, _Q_global_min_index+2)
+                self.__t_min,self.__objective = quadratic_min_time_parameterized(t_v[s], Q_v[s])
                 # Some tests show this discrepancy to be on the order of 1.0e-9
                 #print('self.__objective - Q_v[_Q_global_min_index] = {0}'.format(self.__objective - Q_v[_Q_global_min_index]))
             else:
+                self.__t_min            = t_v[_Q_global_min_index]
                 self.__objective        = Q_v[_Q_global_min_index]
         except ValueError:
             # If there was no local min, then use the last time value
             self.__Q_global_min_index   = len(Q_v)-1
+            self.__t_min                = t_v[self.__Q_global_min_index]
             self.__objective            = Q_v[self.__Q_global_min_index]
 
 def evaluate_shooting_method_objective (dynamics_context, qp_0, t_max, t_delta):
@@ -615,6 +640,7 @@ class OrbitPlot:
         axis.plot(0, 0, 'o', color='black')
         axis.plot(flow_curve[:,0,0], flow_curve[:,0,1])
         axis.plot(flow_curve[0,0,0], flow_curve[0,0,1], 'o', color='green', alpha=0.5)
+        # TODO: Plot the interpolated position/momentum (based on smo.t_min() instead of Q_global_min_index)
         axis.plot(flow_curve[smo.Q_global_min_index(),0,0], flow_curve[smo.Q_global_min_index(),0,1], 'o', color='red', alpha=0.5)
         axis.set_aspect('equal')
 
@@ -627,6 +653,7 @@ class OrbitPlot:
         axis.set_title('{0} curve xy-momentum'.format(curve_description))
         axis.plot(flow_curve[:,1,0], flow_curve[:,1,1])
         axis.plot(flow_curve[0,1,0], flow_curve[0,1,1], 'o', color='green', alpha=0.5)
+        # TODO: Plot the interpolated position/momentum (based on smo.t_min() instead of Q_global_min_index)
         axis.plot(flow_curve[smo.Q_global_min_index(),1,0], flow_curve[smo.Q_global_min_index(),1,1], 'o', color='red', alpha=0.5)
         axis.set_aspect('equal')
 
@@ -649,9 +676,9 @@ class OrbitPlot:
         axis.semilogy(smo.t_v(), abs_J_minus_J_0)
 
         axis = axis_v[6]
-        axis.set_title('squared distance to initial condition')
+        axis.set_title('squared distance to initial condition\nt_min = {0}, min sqd = {1:.17e}'.format(smo.t_min(), smo.objective()))
         axis.semilogy(smo.t_v(), smo.squared_distance_function())
-        axis.axvline(smo.t_v()[smo.Q_global_min_index()], color='green')
+        axis.axvline(smo.t_min(), color='green')
 
     def plot_and_clear (self, *, filename):
         self.fig.tight_layout()
@@ -883,7 +910,7 @@ def search (dynamics_context, options):
             # for i in range(10000):
             for i in range(1000):
                 optimizer.compute_next_step()
-                print('i = {0}, obj = {1:.4e}'.format(i, optimizer.obj_history_v[-1]))
+                print('i = {0}, obj = {1:.17e}'.format(i, optimizer.obj_history_v[-1]))
         except KeyboardInterrupt:
             print('got KeyboardInterrupt -- halting optimization, but will still plot current results')
 
@@ -979,7 +1006,7 @@ if __name__ == '__main__':
                 # for i in range(10000):
                 for i in range(1000):
                     optimizer.compute_next_step()
-                    print('i = {0}, obj = {1:.4e}'.format(i, optimizer.obj_history_v[-1]))
+                    print('i = {0}, obj = {1:.17e}'.format(i, optimizer.obj_history_v[-1]))
             except KeyboardInterrupt:
                 print('got KeyboardInterrupt -- halting optimization, but will still plot current results')
 
