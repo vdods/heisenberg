@@ -879,6 +879,8 @@ def search (dynamics_context, options):
                 print('i = {0}, obj = {1:.17e}'.format(i, optimizer.obj_history_v[-1]))
         except KeyboardInterrupt:
             print('got KeyboardInterrupt -- halting optimization, but will still plot current results')
+        except AssertionError:
+            print('got AssertionError -- halting optimization, but will plot last good results')
 
         qp_opt = optimizer.embedded_parameter_history_v[-1]
         smo_opt = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_opt, t_max=t_max, t_delta=t_delta)
@@ -980,6 +982,8 @@ if __name__ == '__main__':
                     print('i = {0}, obj = {1:.17e}'.format(i, optimizer.obj_history_v[-1]))
             except KeyboardInterrupt:
                 print('got KeyboardInterrupt -- halting optimization, but will still plot current results')
+            except AssertionError:
+                print('got AssertionError -- halting optimization, but will plot last good results')
 
             qp_opt = optimizer.parameter_history_v[-1]
             smo_opt = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_opt, t_max=options.max_time, t_delta=options.dt)
