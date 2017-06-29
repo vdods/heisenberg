@@ -289,6 +289,7 @@ class HeisenbergDynamicsContext_Symbolic(HeisenbergDynamicsContext):
     @classmethod
     def alpha (cls):
         return 2/sp.pi
+        #return sp.pi/8
 
     @classmethod
     def beta (cls):
@@ -329,6 +330,7 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
     @classmethod
     def alpha (cls):
         return 2.0/np.pi
+        #return np.pi/8.0
 
     @classmethod
     def beta (cls):
@@ -633,7 +635,8 @@ class OrbitPlot:
 
     def plot_curve (self, *, curve_description, axis_v, smo):
         flow_curve = smo.flow_curve()
-        abs_H_v = np.abs(vorpy.apply_along_axes(HeisenbergDynamicsContext_Numeric.H, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=()))
+        H_v = vorpy.apply_along_axes(HeisenbergDynamicsContext_Numeric.H, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=())
+        abs_H_v = np.abs(H_v)
 
         axis = axis_v[0]
         axis.set_title('{0} curve xy-position'.format(curve_description))
@@ -663,7 +666,7 @@ class OrbitPlot:
         axis.plot(smo.t_v(), flow_curve[:,1,2])
 
         axis = axis_v[4]
-        axis.set_title('abs(H) (should stay close to 0); max(abs(H)) = {0:.2e}'.format(np.max(abs_H_v)))
+        axis.set_title('abs(H) (should stay close to 0)\nmax(abs(H)) = {0:.2e}, H_0 = {0:e}'.format(np.max(abs_H_v), H_v[0]))
         axis.semilogy(smo.t_v(), abs_H_v)
 
         J_v = vorpy.apply_along_axes(HeisenbergDynamicsContext_Numeric.J, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=())
@@ -755,6 +758,12 @@ class OptionParser:
             default=False,
             help='Indicates that random initial conditions should be generated and for each, if a threshold is met, an optimization routine run to attempt to close the orbit.'
         )
+        self.op.add_option(
+            '--k-fold-initial',
+            dest='k',
+            type='int',
+            help='Specifies that the given value, call it k, should be used in a particular form of initial condition intended to produce a k-fold symmetric orbit -- experimental.'
+        )
 
     @staticmethod
     def __pop_brackets_off_of (string):
@@ -771,64 +780,75 @@ class OptionParser:
     def parse_argv_and_validate (self, argv, dynamics_context):
         options,args = self.op.parse_args()
 
+        if options.search:
+            require_initial_conditions = False
+        elif options.k is not None:
+            require_initial_conditions = False
+            options.qp_0 = np.array([
+                [1.0,             0.0, 0.0625*np.sqrt(options.k**4 * np.pi**2 * 0.0625 - 1.0)],
+                [0.0, 1.0 / options.k,                                                    0.0]
+            ])
+        else:
+            require_initial_conditions = True
+
         num_initial_conditions_specified = sum([
             options.initial_2preimage is not None,
             options.initial_3preimage is not None,
             options.initial is not None
         ])
+        if require_initial_conditions:
+            if num_initial_conditions_specified != 1:
+                print('if neither --search nor --k-fold-initial are not specified, then you must specify exactly one of --initial-2preimage or --initial-3preimage or --initial, but {0} of those were specified.'.format(num_initial_conditions_specified))
+                self.op.print_help()
+                return None,None
+
         if options.dt is None:
             print('required option --dt was not specified.')
             self.op.print_help()
             return None,None
+
         if options.max_time is None:
             print('required option --max-time was not specified.')
             self.op.print_help()
             return None,None
-        if not options.search:
-            if num_initial_conditions_specified != 1:
-                print('if --search is specified, then you must specify exactly one of --initial-2preimage or --initial-3preimage or --initial, but {0} of those were specified.'.format(num_initial_conditions_specified))
-                self.op.print_help()
-                return None,None
 
-        # No initial conditions are needed if --search was specified.
-        if options.search:
-            pass
-        # Attempt to parse initial conditions.  Upon success, the attribute options.qp_0 should exist.
-        elif options.initial_2preimage is not None:
-            try:
-                options.initial_2preimage = OptionParser.__csv_as_ndarray(OptionParser.__pop_brackets_off_of(options.initial_2preimage), float)
-                expected_shape = (2,)
-                if options.initial_2preimage.shape != expected_shape:
-                    raise ValueError('--initial_2preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_2preimage.shape, expected_shape))
-                options.qp_0 = dynamics_context.embedding2(options.initial_2preimage)
-            except ValueError as e:
-                print('error parsing --initial_2preimage value: {0}'.format(str(e)))
-                self.op.print_help()
-                return None,None
-        elif options.initial_3preimage is not None:
-            try:
-                options.initial_3preimage = OptionParser.__csv_as_ndarray(OptionParser.__pop_brackets_off_of(options.initial_3preimage), float)
-                expected_shape = (3,)
-                if options.initial_3preimage.shape != expected_shape:
-                    raise ValueError('--initial_3preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_3preimage.shape, expected_shape))
-                options.qp_0 = dynamics_context.embedding3(options.initial_3preimage)
-            except ValueError as e:
-                print('error parsing --initial_3preimage value: {0}'.format(str(e)))
-                self.op.print_help()
-                return None,None
-        elif options.initial is not None:
-            try:
-                options.initial = OptionParser.__csv_as_ndarray(OptionParser.__pop_brackets_off_of(options.initial), float)
-                expected_shape = (6,)
-                if options.initial.shape != expected_shape:
-                    raise ValueError('--initial value had the wrong number of components (got {0} but expected {1}).'.format(options.initial.shape, expected_shape))
-                options.qp_0 = options.initial.reshape(2,3)
-            except ValueError as e:
-                print('error parsing --initial value: {0}'.format(str(e)))
-                self.op.print_help()
-                return None,None
-        else:
-            assert False, 'this should never happen'
+        if require_initial_conditions:
+            # Attempt to parse initial conditions.  Upon success, the attribute options.qp_0 should exist.
+            if options.initial_2preimage is not None:
+                try:
+                    options.initial_2preimage = OptionParser.__csv_as_ndarray(OptionParser.__pop_brackets_off_of(options.initial_2preimage), float)
+                    expected_shape = (2,)
+                    if options.initial_2preimage.shape != expected_shape:
+                        raise ValueError('--initial_2preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_2preimage.shape, expected_shape))
+                    options.qp_0 = dynamics_context.embedding2(options.initial_2preimage)
+                except ValueError as e:
+                    print('error parsing --initial_2preimage value: {0}'.format(str(e)))
+                    self.op.print_help()
+                    return None,None
+            elif options.initial_3preimage is not None:
+                try:
+                    options.initial_3preimage = OptionParser.__csv_as_ndarray(OptionParser.__pop_brackets_off_of(options.initial_3preimage), float)
+                    expected_shape = (3,)
+                    if options.initial_3preimage.shape != expected_shape:
+                        raise ValueError('--initial_3preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_3preimage.shape, expected_shape))
+                    options.qp_0 = dynamics_context.embedding3(options.initial_3preimage)
+                except ValueError as e:
+                    print('error parsing --initial_3preimage value: {0}'.format(str(e)))
+                    self.op.print_help()
+                    return None,None
+            elif options.initial is not None:
+                try:
+                    options.initial = OptionParser.__csv_as_ndarray(OptionParser.__pop_brackets_off_of(options.initial), float)
+                    expected_shape = (6,)
+                    if options.initial.shape != expected_shape:
+                        raise ValueError('--initial value had the wrong number of components (got {0} but expected {1}).'.format(options.initial.shape, expected_shape))
+                    options.qp_0 = options.initial.reshape(2,3)
+                except ValueError as e:
+                    print('error parsing --initial value: {0}'.format(str(e)))
+                    self.op.print_help()
+                    return None,None
+            else:
+                assert False, 'this should never happen because of the check with num_initial_conditions_specified'
 
         return options,args
 
@@ -999,8 +1019,11 @@ if __name__ == '__main__':
             elif options.initial_3preimage is not None:
                 X_0 = options.initial_2preimage
                 embedding = dynamics_context.embedding3
+            elif options.initial is not None:
+                X_0 = options.qp_0
+                embedding = None
             else:
-                assert options.initial is not None
+                assert options.k is not None
                 X_0 = options.qp_0
                 embedding = None
 
@@ -1021,10 +1044,7 @@ if __name__ == '__main__':
             except KeyboardInterrupt:
                 print('got KeyboardInterrupt -- halting optimization, but will still plot current results')
 
-            if options.initial is not None:
-                qp_opt = optimizer.parameter_history_v[-1]
-            else:
-                qp_opt = optimizer.embedded_parameter_history_v[-1]
+            qp_opt = optimizer.parameter_history_v[-1]
             smo_opt = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_opt, t_max=options.max_time, t_delta=options.dt)
 
             print('qp_opt = {0}'.format(qp_opt))
