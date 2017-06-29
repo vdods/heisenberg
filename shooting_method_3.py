@@ -992,7 +992,7 @@ if __name__ == '__main__':
             print('qp_opt = {0}'.format(qp_opt))
 
             orbit_plot = OrbitPlot(row_count=2, extra_col_count=1)
-            orbit_plot.plot_curve(curve_description='optimized', axis_v=orbit_plot.axis_vv[1], smo=smo_0)
+            orbit_plot.plot_curve(curve_description='optimized', axis_v=orbit_plot.axis_vv[1], smo=smo_opt)
 
             axis = orbit_plot.axis_vv[0][-1]
             axis.set_title('objective function history')
