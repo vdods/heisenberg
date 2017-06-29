@@ -785,8 +785,8 @@ class OptionParser:
         elif options.k is not None:
             require_initial_conditions = False
             options.qp_0 = np.array([
-                [1.0,             0.0, 0.0625*np.sqrt(options.k**4 * np.pi**2 * 0.0625 - 1.0)],
-                [0.0, 1.0 / options.k,                                                    0.0]
+                [1.0,             0.0, 0.25*np.sqrt(options.k**4 * np.pi**2 * 0.0625 - 1.0)],
+                [0.0, 1.0 / options.k,                                                  0.0]
             ])
         else:
             require_initial_conditions = True
