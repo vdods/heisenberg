@@ -35,6 +35,44 @@ and the gradient of f_Omega depends on the gradient of Omega and R_Omega.
 TODO
 -   k-fold symmetry -- make the closest-approach-map measure from a 2pi/k-rotated phase space point
     in order to more efficiently find k-fold symmetric curves.
+-   try to come up with uniform distribution on bounded portion of 2D parameter embedding space
+    for search routine
+-   Decide dt based on the abs(H) bound -- if it's above say 1.0e-4, then reduce dt.
+-   When plotting closed curves, should probably only plot up to the t_min value, not the overlapping
+    part.
+-   Idea for defining a more-robust objective function: Compute t_min as before, but then define the
+    objective function as the L_2 norm squared of the difference between overlapping segments.
+    In more detail, the candidate curve extends past t_min, say until t_min+T for some positive T.
+    Then define the objective function to be
+
+        L_2(curve[0:T] - curve[t_min:t_min+T])^2
+
+    so that curves that are nearly coincident for a positive time duration have a lower objective
+    function than curves that merely have a single point that comes close to the initial condition.
+-   Program to search for orbits in the 2D embedding space:
+    -   Generate random points in the domain
+
+            -sqrt(pi/4) <= p_x <= sqrt(pi/4)
+                     -C <= p_y <= C
+
+        for some arbitrary positive constant C, say 2.  Due to a discrete symmetry in the system
+        (reflection), p_y can be taken to be nonnegative.  Thus the domain can be
+
+            -sqrt(pi/4) <= p_x <= sqrt(pi/4)
+                      0 <= p_y <= C
+
+    -   For each of these, compute the embedding qp_0 into phase space and use that as the initial
+        condition for the flow curve.  Use some fixed dt and max_time.
+    -   For each flow curve, compute the following values:
+        -   The objective function value (which could be NaN if the curve didn't go back toward itself)
+        -   The t_min value (which for a closed curve would be its period)
+        -   The upper bound on abs(H)
+        -   The upper bound on abs(J - J_0)
+        -   If it is [close to being] closed, then the order of its radial symmetry
+        -   The deviation of its z(t) function from a sine wave (for closed, this always appears to
+            be a sine wave, but this hasn't been checked).
+    -   Visualize these two functions to determine if they are continuous and/or have other structure
+        to them.  Perhaps there are regions which are continuous surrounding zeros the objective function.
 """
 
 def polynomial_basis_vector (generator, degree):
@@ -307,7 +345,9 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
         #print('p_z_solution_v = {0}'.format(p_z_solution_v))
         # Just take the last solution.
         p_z_solution = p_z_solution_v[-1]
-        #print('p_z_solution = {0}'.format(p_z_solution))
+        print('p_z_solution = {0}'.format(p_z_solution))
+        # The domain for this function is
+        #     -sqrt(pi/4) <= p_x <= sqrt(pi/4)
 
         self.symbolic_embedding2_domain = X[:2]
         self.symbolic_embedding2 = np.array(
@@ -467,16 +507,17 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
 
 class ShootingMethodObjective:
     def __init__ (self, *, dynamics_context, qp_0, t_max, t_delta):
-        self.__dynamics_context     = dynamics_context
-        self.qp_0                   = qp_0
-        self.__t_v                  = None
-        self.__qp_v                 = None
-        self.t_max                  = t_max
-        self.t_delta                = t_delta
-        self.__Q_v                  = None
-        self.__Q_global_min_index   = None
-        self.__t_min                = None
-        self.__objective            = None
+        self.__dynamics_context         = dynamics_context
+        self.qp_0                       = qp_0
+        self.__t_v                      = None
+        self.__qp_v                     = None
+        self.t_max                      = t_max
+        self.t_delta                    = t_delta
+        self.__Q_v                      = None
+        self.__Q_global_min_index       = None
+        self.__t_min                    = None
+        self.__objective                = None
+        self.flow_curve_was_salvaged    = False
 
     def configuration_space_dimension (self):
         return self.__dynamics_context.configuration_space_dimension()
@@ -491,14 +532,41 @@ class ShootingMethodObjective:
             # Want 2*omega*t_delta = pi/2, meaning that omega = pi/(4*t_delta)
             omega = np.pi/(4*self.t_delta)
             assert np.allclose(2*omega*self.t_delta, np.pi/2)
-            qp_v = vorpy.symplectic_integration.nonseparable_hamiltonian.integrate(
-                initial_coordinates=self.qp_0,
-                t_v=t_v,
-                dH_dq=self.__dynamics_context.dH_dq,
-                dH_dp=self.__dynamics_context.dH_dp,
-                order=order,
-                omega=omega
-            )
+            try:
+                qp_v = vorpy.symplectic_integration.nonseparable_hamiltonian.integrate(
+                    initial_coordinates=self.qp_0,
+                    t_v=t_v,
+                    dH_dq=self.__dynamics_context.dH_dq,
+                    dH_dp=self.__dynamics_context.dH_dp,
+                    order=order,
+                    omega=omega
+                )
+                self.flow_curve_was_salvaged = False
+            except vorpy.symplectic_integration.nonseparable_hamiltonian.SalvagedResultException as e:
+                print('salvaged results from exception encountered in nonseparable_hamiltonian.integrate: {0}'.format(e))
+                original_step_count = len(t_v)
+                self.__qp_v = qp_v  = e.integrated_coordinates[:e.salvaged_step_count,...]
+                self.__t_v  = t_v   = t_v[:e.salvaged_step_count]
+                self.flow_curve_was_salvaged = True
+
+                # TEMP: Plot this salvaged curve in order to diagnose what went wrong
+                orbit_plot = OrbitPlot(row_count=1, extra_col_count=0)
+                orbit_plot.plot_curve(
+                    curve_description='salvaged curve - {0} steps out of {1}'.format(e.salvaged_step_count, original_step_count),
+                    axis_v=orbit_plot.axis_vv[0],
+                    smo=self
+                )
+                orbit_plot.plot_and_clear(
+                    filename=os.path.join(
+                        'shooting_method_3.custom_plot',
+                        'salvaged.obj:{0:.4e}.t_delta:{1:.3e}.t_max:{2:.3e}.ic:{3}.png'.format(
+                            self.objective(),
+                            self.t_delta,
+                            self.t_max,
+                            ndarray_as_single_line_string(self.qp_0)
+                        )
+                    )
+                )
 
             print('integration took {0} seconds'.format(time.time() - start_time))
 
@@ -558,10 +626,10 @@ class ShootingMethodObjective:
                 self.__t_min            = t_v[_Q_global_min_index]
                 self.__objective        = Q_v[_Q_global_min_index]
         except ValueError:
-            # If there was no local min, then use the last time value
-            self.__Q_global_min_index   = len(Q_v)-1
-            self.__t_min                = t_v[self.__Q_global_min_index]
-            self.__objective            = Q_v[self.__Q_global_min_index]
+            # If there was no local min, then declare the objective function value to be NaN
+            self.__Q_global_min_index   = None
+            self.__t_min                = np.nan
+            self.__objective            = np.nan
 
 def evaluate_shooting_method_objective (dynamics_context, qp_0, t_max, t_delta):
     return ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=t_delta)()
@@ -715,6 +783,13 @@ class OptionParser:
             type='int',
             help='Specifies that the given value, call it k, should be used in a particular form of initial condition intended to produce a k-fold symmetric orbit -- experimental.'
         )
+        self.op.add_option(
+            '--abortive-threshold',
+            dest='abortive_threshold',
+            default=0.1,
+            type='float',
+            help='Sets the threshold below which a candidate curve\'s objective function will qualify it for running through the optimizer to attempt to close it.'
+        )
 
     @staticmethod
     def __pop_brackets_off_of (string):
@@ -818,8 +893,8 @@ def ndarray_as_single_line_string (A):
     else:
         return '[' + ','.join(ndarray_as_single_line_string(a) for a in A) + ']'
 
-def construct_filename (*, obj, t_delta, t_max, initial_condition, period):
-    return 'obj:{0:.4e}.t_delta:{1:.3e}.t_max:{2:.3e}.initial_condition:{3}.period:{4:.17e}.png'.format(obj, t_delta, t_max, ndarray_as_single_line_string(initial_condition), period)
+def construct_filename (*, obj, t_delta, t_max, initial_condition, t_min):
+    return 'obj:{0:.4e}.t_delta:{1:.3e}.t_max:{2:.3e}.initial_condition:{3}.t_min:{4:.17e}.png'.format(obj, t_delta, t_max, ndarray_as_single_line_string(initial_condition), t_min)
 
 def search (dynamics_context, options):
     if not os.path.exists('shooting_method_3/'):
@@ -831,11 +906,24 @@ def search (dynamics_context, options):
     np.set_printoptions(formatter={'float':float_formatter})
 
     def try_random_initial_condition ():
-        #X_0 = rng.randn(*HeisenbergDynamicsContext_Numeric.initial_condition_preimage().shape)
-        X_0 = rng.randn(2)
-        # NOTE: This somewhat biases the generation of random initial conditions
-        #X_0[0] = np.exp(X_0[0]) # So we never get negative values
-        X_0[1] = np.abs(X_0[1]) # So we only bother pointing upward
+        ##X_0 = rng.randn(*HeisenbergDynamicsContext_Numeric.initial_condition_preimage().shape)
+        #X_0 = rng.randn(2)
+        ## NOTE: This somewhat biases the generation of random initial conditions
+        ##X_0[0] = np.exp(X_0[0]) # So we never get negative values
+        #X_0[1] = np.abs(X_0[1]) # So we only bother pointing upward
+
+        # NOTE: The goal here is to sample uniformly over the domain:
+        #     -sqrt(pi/4) <= p_x <= sqrt(pi/4)
+        #               0 <= p_y <= C
+        # for some arbitrary positive bound C, say 2.
+
+        C = 2.0
+        epsilon = 1.0e-5
+        # Perturb the bounds for p_x by epsilon away from the actual bound.
+        X_0 = np.array([
+            rng.uniform(-np.sqrt(np.pi/4)+epsilon, np.sqrt(np.pi/4)-epsilon),
+            rng.uniform(0.0, C)
+        ])
 
         #X_0 = np.array([4.53918797113298744e-01,-6.06738228528062038e-04,1.75369725636529949e+00])
 
@@ -844,14 +932,13 @@ def search (dynamics_context, options):
         print(X_0)
         #print('embedding of randomly generated initial condition preimage: qp_0:')
         #print(qp_0)
-        t_delta = 0.001
         t_max = 5.0
         # TODO: Pick a large-ish t_max, then cluster the local mins, and then from the lowest cluster,
         # pick the corresponding to the lowest time value, and then make t_max 15% larger than that.
         while True:
-            smo_0 = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=t_delta)
-            print('smo_0.objective() = {0}'.format(smo_0.objective()))
-            if smo_0.objective() < 1.0e-1:
+            smo_0 = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=options.dt)
+            print('smo_0.objective() = {0}, smo.t_min() = {1}'.format(smo_0.objective(), smo_0.t_min()))
+            if smo_0.objective() < options.abortive_threshold:
                 break
             else:
                 t_max *= 1.5
@@ -866,10 +953,10 @@ def search (dynamics_context, options):
                         'shooting_method_3/abortive',
                         construct_filename(
                             obj=smo_0.objective(),
-                            t_delta=t_delta,
+                            t_delta=options.dt,
                             t_max=t_max,
                             initial_condition=qp_0,
-                            period=smo_0.t_min()
+                            t_min=smo_0.t_min()
                         )
                     )
                 )
@@ -878,12 +965,12 @@ def search (dynamics_context, options):
         flow_curve_0 = smo_0.flow_curve()
 
         optimizer = library.monte_carlo.MonteCarlo(
-            obj=lambda qp_0:evaluate_shooting_method_objective(dynamics_context, qp_0, t_max, t_delta),
+            obj=lambda qp_0:evaluate_shooting_method_objective(dynamics_context, qp_0, t_max, options.dt),
             initial_parameters=X_0,
             inner_radius=1.0e-12,
             outer_radius=1.0e-1,
-            rng_seed=random_seed,
-            embedding=dynamics_context.embedding
+            rng_seed=options.seed,
+            embedding=dynamics_context.embedding2
         )
         try:
             actual_iteration_count = 0
@@ -897,7 +984,7 @@ def search (dynamics_context, options):
             print('got AssertionError -- halting optimization, but will plot last good results')
 
         qp_opt = optimizer.embedded_parameter_history_v[-1]
-        smo_opt = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_opt, t_max=t_max, t_delta=t_delta)
+        smo_opt = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_opt, t_max=t_max, t_delta=options.dt)
         flow_curve_opt = smo_opt.flow_curve()
 
         print('qp_0 = {0}'.format(qp_0))
@@ -917,10 +1004,10 @@ def search (dynamics_context, options):
                 'shooting_method_3',
                 construct_filename(
                     obj=smo_opt.objective(),
-                    t_delta=t_delta,
+                    t_delta=options.dt,
                     t_max=t_max,
                     initial_condition=qp_opt,
-                    period=smo_opt.t_min()
+                    t_min=smo_opt.t_min()
                 )
             )
         )
@@ -1028,7 +1115,7 @@ if __name__ == '__main__':
                     t_delta=options.dt,
                     t_max=options.max_time,
                     initial_condition=qp,
-                    period=smo.t_min()
+                    t_min=smo.t_min()
                 )
             )
         )
