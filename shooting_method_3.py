@@ -691,6 +691,7 @@ class OptionParser:
         self.op.add_option(
             '--seed',
             dest='seed',
+            default=666,
             type='int',
             help='Specifies the seed to use for pseudorandom number generation.  Using the same seed should produce the same sequence of random numbers, and therefore provide reproducible program execution.'
         )
