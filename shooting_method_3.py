@@ -1068,7 +1068,7 @@ if __name__ == '__main__':
                 X_0 = options.initial_2preimage
                 embedding = dynamics_context.embedding2
             elif options.initial_3preimage is not None:
-                X_0 = options.initial_2preimage
+                X_0 = options.initial_3preimage
                 embedding = dynamics_context.embedding3
             elif options.initial is not None:
                 X_0 = options.qp_0
