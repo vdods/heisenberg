@@ -1093,7 +1093,7 @@ if __name__ == '__main__':
             except AssertionError:
                 print('got AssertionError -- halting optimization, but will plot last good results')
 
-            qp_opt = optimizer.parameter_history_v[-1]
+            qp_opt = optimizer.embedded_parameter_history_v[-1]
             smo_opt = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_opt, t_max=options.max_time, t_delta=options.dt)
 
             print('qp_opt = {0}'.format(qp_opt))
