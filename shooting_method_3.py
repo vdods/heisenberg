@@ -1032,9 +1032,13 @@ def search (dynamics_context, options):
 
 
 if __name__ == '__main__':
+    import matplotlib
     import matplotlib.pyplot as plt
     import os
     import sys
+
+    # https://github.com/matplotlib/matplotlib/issues/5907 says this should fix "Exceeded cell block limit" problems
+    matplotlib.rcParams['agg.path.chunksize'] = 10000
 
     dynamics_context = HeisenbergDynamicsContext_Numeric()
 
