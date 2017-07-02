@@ -419,9 +419,52 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
             #verbose=True
         )
 
+    def __solve_for_embedding5 (self):
+        # Symbolically solve H(qp) = 0 for qp[1,2].
+        X = vorpy.symbolic.tensor('X', (6,))
+        zero = sp.Integer(0)
+        qp = np.array(
+            (
+                (X[0], X[1], X[2]),
+                (X[3], X[4], X[5]),
+            ),
+            dtype=object
+        )
+        H = HeisenbergDynamicsContext_Symbolic.H(qp)
+        #print('H(qp) = {0}'.format(H))
+        p_z = qp[1,2] # Momentum for z coordinate
+        p_z_solution_v = sp.solve(H, p_z)
+        #print('len(p_z_solution_v) = {0}'.format(len(p_z_solution_v)))
+        #print('p_z_solution_v = {0}'.format(p_z_solution_v))
+        # Just take the last solution.
+        p_z_solution = p_z_solution_v[-1]
+        #print('p_z_solution = {0}'.format(p_z_solution))
+
+        self.symbolic_embedding5_domain = X[:5]
+        self.symbolic_embedding5 = np.array(
+            (
+                (X[0], X[1],         X[2]),
+                (X[3], X[4], p_z_solution),
+            ),
+            dtype=object
+        )
+        self.embedding5 = vorpy.symbolic.lambdified(
+            self.symbolic_embedding5,
+            self.symbolic_embedding5_domain,
+            replacement_d={
+                'array'         :'np.array',
+                'ndarray'       :'np.ndarray',
+                'dtype=object'  :'dtype=float',
+                'sqrt'          :'np.sqrt',
+                'pi'            :'np.pi',
+            },
+            #verbose=True
+        )
+
     def __init__ (self):
         self.__solve_for_embedding2()
         self.__solve_for_embedding3()
+        self.__solve_for_embedding5()
 
     #@classmethod
     #def initial_condition_preimage (cls):
@@ -758,6 +801,12 @@ class OptionParser:
             help='Specifies the preimage of the initial conditions with respect to the [x,p_x,p_y] |-> [[x,y,z],[p_x,p_y,p_z]] embedding.  Should have the form [x,p_x,p_y], where each of x,y,z are floating point literals.'
         )
         self.op.add_option(
+            '--initial-5preimage',
+            dest='initial_5preimage',
+            type='string',
+            help='Specifies the preimage of the initial conditions with respect to the [x,y,z,p_x,p_y] |-> [[x,y,z],[p_x,p_y,p_z]] embedding.  Should have the form [x,y,z,p_x,p_y], where each of x,y,z are floating point literals.'
+        )
+        self.op.add_option(
             '--initial',
             dest='initial',
             type='string',
@@ -827,11 +876,12 @@ class OptionParser:
         num_initial_conditions_specified = sum([
             options.initial_2preimage is not None,
             options.initial_3preimage is not None,
+            options.initial_5preimage is not None,
             options.initial is not None
         ])
         if require_initial_conditions:
             if num_initial_conditions_specified != 1:
-                print('if neither --search nor --k-fold-initial are not specified, then you must specify exactly one of --initial-2preimage or --initial-3preimage or --initial, but {0} of those were specified.'.format(num_initial_conditions_specified))
+                print('if neither --search nor --k-fold-initial are not specified, then you must specify exactly one of --initial-2preimage or --initial-3preimage or --initial-5preimage or --initial, but {0} of those were specified.'.format(num_initial_conditions_specified))
                 self.op.print_help()
                 return None,None
 
@@ -848,14 +898,15 @@ class OptionParser:
         if require_initial_conditions:
             # Attempt to parse initial conditions.  Upon success, the attribute options.qp_0 should exist.
             if options.initial_2preimage is not None:
+                # TODO: Refactor this checking to avoid code duplication
                 try:
                     options.initial_2preimage = OptionParser.__csv_as_ndarray(OptionParser.__pop_brackets_off_of(options.initial_2preimage), float)
                     expected_shape = (2,)
                     if options.initial_2preimage.shape != expected_shape:
-                        raise ValueError('--initial_2preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_2preimage.shape, expected_shape))
+                        raise ValueError('--initial-2preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_2preimage.shape, expected_shape))
                     options.qp_0 = dynamics_context.embedding2(options.initial_2preimage)
                 except ValueError as e:
-                    print('error parsing --initial_2preimage value: {0}'.format(str(e)))
+                    print('error parsing --initial-2preimage value: {0}'.format(str(e)))
                     self.op.print_help()
                     return None,None
             elif options.initial_3preimage is not None:
@@ -863,10 +914,21 @@ class OptionParser:
                     options.initial_3preimage = OptionParser.__csv_as_ndarray(OptionParser.__pop_brackets_off_of(options.initial_3preimage), float)
                     expected_shape = (3,)
                     if options.initial_3preimage.shape != expected_shape:
-                        raise ValueError('--initial_3preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_3preimage.shape, expected_shape))
+                        raise ValueError('--initial-3preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_3preimage.shape, expected_shape))
                     options.qp_0 = dynamics_context.embedding3(options.initial_3preimage)
                 except ValueError as e:
-                    print('error parsing --initial_3preimage value: {0}'.format(str(e)))
+                    print('error parsing --initial-3preimage value: {0}'.format(str(e)))
+                    self.op.print_help()
+                    return None,None
+            elif options.initial_5preimage is not None:
+                try:
+                    options.initial_5preimage = OptionParser.__csv_as_ndarray(OptionParser.__pop_brackets_off_of(options.initial_5preimage), float)
+                    expected_shape = (5,)
+                    if options.initial_5preimage.shape != expected_shape:
+                        raise ValueError('--initial-5preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_5preimage.shape, expected_shape))
+                    options.qp_0 = dynamics_context.embedding5(options.initial_5preimage)
+                except ValueError as e:
+                    print('error parsing --initial-5preimage value: {0}'.format(str(e)))
                     self.op.print_help()
                     return None,None
             elif options.initial is not None:
@@ -1070,6 +1132,9 @@ if __name__ == '__main__':
             elif options.initial_3preimage is not None:
                 X_0 = options.initial_3preimage
                 embedding = dynamics_context.embedding3
+            elif options.initial_5preimage is not None:
+                X_0 = options.initial_5preimage
+                embedding = dynamics_context.embedding5
             elif options.initial is not None:
                 X_0 = options.qp_0
                 embedding = None
