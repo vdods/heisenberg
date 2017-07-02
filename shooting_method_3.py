@@ -944,7 +944,7 @@ def search (dynamics_context, options):
         # pick the corresponding to the lowest time value, and then make t_max 15% larger than that.
         while True:
             smo_0 = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=options.dt)
-            print('smo_0.objective() = {0}, smo.t_min() = {1}'.format(smo_0.objective(), smo_0.t_min()))
+            print('smo_0.objective() = {0:.17e}, smo.t_min() = {1}'.format(smo_0.objective(), smo_0.t_min()))
             if smo_0.objective() < options.abortive_threshold:
                 break
             else:
@@ -994,8 +994,8 @@ def search (dynamics_context, options):
         smo_opt = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_opt, t_max=t_max, t_delta=options.dt)
         flow_curve_opt = smo_opt.flow_curve()
 
-        print('qp_0 = {0}'.format(qp_0))
         print('qp_opt = {0}'.format(qp_opt))
+        print('qp_opt embedding preimage; X_0 = {0}'.format(optimizer.parameter_history_v[-1]))
 
         orbit_plot = OrbitPlot(row_count=2, extra_col_count=1)
 
@@ -1097,6 +1097,8 @@ if __name__ == '__main__':
             smo_opt = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_opt, t_max=options.max_time, t_delta=options.dt)
 
             print('qp_opt = {0}'.format(qp_opt))
+            if embedding is not None:
+                print('qp_opt embedding preimage; X_0 = {0}'.format(optimizer.parameter_history_v[-1]))
 
             orbit_plot = OrbitPlot(row_count=2, extra_col_count=1)
             orbit_plot.plot_curve(curve_description='optimized', axis_v=orbit_plot.axis_vv[1], smo=smo_opt)
