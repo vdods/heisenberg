@@ -549,7 +549,7 @@ class ShootingMethodObjective:
                     omega=omega
                 )
                 self.flow_curve_was_salvaged = False
-            except vorpy.symplectic_integration.nonseparable_hamiltonian.SalvagedResultException as e:
+            except vorpy.symplectic_integration.exceptions.SalvagedResultException as e:
                 print('salvaged results from exception encountered in nonseparable_hamiltonian.integrate: {0}'.format(e))
                 original_step_count = len(t_v)
                 self.__qp_v = qp_v  = e.integrated_coordinates[:e.salvaged_step_count,...]
