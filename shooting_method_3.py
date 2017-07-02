@@ -33,6 +33,13 @@ Define R_Omega to give point closest to Omega(q,p).  Then f_Omega is defined as
 and the gradient of f_Omega depends on the gradient of Omega and R_Omega.
 
 TODO
+-   Examine following hypothesis: Z curve for closed orbit is a sine wave.
+-   Examine following hypothesis: Z curve for quasi-periodic orbit is a sine wave of decreasing
+    amplitude and increasing frequency, perhaps this can be expressed simply as being a rotated
+    and dilated (and time-reparameterized) version of itself.
+-   Replace 'X[0]', 'X[1]' names in solution for H = 0 with actual names of coordinates, specifically
+    x,y,z,p_x,p_y,p_z.
+-   If abs(H) escapes a certain threshold while integrating, either abort or decreate the timestep.
 -   k-fold symmetry -- make the closest-approach-map measure from a 2pi/k-rotated phase space point
     in order to more efficiently find k-fold symmetric curves.
 -   try to come up with uniform distribution on bounded portion of 2D parameter embedding space
