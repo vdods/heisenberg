@@ -900,8 +900,8 @@ def ndarray_as_single_line_string (A):
     else:
         return '[' + ','.join(ndarray_as_single_line_string(a) for a in A) + ']'
 
-def construct_filename (*, obj, t_delta, t_max, initial_condition, t_min):
-    return 'obj:{0:.4e}.t_delta:{1:.3e}.t_max:{2:.3e}.initial_condition:{3}.t_min:{4:.17e}.png'.format(obj, t_delta, t_max, ndarray_as_single_line_string(initial_condition), t_min)
+def construct_base_filename (*, obj, t_delta, t_max, initial_condition, t_min):
+    return 'obj:{0:.4e}.t_delta:{1:.3e}.t_max:{2:.3e}.initial_condition:{3}.t_min:{4:.17e}'.format(obj, t_delta, t_max, ndarray_as_single_line_string(initial_condition), t_min)
 
 def search (dynamics_context, options):
     if not os.path.exists('shooting_method_3/'):
@@ -958,13 +958,13 @@ def search (dynamics_context, options):
                 orbit_plot.plot_and_clear(
                     filename=os.path.join(
                         'shooting_method_3/abortive',
-                        construct_filename(
+                        construct_base_filename(
                             obj=smo_0.objective(),
                             t_delta=options.dt,
                             t_max=t_max,
                             initial_condition=qp_0,
                             t_min=smo_0.t_min()
-                        )
+                        )+'.png'
                     )
                 )
 
@@ -1009,13 +1009,13 @@ def search (dynamics_context, options):
         orbit_plot.plot_and_clear(
             filename=os.path.join(
                 'shooting_method_3',
-                construct_filename(
+                construct_base_filename(
                     obj=smo_opt.objective(),
                     t_delta=options.dt,
                     t_max=t_max,
                     initial_condition=qp_opt,
                     t_min=smo_opt.t_min()
-                )
+                )+'.png'
             )
         )
 
@@ -1123,12 +1123,12 @@ if __name__ == '__main__':
         orbit_plot.plot_and_clear(
             filename=os.path.join(
                 'shooting_method_3.custom_plot',
-                construct_filename(
+                construct_base_filename(
                     obj=smo.objective(),
                     t_delta=options.dt,
                     t_max=options.max_time,
                     initial_condition=qp,
                     t_min=smo.t_min()
-                )
+                )+'.png'
             )
         )
