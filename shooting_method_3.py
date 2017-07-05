@@ -5,6 +5,7 @@ import numpy as np
 import sympy as sp
 import time
 import vorpy
+import vorpy.pickle
 import vorpy.symbolic
 import vorpy.symplectic_integration
 
@@ -17,7 +18,7 @@ sequence of points in the solution to the orbital curve for initial condition (q
 
 Define f : T^* Q -> R, (q,p) |-> 1/2 * |(q,p) - R(q,p)|^2
 
-Use gradient descent to find critical points of f.
+Use an optimization method (e.g. a Monte Carlo method or gradient descent) to find critical points of f.
 
 The gradient of f depends on the gradient of R.  This can be computed numerically using a least-squares
 approximation of the first-order Taylor polynomial of R.
@@ -33,10 +34,13 @@ Define R_Omega to give point closest to Omega(q,p).  Then f_Omega is defined as
 and the gradient of f_Omega depends on the gradient of Omega and R_Omega.
 
 TODO
+-   In addition to plot and pickle files, output a short, human-readable summary of the pickle file,
+    most importantly with the exact initial conditions, dt, t_min, and the values for alpha and beta.
 -   Examine following hypothesis: Z curve for closed orbit is a sine wave.
--   Examine following hypothesis: Z curve for quasi-periodic orbit is a sine wave of decreasing
-    amplitude and increasing frequency, perhaps this can be expressed simply as being a rotated
-    and dilated (and time-reparameterized) version of itself.
+-   Examine following hypothesis: Z curve for quasi-periodic orbit is a sine wave (or whatever periodic
+    function) of decreasing amplitude and increasing frequency (or vice versa, depending on if the orbit
+    is spiraling in or out), perhaps this can be expressed simply as being a rotated and dilated (and
+    time-reparameterized) version of itself.
 -   Replace 'X[0]', 'X[1]' names in solution for H = 0 with actual names of coordinates, specifically
     x,y,z,p_x,p_y,p_z.
 -   If abs(H) escapes a certain threshold while integrating, either abort or decreate the timestep.
@@ -558,6 +562,8 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
 class ShootingMethodObjective:
     def __init__ (self, *, dynamics_context, qp_0, t_max, t_delta):
         self.__dynamics_context         = dynamics_context
+        self.alpha                      = dynamics_context.alpha()
+        self.beta                       = dynamics_context.beta()
         self.qp_0                       = qp_0
         self.__t_v                      = None
         self.__qp_v                     = None
@@ -622,6 +628,7 @@ class ShootingMethodObjective:
 
             self.__t_v = t_v
             self.__qp_v = qp_v
+            assert self.__qp_v is not None
         return self.__qp_v
 
     def t_v (self):
@@ -630,26 +637,30 @@ class ShootingMethodObjective:
             assert self.__t_v is not None
         return self.__t_v
 
-    def squared_distance_function (self):
+    def Q_v (self):
         if self.__Q_v is None:
             # Let s denote squared distance function s(t) := 1/2 |qp_0 - flow_of_qp_0(t))|^2
             #self.__Q_v = 0.5 * np.sum(np.square(self.flow_curve() - self.qp_0), axis=-1)
             self.__Q_v = vorpy.apply_along_axes(lambda x:0.5*np.sum(np.square(x)), (-2,-1), (self.flow_curve() - self.qp_0,), output_axis_v=(), func_output_shape=())
+            assert self.__Q_v is not None
         return self.__Q_v
 
     def t_min (self):
         if self.__t_min is None:
             self.compute_t_min_and_objective()
+            assert self.__t_min is not None
         return self.__t_min
 
     def objective (self):
         if self.__objective is None:
             self.compute_t_min_and_objective()
+            assert self.__objective is not None
         return self.__objective
 
     def Q_global_min_index (self):
         if self.__Q_global_min_index is None:
             self.compute_t_min_and_objective()
+            assert self.__Q_global_min_index is not None
         return self.__Q_global_min_index
 
     def __call__ (self):
@@ -657,7 +668,7 @@ class ShootingMethodObjective:
 
     def compute_t_min_and_objective (self):
         t_v                             = self.t_v()
-        Q_v                             = self.squared_distance_function()
+        Q_v                             = self.Q_v()
 
         local_min_index_v               = [i for i in range(1,len(Q_v)-1) if Q_v[i-1] > Q_v[i] and Q_v[i] < Q_v[i+1]]
         Q_local_min_v                   = [Q_v[i] for i in local_min_index_v]
@@ -680,6 +691,26 @@ class ShootingMethodObjective:
             self.__Q_global_min_index   = None
             self.__t_min                = np.nan
             self.__objective            = np.nan
+
+    def pickle (self, filename):
+        # First, ensure everything is computed.
+        pickle_data = {
+            'alpha':self.alpha,
+            'beta':self.beta,
+            't_v':self.t_v(),
+            'qp_v':self.flow_curve(),
+            'Q_v':self.Q_v(),
+            'Q_global_min_index':self.Q_global_min_index(),
+            't_min':self.t_min(),
+            'obj':self.objective(),
+        }
+        # Not sure if there's a guarantee as to the order the above dict elements are computed, so
+        # ensure that self.flow_curve() has been called before assigning the flow_curve_was_salvaged
+        # attribute in the dict.
+        pickle_data['flow_curve_was_salvaged'] = self.flow_curve_was_salvaged,
+
+        vorpy.pickle.try_to_pickle(data=pickle_data, pickle_filename=filename, log_out=sys.stdout)
+        print('wrote to "{0}"'.format(filename))
 
 def evaluate_shooting_method_objective (dynamics_context, qp_0, t_max, t_delta):
     return ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=t_delta)()
@@ -747,7 +778,7 @@ class OrbitPlot:
 
         axis = axis_v[axis_index]
         axis.set_title('squared distance to initial condition\nt_min = {0}, min sqd = {1:.17e}'.format(smo.t_min(), smo.objective()))
-        axis.semilogy(smo.t_v(), smo.squared_distance_function())
+        axis.semilogy(smo.t_v(), smo.Q_v())
         axis.axvline(smo.t_min(), color='green')
         axis_index += 1
 
@@ -963,7 +994,7 @@ def ndarray_as_single_line_string (A):
         return '[' + ','.join(ndarray_as_single_line_string(a) for a in A) + ']'
 
 def construct_base_filename (*, obj, t_delta, t_max, initial_condition, t_min):
-    return 'obj:{0:.4e}.t_delta:{1:.3e}.t_max:{2:.3e}.initial_condition:{3}.t_min:{4:.17e}'.format(obj, t_delta, t_max, ndarray_as_single_line_string(initial_condition), t_min)
+    return 'obj:{0:.4e}.dt:{1:.3e}.t_max:{2:.3e}.ic:{3}.t_min:{4:.4e}'.format(obj, t_delta, t_max, ndarray_as_single_line_string(initial_condition), t_min)
 
 def search (dynamics_context, options):
     if not os.path.exists('shooting_method_3/'):
@@ -1015,20 +1046,21 @@ def search (dynamics_context, options):
             if t_max > options.max_time:
                 print('t_max ({0}) was raised too many times, exceeding --max-time value of {1}, before nearly closing up -- aborting'.format(t_max, options.max_time))
 
-                orbit_plot = OrbitPlot(row_count=1, extra_col_count=0)
-                orbit_plot.plot_curve(curve_description='initial', axis_v=orbit_plot.axis_vv[0], smo=smo_0)
-                orbit_plot.plot_and_clear(
-                    filename=os.path.join(
-                        'shooting_method_3/abortive',
-                        construct_base_filename(
-                            obj=smo_0.objective(),
-                            t_delta=options.dt,
-                            t_max=t_max,
-                            initial_condition=qp_0,
-                            t_min=smo_0.t_min()
-                        )+'.png'
+                base_filename = os.path.join(
+                    'shooting_method_3/abortive',
+                    construct_base_filename(
+                        obj=smo_0.objective(),
+                        t_delta=options.dt,
+                        t_max=t_max,
+                        initial_condition=qp_0,
+                        t_min=smo_0.t_min()
                     )
                 )
+
+                orbit_plot = OrbitPlot(row_count=1, extra_col_count=0)
+                orbit_plot.plot_curve(curve_description='initial', axis_v=orbit_plot.axis_vv[0], smo=smo_0)
+                orbit_plot.plot_and_clear(filename=base_filename+'.png')
+                smo_0.pickle(base_filename+'.pickle')
 
                 return
         flow_curve_0 = smo_0.flow_curve()
@@ -1059,6 +1091,17 @@ def search (dynamics_context, options):
         print('qp_opt = {0}'.format(qp_opt))
         print('qp_opt embedding preimage; X_0 = {0}'.format(optimizer.parameter_history_v[-1]))
 
+        base_filename = os.path.join(
+            'shooting_method_3',
+            construct_base_filename(
+                obj=smo_opt.objective(),
+                t_delta=options.dt,
+                t_max=t_max,
+                initial_condition=qp_opt,
+                t_min=smo_opt.t_min()
+            )
+        )
+
         orbit_plot = OrbitPlot(row_count=2, extra_col_count=1)
 
         orbit_plot.plot_curve(curve_description='initial', axis_v=orbit_plot.axis_vv[0], smo=smo_0)
@@ -1068,18 +1111,8 @@ def search (dynamics_context, options):
         axis.set_title('objective function history')
         axis.semilogy(optimizer.obj_history_v)
 
-        orbit_plot.plot_and_clear(
-            filename=os.path.join(
-                'shooting_method_3',
-                construct_base_filename(
-                    obj=smo_opt.objective(),
-                    t_delta=options.dt,
-                    t_max=t_max,
-                    initial_condition=qp_opt,
-                    t_min=smo_opt.t_min()
-                )+'.png'
-            )
-        )
+        orbit_plot.plot_and_clear(filename=base_filename+'.png')
+        smo_opt.pickle(base_filename+'.pickle')
 
     try:
         while True:
@@ -1183,17 +1216,17 @@ if __name__ == '__main__':
             qp = qp_0
             smo = smo_0
 
-        orbit_plot.plot_curve(curve_description='initial', axis_v=orbit_plot.axis_vv[0], smo=smo_0)
-
-        orbit_plot.plot_and_clear(
-            filename=os.path.join(
-                'shooting_method_3.custom_plot',
-                construct_base_filename(
-                    obj=smo.objective(),
-                    t_delta=options.dt,
-                    t_max=options.max_time,
-                    initial_condition=qp,
-                    t_min=smo.t_min()
-                )+'.png'
+        base_filename = os.path.join(
+            'shooting_method_3.custom_plot',
+            construct_base_filename(
+                obj=smo.objective(),
+                t_delta=options.dt,
+                t_max=options.max_time,
+                initial_condition=qp,
+                t_min=smo.t_min()
             )
         )
+
+        orbit_plot.plot_curve(curve_description='initial', axis_v=orbit_plot.axis_vv[0], smo=smo_0)
+        orbit_plot.plot_and_clear(filename=base_filename+'.png')
+        smo.pickle(base_filename+'.pickle')
