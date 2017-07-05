@@ -1,3 +1,6 @@
 *.pyc
 *.png
-
+*.pickle
+core
+*.pyprof
+*.kate-swp
