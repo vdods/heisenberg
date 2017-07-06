@@ -107,7 +107,7 @@ def quadratic_min_time_parameterized (t_v, f_v):
 
     return t_min,q_min
 
-class DynamicsContext(metaclass=abc.ABCMeta):
+class HamiltonianDynamicsContext(metaclass=abc.ABCMeta):
     @classmethod
     @abc.abstractmethod
     def configuration_space_dimension (cls):
@@ -132,13 +132,11 @@ class DynamicsContext(metaclass=abc.ABCMeta):
         pass
 
     @classmethod
-    def X_H (cls, coordinates):
+    def X_H (cls, qp):
         """
-        Computes the Hamiltonian vector field on the (q,p) coordinate reshaped as a (2*N,)-vector, returns the same shape.
+        Computes the Hamiltonian vector field on coordinates qp (with shape (2,N)), returning the same shape.
 
         \omega^-1 * dH (i.e. the symplectic gradient of H) is the hamiltonian vector field for this system.
-        X is the list of coordinates [x, y, z, p_x, p_y, p_z].
-        t is the time at which to evaluate the flow.  This particular vector field is independent of time.
 
         If the tautological one-form on the cotangent bundle is
 
@@ -148,7 +146,7 @@ class DynamicsContext(metaclass=abc.ABCMeta):
 
             omega := -dtau = -dq wedge dp
 
-        which, in the coordinates (q_0, q_1, p_0, p_1), has the matrix
+        which, e.g. in the coordinates (q_0, q_1, p_0, p_1), has the matrix
 
             [  0  0 -1  0 ]
             [  0  0  0 -1 ]
@@ -181,20 +179,27 @@ class DynamicsContext(metaclass=abc.ABCMeta):
         or expressed in coordinates as
 
             [  dH/dp ]
-            [ -dH/dq ],
+            [ -dH/dq ].
+
+        The equation defining the flow for this vector field is
+
+            dq/dt =  dH/dp
+            dp/dt = -dH/dq,
 
         which is Hamilton's equations.
         """
         q = coordinates[0,:]
         p = coordinates[1,:]
         # This is the symplectic gradient of H.
-        return np.concatenate((cls.dH_dp(q,p), -cls.dH_dq(q,p)))
+        retval = np.vstack((cls.dH_dp(q,p), -cls.dH_dq(q,p)))
+        assert retval.shape[0] == 2
+        return retval
 
     @classmethod
     def phase_space_dimension (cls):
         return 2*cls.configuration_space_dimension()
 
-class HeisenbergDynamicsContext(DynamicsContext):
+class HeisenbergDynamicsContext(HamiltonianDynamicsContext):
     @classmethod
     def configuration_space_dimension (cls):
         return 3
