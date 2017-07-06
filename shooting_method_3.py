@@ -41,13 +41,9 @@ TODO
     function) of decreasing amplitude and increasing frequency (or vice versa, depending on if the orbit
     is spiraling in or out), perhaps this can be expressed simply as being a rotated and dilated (and
     time-reparameterized) version of itself.
--   Replace 'X[0]', 'X[1]' names in solution for H = 0 with actual names of coordinates, specifically
-    x,y,z,p_x,p_y,p_z.
--   If abs(H) escapes a certain threshold while integrating, either abort or decreate the timestep.
+-   If abs(H) escapes a certain threshold while integrating, either abort or decrease the timestep.
 -   k-fold symmetry -- make the closest-approach-map measure from a 2pi/k-rotated phase space point
     in order to more efficiently find k-fold symmetric curves.
--   try to come up with uniform distribution on bounded portion of 2D parameter embedding space
-    for search routine
 -   Decide dt based on the abs(H) bound -- if it's above say 1.0e-4, then reduce dt.
 -   When plotting closed curves, should probably only plot up to the t_min value, not the overlapping
     part.
@@ -338,7 +334,7 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
 
     def __solve_for_embedding2 (self):
         # Symbolically solve H(qp) = 0 for qp[1,2].
-        X = vorpy.symbolic.tensor('X', (3,))
+        X = np.array(sp.symbols(('p_x','p_y','p_z')))
         zero = sp.Integer(0)
         one = sp.Integer(1)
         qp = np.array(
@@ -383,7 +379,7 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
 
     def __solve_for_embedding3 (self):
         # Symbolically solve H(qp) = 0 for qp[1,2].
-        X = vorpy.symbolic.tensor('X', (4,))
+        X = np.array(sp.symbols(('x','p_x','p_y','p_z')))
         zero = sp.Integer(0)
         qp = np.array(
             (
@@ -425,7 +421,7 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext):
 
     def __solve_for_embedding5 (self):
         # Symbolically solve H(qp) = 0 for qp[1,2].
-        X = vorpy.symbolic.tensor('X', (6,))
+        X = np.array(sp.symbols(('x','y','z','p_x','p_y','p_z')))
         zero = sp.Integer(0)
         qp = np.array(
             (
