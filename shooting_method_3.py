@@ -602,14 +602,14 @@ class ShootingMethodObjective:
             except vorpy.symplectic_integration.exceptions.SalvagedResultException as e:
                 print('salvaged results from exception encountered in nonseparable_hamiltonian.integrate: {0}'.format(e))
                 original_step_count = len(t_v)
-                self.__qp_v = qp_v  = e.integrated_coordinates[:e.salvaged_step_count,...]
-                self.__t_v  = t_v   = t_v[:e.salvaged_step_count]
+                self.__qp_v = qp_v  = e.salvaged_qp_v
+                self.__t_v  = t_v   = e.salvaged_t_v
                 self.flow_curve_was_salvaged = True
 
                 # TEMP: Plot this salvaged curve in order to diagnose what went wrong
                 orbit_plot = OrbitPlot(row_count=1, extra_col_count=0)
                 orbit_plot.plot_curve(
-                    curve_description='salvaged curve - {0} steps out of {1}'.format(e.salvaged_step_count, original_step_count),
+                    curve_description='salvaged curve - {0} steps out of {1}'.format(e.salvaged_qp_v.shape[0], original_step_count),
                     axis_v=orbit_plot.axis_vv[0],
                     smo=self
                 )
