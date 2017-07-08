@@ -26,7 +26,7 @@ class MonteCarlo:
 
     def random_perturbation (self):
         # return self.stddev*self.rng.randn(*self.shape)
-        return random_radial.random_point_with_uniform_radial_distribution(shape=self.shape, inner_radius=self.inner_radius, outer_radius=self.outer_radius, rng=self.rng)
+        return random_radial.random_point_with_uniform_radial_exponent_distribution(shape=self.shape, inner_radius=self.inner_radius, outer_radius=self.outer_radius, rng=self.rng)
 
     def compute_next_step (self):
         previous_parameter = self.parameter_history_v[-1]
