@@ -1,3 +1,9 @@
+"""
+TODO:
+-   Feature: Clicking on a point in the parameter space plots the integral curve with that initial condition
+    so that the parameter space can be explored interactively.
+"""
+
 import glob
 import numpy as np
 import os

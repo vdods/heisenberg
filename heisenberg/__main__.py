@@ -23,6 +23,9 @@ Define R_Omega to give point closest to Omega(q,p).  Then f_Omega is defined as
 and the gradient of f_Omega depends on the gradient of Omega and R_Omega.
 
 TODO
+-   Make a setup.py and define "entry points" for scripts (mainly `heisenberg` script):
+    https://chriswarrick.com/blog/2014/09/15/python-apps-the-right-way-entry_points-and-scripts/
+-   Make 3d plot option.
 -   Optionally use other sheet of H=0 in solution for p_z.  Generally allow different coordinate charts.
 -   optparse is apparently deprecated -- switch to argparse https://docs.python.org/3/howto/argparse.html
 -   Take all dynamics_context-specific code out of OptionParser
@@ -76,6 +79,36 @@ TODO
             always appears to be a sine wave, but this hasn't been checked rigorously).
     -   Visualize these two functions to determine if they are continuous and/or have other structure
         to them.  Perhaps there are regions which are continuous surrounding zeros the objective function.
+-   Design for external program interface:
+
+    Have the following modules each be separate [sub-]programs:
+
+        heisenberg                  (heisenberg/__main__.py)
+        heisenberg.plot             (heisenberg/plot.py)
+        heisenberg.search           (heisenberg/search.py)
+        heisenberg.sample           (heisenberg/sample.py)
+        heisenberg.plot_samples     (heisenberg/plot_samples.py)
+
+    Where heisenberg just prints usage information for the sub-programs.  There is a set of common options,
+    and then there are sub-program specific options, which should be defined in and parsed by each
+    sub-program.
+
+    The sub-programs can be invoked as
+
+        python3 -m heisenberg
+        python3 -m heisenberg.plot
+        python3 -m heisenberg.search
+        python3 -m heisenberg.sample
+        python3 -m heisenberg.plot_samples
+
+    Or once setup.py is defined with its entry points, the following scripts will be created that can be
+    executed:
+
+        heisenberg
+        heisenberg.plot
+        heisenberg.search
+        heisenberg.sample
+        heisenberg.plot_samples
 """
 
 if __name__ == '__main__':
