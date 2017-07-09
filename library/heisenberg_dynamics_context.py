@@ -157,6 +157,9 @@ class Numeric(Base):
         #print('H(qp) = {0}'.format(H))
         p_z = qp[1,2] # Momentum for z coordinate
         p_z_solution_v = sp.solve(H, p_z)
+        print('There are {0} solutions for the equation: {1} = 0'.format(len(p_z_solution_v), H))
+        for i,p_z_solution in enumerate(p_z_solution_v):
+            print('    solution {0}: p_z = {1}'.format(i, p_z_solution))
         #print('len(p_z_solution_v) = {0}'.format(len(p_z_solution_v)))
         #print('p_z_solution_v = {0}'.format(p_z_solution_v))
         # Just take the last solution.
