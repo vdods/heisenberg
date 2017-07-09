@@ -117,5 +117,5 @@ if __name__ == '__main__':
     elif options.plot:
         plot.plot(dynamics_context, options, rng=rng)
     else:
-        print('Must specify one of --search, --sample, or --plot.')
+        print('Must specify one of --search, --sample, --plot, or --plot-samples.')
         sys.exit(-1)
