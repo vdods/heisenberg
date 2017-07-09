@@ -4,12 +4,7 @@ import numpy as np
 import sympy as sp
 import vorpy.symbolic
 
-"""
-TODO:
--   Rename HeisenbergDynamicsContext_XYZ to just XYZ
-"""
-
-class HeisenbergDynamicsContext_Base(hamiltonian_dynamics_context.HamiltonianDynamicsContext):
+class Base(hamiltonian_dynamics_context.HamiltonianDynamicsContext):
     @classmethod
     def configuration_space_dimension (cls):
         return 3
@@ -93,7 +88,7 @@ class HeisenbergDynamicsContext_Base(hamiltonian_dynamics_context.HamiltonianDyn
         """Return the beta value occurring in the fundamental solution to the sub-Riemannian Laplacian."""
         return 16
 
-class HeisenbergDynamicsContext_Symbolic(HeisenbergDynamicsContext_Base):
+class Symbolic(Base):
     @classmethod
     def sqrt (cls, x):
         return sp.sqrt(x)
@@ -127,7 +122,7 @@ class HeisenbergDynamicsContext_Symbolic(HeisenbergDynamicsContext_Base):
             (0.0, 1.0, p_z_solution)
         ))
 
-class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext_Base):
+class Numeric(Base):
     @classmethod
     def sqrt (cls, x):
         return np.sqrt(x)
@@ -158,7 +153,7 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext_Base):
             ),
             dtype=object
         )
-        H = HeisenbergDynamicsContext_Symbolic.H(qp)
+        H = Symbolic.H(qp)
         #print('H(qp) = {0}'.format(H))
         p_z = qp[1,2] # Momentum for z coordinate
         p_z_solution_v = sp.solve(H, p_z)
@@ -202,7 +197,7 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext_Base):
             ),
             dtype=object
         )
-        H = HeisenbergDynamicsContext_Symbolic.H(qp)
+        H = Symbolic.H(qp)
         #print('H(qp) = {0}'.format(H))
         p_z = qp[1,2] # Momentum for z coordinate
         p_z_solution_v = sp.solve(H, p_z)
@@ -244,7 +239,7 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext_Base):
             ),
             dtype=object
         )
-        H = HeisenbergDynamicsContext_Symbolic.H(qp)
+        H = Symbolic.H(qp)
         #print('H(qp) = {0}'.format(H))
         p_z = qp[1,2] # Momentum for z coordinate
         p_z_solution_v = sp.solve(H, p_z)
@@ -298,7 +293,7 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext_Base):
             #),
             #dtype=object
         #)
-        #H = HeisenbergDynamicsContext_Symbolic.H(qp)
+        #H = Symbolic.H(qp)
         #print('H(qp) = {0}'.format(H))
         #p_z = qp[1,2] # Momentum for z coordinate
         #p_z_solution_v = sp.solve(H, p_z)
@@ -338,7 +333,7 @@ class HeisenbergDynamicsContext_Numeric(HeisenbergDynamicsContext_Base):
         ## Symbolically solve H(qp) = 0 for qp[1,2].
         #X = vorpy.symbolic.tensor('X', (6,))
         #qp = X.reshape(2,3)
-        #H = HeisenbergDynamicsContext_Symbolic.H(qp)
+        #H = Symbolic.H(qp)
         #print('H(qp) = {0}'.format(H))
         #p_z = qp[1,2] # Momentum for z coordinate
         #p_z_solution_v = sp.solve(H, p_z)

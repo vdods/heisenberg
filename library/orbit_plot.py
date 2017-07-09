@@ -11,7 +11,7 @@ class OrbitPlot:
 
     def plot_curve (self, *, curve_description, axis_v, smo):
         flow_curve = smo.flow_curve()
-        H_v = vorpy.apply_along_axes(heisenberg_dynamics_context.HeisenbergDynamicsContext_Numeric.H, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=())
+        H_v = vorpy.apply_along_axes(heisenberg_dynamics_context.Numeric.H, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=())
         abs_H_v = np.abs(H_v)
 
         axis_index = 0
@@ -54,7 +54,7 @@ class OrbitPlot:
         axis.semilogy(smo.t_v(), abs_H_v)
         axis_index += 1
 
-        J_v = vorpy.apply_along_axes(heisenberg_dynamics_context.HeisenbergDynamicsContext_Numeric.J, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=())
+        J_v = vorpy.apply_along_axes(heisenberg_dynamics_context.Numeric.J, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=())
         J_0 = J_v[0]
         J_v -= J_0
         abs_J_minus_J_0 = np.abs(J_v)

@@ -43,8 +43,9 @@ def sample (dynamics_context, options, *, rng):
         print('--seed must be specified.')
         sys.exit(-1)
 
-    if not os.path.exists('heisenberg.sample/'):
-        os.mkdir('heisenberg.sample')
+    if not os.path.exists(options.samples_dir):
+        # TODO: Create dirs recursively if it's a nested dir
+        os.mkdir(options.samples_dir)
 
     sample_v = []
     try:
@@ -96,6 +97,6 @@ def sample (dynamics_context, options, *, rng):
             sample_v.append(sample)
     except (Exception,KeyboardInterrupt) as e:
         print('caught exception "{0}" -- saving results and exiting.'.format(e))
-        filename = 'heisenberg.sample/sample_v.seed:{0}.count:{1}.pickle'.format(options.seed, len(sample_v))
+        filename = os.path.join(options.samples_dir, 'sample_v.seed:{0}.count:{1}.pickle'.format(options.seed, len(sample_v)))
         vorpy.pickle.try_to_pickle(data=sample_v, pickle_filename=filename, log_out=sys.stdout)
 

@@ -23,6 +23,7 @@ Define R_Omega to give point closest to Omega(q,p).  Then f_Omega is defined as
 and the gradient of f_Omega depends on the gradient of Omega and R_Omega.
 
 TODO
+-   Optionally use other sheet of H=0 in solution for p_z.  Generally allow different coordinate charts.
 -   optparse is apparently deprecated -- switch to argparse https://docs.python.org/3/howto/argparse.html
 -   Take all dynamics_context-specific code out of OptionParser
 -   Create a quadratic_min_time_parameterized which takes more than 3 points and does a least-squares fit.
@@ -88,13 +89,14 @@ if __name__ == '__main__':
     import numpy as np
     from . import option_parser
     from . import plot
+    from . import plot_samples
     from . import sample
     from . import search
 
     # https://github.com/matplotlib/matplotlib/issues/5907 says this should fix "Exceeded cell block limit" problems
     matplotlib.rcParams['agg.path.chunksize'] = 10000
 
-    dynamics_context = library.heisenberg_dynamics_context.HeisenbergDynamicsContext_Numeric()
+    dynamics_context = library.heisenberg_dynamics_context.Numeric()
 
     op = option_parser.OptionParser()
     options,args = op.parse_argv_and_validate(sys.argv, dynamics_context)
@@ -110,6 +112,8 @@ if __name__ == '__main__':
         search.search(dynamics_context, options, rng=rng)
     elif options.sample:
         sample.sample(dynamics_context, options, rng=rng)
+    elif options.plot_samples:
+        plot_samples.plot_samples(dynamics_context, options, rng=rng)
     elif options.plot:
         plot.plot(dynamics_context, options, rng=rng)
     else:

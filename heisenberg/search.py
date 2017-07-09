@@ -17,7 +17,7 @@ def search (dynamics_context, options, *, rng):
     np.set_printoptions(formatter={'float':library.util.float_formatter})
 
     def try_random_initial_condition ():
-        ##X_0 = rng.randn(*library.heisenberg_dynamics_context.HeisenbergDynamicsContext_Numeric.initial_condition_preimage().shape)
+        ##X_0 = rng.randn(*library.heisenberg_dynamics_context.Numeric.initial_condition_preimage().shape)
         #X_0 = rng.randn(2)
         ## NOTE: This somewhat biases the generation of random initial conditions
         ##X_0[0] = np.exp(X_0[0]) # So we never get negative values
