@@ -2,8 +2,9 @@ import numpy as np
 import optparse
 
 class OptionParser:
-    def __init__ (self):
+    def __init__ (self, *, prog_name):
         self.op = optparse.OptionParser()
+        self.op.prog = prog_name
         self.op.add_option(
             '--optimization-iterations',
             dest='optimization_iterations',
@@ -124,7 +125,7 @@ class OptionParser:
     def __csv_as_ndarray (string, dtype):
         return np.array([dtype(token) for token in string.split(',')])
 
-    def parse_argv_and_validate (self, argv, dynamics_context):
+    def parse_argv_and_validate (self, dynamics_context):
         options,args = self.op.parse_args()
 
         if options.search:

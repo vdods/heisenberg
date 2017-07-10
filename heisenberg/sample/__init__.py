@@ -1,7 +1,8 @@
-import library.shooting_method_objective
+import heisenberg.library.shooting_method_objective
+import heisenberg.util
+import numpy as np
 import os
 import sys
-from . import util
 import vorpy
 import vorpy.pickle
 import vorpy.symplectic_integration.exceptions
@@ -50,13 +51,13 @@ def sample (dynamics_context, options, *, rng):
     sample_v = []
     try:
         while True:
-            initial2 = util.random_embedding2_point(rng)
+            initial2 = heisenberg.util.random_embedding2_point(rng)
             qp_0 = dynamics_context.embedding2(initial2)
             dt = options.dt
             max_time = options.max_time
 
             try:
-                smo = library.shooting_method_objective.ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=max_time, t_delta=dt)
+                smo = heisenberg.library.shooting_method_objective.ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=max_time, t_delta=dt)
 
                 flow_curve = smo.flow_curve()
                 objective = smo.objective()

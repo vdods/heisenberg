@@ -1,8 +1,8 @@
-import library.util
+import heisenberg.library.util
 import numpy as np
 
 def construct_base_filename (*, obj, t_delta, t_max, initial_condition, t_min):
-    return 'obj:{0:.4e}.dt:{1:.3e}.t_max:{2:.3e}.ic:{3}.t_min:{4:.4e}'.format(obj, t_delta, t_max, library.util.ndarray_as_single_line_string(initial_condition), t_min)
+    return 'obj:{0:.4e}.dt:{1:.3e}.t_max:{2:.3e}.ic:{3}.t_min:{4:.4e}'.format(obj, t_delta, t_max, heisenberg.library.util.ndarray_as_single_line_string(initial_condition), t_min)
 
 def random_embedding2_point (rng):
     C = 2.0

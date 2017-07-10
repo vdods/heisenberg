@@ -8,7 +8,7 @@ import glob
 import numpy as np
 import os
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtGui, QtCore
+import pyqtgraph.Qt
 import sys
 import vorpy.pickle
 
@@ -41,8 +41,8 @@ def plot_samples (dynamics_context, options, *, rng):
 
     print('number of points: {0}'.format(data_v.shape[0]))
 
-    app = QtGui.QApplication([])
-    mw = QtGui.QMainWindow()
+    app = pyqtgraph.Qt.QtGui.QApplication([])
+    mw = pyqtgraph.Qt.QtGui.QMainWindow()
     mw.resize(1200,1200)
     view = pg.GraphicsLayoutWidget()  ## GraphicsView with GraphicsLayout inserted by default
     mw.setCentralWidget(view)
@@ -100,6 +100,6 @@ def plot_samples (dynamics_context, options, *, rng):
     color_scatterplot(w4, data_v[:,0:2], data_v[:,5], use_log=True) # max_abs_J_minus_J_0
 
     ## Start Qt event loop unless running in interactive mode.
-    if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-        QtGui.QApplication.instance().exec_()
+    if (sys.flags.interactive != 1) or not hasattr(pyqtgraph.Qt.QtCore, 'PYQT_VERSION'):
+        pyqtgraph.Qt.QtGui.QApplication.instance().exec_()
 
