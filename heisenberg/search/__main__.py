@@ -33,10 +33,11 @@ op.add_option(
     help='Sets the directory into which the search will generate plot images and data.  Default is "search-results".'
 )
 op.add_option(
-    '--abortive-subdir',
-    dest='abortive_subdir',
-    default=None,
-    help='If specified, sets the subdirectory of the output dir into which the search will generate plot images and data for initial conditions whose objective function value was not below the abortive threshold.'
+    '--disable-abortive-output',
+    dest='disable_abortive_output',
+    action='store_true',
+    default=False,
+    help='If specified, disables the saving of data upon discovery of an "abortive" search result.  Default behavior is to save data to the "abortive" subdirectory of the directory specified by --output-dir.'
 )
 
 options,args = op.parse_argv_and_validate(dynamics_context)

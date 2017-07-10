@@ -6,12 +6,13 @@ import heisenberg.util
 import numpy as np
 import os
 import sys
+import traceback
 
 subprogram_description = 'Search a specified parameter space for initial conditions for curves.  Once a curve is found that comes close enough to closing back up on itself, an optimization method is used to attempt to alter the initial conditions so that the curve closes back up on itself.  The result is integral curves which approximate closed solutions to within numerical accuracy.'
 
 def search (dynamics_context, options, *, rng):
     output_dir = options.output_dir
-    abortive_dir = os.path.join(options.output_dir, options.abortive_subdir) if options.abortive_subdir is not None else None
+    abortive_dir = None if options.disable_abortive_output else os.path.join(options.output_dir, 'abortive')
 
     heisenberg.util.ensure_dir_exists(output_dir)
     if abortive_dir is not None:
@@ -62,21 +63,22 @@ def search (dynamics_context, options, *, rng):
             if t_max > options.max_time:
                 print('t_max ({0}) was raised too many times, exceeding --max-time value of {1}, before nearly closing up -- aborting'.format(t_max, options.max_time))
 
-                base_filename = os.path.join(
-                    abortive_dir,
-                    heisenberg.util.construct_base_filename(
-                        obj=smo_0.objective(),
-                        t_delta=options.dt,
-                        t_max=t_max,
-                        initial_condition=qp_0,
-                        t_min=smo_0.t_min()
+                if not options.disable_abortive_output:
+                    base_filename = os.path.join(
+                        abortive_dir,
+                        heisenberg.util.construct_base_filename(
+                            obj=smo_0.objective(),
+                            t_delta=options.dt,
+                            t_max=t_max,
+                            initial_condition=qp_0,
+                            t_min=smo_0.t_min()
+                        )
                     )
-                )
 
-                orbit_plot = heisenberg.library.orbit_plot.OrbitPlot(row_count=1, extra_col_count=0)
-                orbit_plot.plot_curve(curve_description='initial', axis_v=orbit_plot.axis_vv[0], smo=smo_0)
-                orbit_plot.plot_and_clear(filename=base_filename+'.png')
-                smo_0.pickle(base_filename+'.pickle')
+                    orbit_plot = heisenberg.library.orbit_plot.OrbitPlot(row_count=1, extra_col_count=0)
+                    orbit_plot.plot_curve(curve_description='initial', axis_v=orbit_plot.axis_vv[0], smo=smo_0)
+                    orbit_plot.plot_and_clear(filename=base_filename+'.png')
+                    smo_0.pickle(base_filename+'.pickle')
 
                 return
         flow_curve_0 = smo_0.flow_curve()
@@ -136,7 +138,9 @@ def search (dynamics_context, options, *, rng):
                 try_random_initial_condition()
             except Exception as e:
                 print('encountered exception of type {0} during try_random_initial_condition; skipping.  exception was: {1}'.format(type(e), e))
-                pass
+                print('stack:')
+                ex_type,ex,tb = sys.exc_info()
+                traceback.print_tb(tb)
     except KeyboardInterrupt:
         print('got KeyboardInterrupt -- exiting program')
         sys.exit(0)
