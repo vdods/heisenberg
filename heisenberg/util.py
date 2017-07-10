@@ -1,5 +1,6 @@
 import heisenberg.library.util
 import numpy as np
+import os
 import textwrap
 
 def construct_base_filename (*, obj, t_delta, t_max, initial_condition, t_min):
@@ -27,3 +28,18 @@ def csv_as_ndarray (string, dtype):
 
 def wrap_and_indent (*, text, indent_count):
     return textwrap.indent(textwrap.fill(text, width=80), prefix=' '*(indent_count*4))
+
+def ensure_dir_exists (path):
+    os.makedirs(path, exist_ok=True)
+    assert os.path.exists(path)
+
+def find_next_output_dir (path_prefix):
+    n = 0
+    while True:
+        output_dir = '{0}.{1:03}'.format(path_prefix, n)
+        if not os.path.exists(output_dir):
+            break
+        elif n > 1000: # Cap it at some high limit so we don't loop too long
+            raise Exception('couldn\'t find an output_dir in a reasonable amount of time; delete some of "output.*"')
+        n += 1
+    return output_dir

@@ -7,9 +7,8 @@ import os
 subprogram_description = 'Plots an integral curve of the system using given initial condition, optionally running an optimization method to find a nearby curve that closes back up on itself.'
 
 def plot (dynamics_context, options, *, rng):
-    # TODO: Replace with os.makedirs(path, exist_ok=True)
-    if not os.path.exists('heisenberg.custom_plot/'):
-        os.mkdir('heisenberg.custom_plot')
+    if not os.path.exists(options.output_dir):
+        os.makedirs(options.output_dir, exist_ok=True)
 
     # Plot given curve
     qp_0 = options.qp_0
@@ -75,7 +74,7 @@ def plot (dynamics_context, options, *, rng):
         smo = smo_0
 
     base_filename = os.path.join(
-        'heisenberg.custom_plot',
+        options.output_dir,
         heisenberg.util.construct_base_filename(
             obj=smo.objective(),
             t_delta=options.dt,

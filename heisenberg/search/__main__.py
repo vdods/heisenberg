@@ -26,6 +26,18 @@ op.add_option(
     type='float',
     help='Sets the threshold below which a candidate curve\'s objective function will qualify it for running through the optimizer to attempt to close it.'
 )
+op.add_option(
+    '--output-dir',
+    dest='output_dir',
+    default='search-results',
+    help='Sets the directory into which the search will generate plot images and data.  Default is "search-results".'
+)
+op.add_option(
+    '--abortive-subdir',
+    dest='abortive_subdir',
+    default=None,
+    help='If specified, sets the subdirectory of the output dir into which the search will generate plot images and data for initial conditions whose objective function value was not below the abortive threshold.'
+)
 
 options,args = op.parse_argv_and_validate(dynamics_context)
 if options is None:

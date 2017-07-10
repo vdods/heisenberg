@@ -10,11 +10,12 @@ import sys
 subprogram_description = 'Search a specified parameter space for initial conditions for curves.  Once a curve is found that comes close enough to closing back up on itself, an optimization method is used to attempt to alter the initial conditions so that the curve closes back up on itself.  The result is integral curves which approximate closed solutions to within numerical accuracy.'
 
 def search (dynamics_context, options, *, rng):
-    if not os.path.exists('heisenberg/'):
-        os.mkdir('heisenberg/')
+    output_dir = options.output_dir
+    abortive_dir = os.path.join(options.output_dir, options.abortive_subdir) if options.abortive_subdir is not None else None
 
-    if not os.path.exists('heisenberg/abortive'):
-        os.mkdir('heisenberg/abortive')
+    heisenberg.util.ensure_dir_exists(output_dir)
+    if abortive_dir is not None:
+        heisenberg.util.ensure_dir_exists(abortive_dir)
 
     np.set_printoptions(formatter={'float':heisenberg.library.util.float_formatter})
 
@@ -62,7 +63,7 @@ def search (dynamics_context, options, *, rng):
                 print('t_max ({0}) was raised too many times, exceeding --max-time value of {1}, before nearly closing up -- aborting'.format(t_max, options.max_time))
 
                 base_filename = os.path.join(
-                    'heisenberg/abortive',
+                    abortive_dir,
                     heisenberg.util.construct_base_filename(
                         obj=smo_0.objective(),
                         t_delta=options.dt,
@@ -107,8 +108,8 @@ def search (dynamics_context, options, *, rng):
         print('qp_opt embedding preimage; X_0 = {0}'.format(optimizer.parameter_history_v[-1]))
 
         base_filename = os.path.join(
-            'heisenberg',
-            construct_base_filename(
+            output_dir,
+            heisenberg.util.construct_base_filename(
                 obj=smo_opt.objective(),
                 t_delta=options.dt,
                 t_max=t_max,

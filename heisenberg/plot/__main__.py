@@ -57,6 +57,12 @@ op.add_option(
     default=False,
     help='Indicates that the specified initial condition (via whichever of the --initial... options) should be used as the starting point for an optimization to attempt to close the orbit.  Default value is False.'
 )
+op.add_option(
+    '--output-dir',
+    dest='output_dir',
+    default='.',
+    help='Specifies the directory to write plot images and data files to.  Default is current directory.'
+)
 
 options,args = op.parse_argv_and_validate(dynamics_context)
 if options is None:
