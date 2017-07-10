@@ -31,6 +31,19 @@ No warranty is provided -- use at your own risk.
     to alter the initial conditions so that the curve closes back up on itself.  The result is
     integral curves which approximate closed solutions to within numerical accuracy.
 
+#### Invoking Subprograms
+
+The following command, when executed from this project's root directory, will print a directory of
+the available subprograms.
+
+    python3 -m heisenberg
+
+Examples of invoking specific subprograms:
+
+    python3 -m heisenberg.plot --dt=0.003 --max-time=23 --initial-3preimage=[0.5,0,1]
+
+    python3 -m heisenberg.search --dt=0.001 --max-time=100 --output-dir=search-output --abortive-subdir=abortive --seed=75912763
+
 #### Resources on markdown (which is what the .md extension in README.md stands for):
 
 -   [github-specific markdown info](https://help.github.com/articles/github-flavored-markdown)
