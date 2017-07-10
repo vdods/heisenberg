@@ -4,6 +4,8 @@ import heisenberg.library.shooting_method_objective
 import heisenberg.util
 import os
 
+subprogram_description = 'Plots an integral curve of the system using given initial condition, optionally running an optimization method to find a nearby curve that closes back up on itself.'
+
 def plot (dynamics_context, options, *, rng):
     # TODO: Replace with os.makedirs(path, exist_ok=True)
     if not os.path.exists('heisenberg.custom_plot/'):

@@ -7,6 +7,8 @@ import vorpy
 import vorpy.pickle
 import vorpy.symplectic_integration.exceptions
 
+subprogram_description = 'Samples a specified parameter space of initial conditions, computing the corresponding integral curves, and computing and storing relevant data about the each curve in a file.  This is intended to sample various functions of the initial condition space, and can be used in later processing; see the heisenberg.plot_samples subprogram.'
+
 ## TODO: Come up with less generic name.
 #Sample = collections.namedtuple('Sample', ['initial2', 'qp_0', 'dt', 'max_time', 'objective', 't_min', 'max_abs_H', 'max_abs_J_minus_J_0', 'flow_curve_was_salvaged'])
 def make_sample (*, initial2, qp_0, dt, max_time, objective, t_min, max_abs_H, max_abs_J_minus_J_0, flow_curve_was_salvaged):

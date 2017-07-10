@@ -7,6 +7,8 @@ import numpy as np
 import os
 import sys
 
+subprogram_description = 'Search a specified parameter space for initial conditions for curves.  Once a curve is found that comes close enough to closing back up on itself, an optimization method is used to attempt to alter the initial conditions so that the curve closes back up on itself.  The result is integral curves which approximate closed solutions to within numerical accuracy.'
+
 def search (dynamics_context, options, *, rng):
     if not os.path.exists('heisenberg/'):
         os.mkdir('heisenberg/')
