@@ -36,7 +36,7 @@ class OptionParser:
             #help='Plots the given initial conditions in an interactive 3D visualization.  If the --optimize-initial option is also present, then the given initial condition will be optimized and that will also be plotted.'
         #)
 
-    def parse_argv_and_validate (self, dynamics_context):
+    def parse_argv_and_validate (self):
         options,args = self.__op.parse_args()
 
         if options.dt is None:

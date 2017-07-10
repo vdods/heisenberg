@@ -23,6 +23,8 @@ Define R_Omega to give point closest to Omega(q,p).  Then f_Omega is defined as
 and the gradient of f_Omega depends on the gradient of Omega and R_Omega.
 
 TODO
+-   Make heisenberg.sample able to sample a mesh, so that the resulting data is easily representable,
+    plottable, and manipulable.
 -   Make it so that heisenberg subprogram modules can be imported lightly -- so they don't import anything.
 -   Use --parameter-space=<chart-name> and --initial=<parameters-value> instead of --initial-Npreimage etc.
 -   Replace the `options` param in the various subprograms' functions with specific params (maybe?)
@@ -31,7 +33,6 @@ TODO
 -   Make 3d plot option.
 -   Optionally use other sheet of H=0 in solution for p_z.  Generally allow different coordinate charts.
 -   optparse is apparently deprecated -- switch to argparse https://docs.python.org/3/howto/argparse.html
--   Take all dynamics_context-specific code out of OptionParser
 -   Create a quadratic_min_time_parameterized which takes more than 3 points and does a least-squares fit.
 -   Ensure that the objective function as computed in ShootingMethodObjective is nonnegative.
 -   Change the search mechanism for increasing time such that no redundant integration is done, but

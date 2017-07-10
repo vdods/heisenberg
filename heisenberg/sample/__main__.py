@@ -20,7 +20,7 @@ op.add_option(
     help='Specify the directory that sample_v.*.pickle files will be read from.'
 )
 
-options,args = op.parse_argv_and_validate(dynamics_context)
+options,args = op.parse_argv_and_validate()
 if options is None:
     sys.exit(-1)
 

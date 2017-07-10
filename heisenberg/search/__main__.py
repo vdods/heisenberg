@@ -40,7 +40,7 @@ op.add_option(
     help='If specified, disables the saving of data upon discovery of an "abortive" search result.  Default behavior is to save data to the "abortive" subdirectory of the directory specified by --output-dir.'
 )
 
-options,args = op.parse_argv_and_validate(dynamics_context)
+options,args = op.parse_argv_and_validate()
 if options is None:
     sys.exit(-1)
 

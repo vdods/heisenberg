@@ -64,7 +64,7 @@ op.add_option(
     help='Specifies the directory to write plot images and data files to.  Default is current directory.'
 )
 
-options,args = op.parse_argv_and_validate(dynamics_context)
+options,args = op.parse_argv_and_validate()
 if options is None:
     sys.exit(-1)
 
