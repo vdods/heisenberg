@@ -46,9 +46,7 @@ def sample (dynamics_context, options, *, rng):
         print('--seed must be specified.')
         sys.exit(-1)
 
-    if not os.path.exists(options.samples_dir):
-        # TODO: Create dirs recursively if it's a nested dir
-        os.mkdir(options.samples_dir)
+    heisenberg.util.ensure_dir_exists(options.samples_dir)
 
     sample_v = []
     try:
