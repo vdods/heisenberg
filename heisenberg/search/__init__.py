@@ -77,7 +77,7 @@ def search (dynamics_context, options, *, rng):
 
                     orbit_plot = heisenberg.library.orbit_plot.OrbitPlot(row_count=1, extra_col_count=0)
                     orbit_plot.plot_curve(curve_description='initial', axis_v=orbit_plot.axis_vv[0], smo=smo_0)
-                    orbit_plot.plot_and_clear(filename=base_filename+'.png')
+                    orbit_plot.plot_and_clear(filename=base_filename+'.'+options.plot_type)
                     smo_0.pickle(base_filename+'.pickle')
 
                 return
@@ -129,7 +129,7 @@ def search (dynamics_context, options, *, rng):
         axis.set_title('objective function history')
         axis.semilogy(optimizer.obj_history_v)
 
-        orbit_plot.plot_and_clear(filename=base_filename+'.png')
+        orbit_plot.plot_and_clear(filename=base_filename+'.'+options.plot_type)
         smo_opt.pickle(base_filename+'.pickle')
 
     try:

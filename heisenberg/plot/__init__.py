@@ -87,5 +87,5 @@ def plot (dynamics_context, options, *, rng):
     )
 
     op.plot_curve(curve_description='initial', axis_v=op.axis_vv[0], smo=smo_0)
-    op.plot_and_clear(filename=base_filename+'.png')
+    op.plot_and_clear(filename=base_filename+'.'+options.plot_type)
     smo.pickle(base_filename+'.pickle')

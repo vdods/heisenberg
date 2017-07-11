@@ -23,6 +23,9 @@ Define R_Omega to give point closest to Omega(q,p).  Then f_Omega is defined as
 and the gradient of f_Omega depends on the gradient of Omega and R_Omega.
 
 TODO
+-   Make plotting interactive (pyplot vs pyqtgraph)
+-   Figure out how to use pyqtgraph for static plot generation with no windows or interaction.
+-   Figure out why OptionParser epilog strips out newlines.
 -   If --seed option isn't specified, get one from np.random.randint in the appropriate range.
 -   Make heisenberg.sample able to sample a mesh, so that the resulting data is easily representable,
     plottable, and manipulable.
@@ -115,6 +118,11 @@ TODO
         heisenberg.sample
         heisenberg.plot_samples
 -   Make subprograms for reproducing specific results.
+-   Minimal, quick design for "nice plots"
+
+    -   Want SVG output of just (x,y) curve, with no axes, but with plotting the sun (origin) and initial point.
+    -   Nice to have: SVG output of (x,y,z) curve in 3D.
+
 """
 
 import heisenberg

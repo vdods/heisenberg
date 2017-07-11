@@ -1,4 +1,5 @@
 import heisenberg.library.util
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import textwrap
@@ -46,3 +47,13 @@ def find_next_output_dir (path_prefix):
             raise Exception('couldn\'t find an output_dir in a reasonable amount of time; delete some of "output.*"')
         n += 1
     return output_dir
+
+def get_supported_plot_type_d ():
+    # This dict has the form { 'name of filetype':['ext', 'ext2'], 'name of another filetype':['ext3'] }
+    supported_d = plt.gcf().canvas.get_supported_filetypes_grouped()
+    # Change it so the keys are the file extensions, and the values are the names of the filetypes.
+    retval_d = {}
+    for name,ext_v in supported_d.items():
+        for ext in ext_v:
+            retval_d[ext] = name
+    return retval_d
