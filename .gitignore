@@ -4,3 +4,4 @@
 core
 *.pyprof
 *.kate-swp
+lambdified_cache
