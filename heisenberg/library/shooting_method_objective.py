@@ -1,5 +1,6 @@
 import numpy as np
 from . import orbit_plot
+import os
 import sys
 import time
 from . import util
@@ -8,7 +9,7 @@ import vorpy.pickle
 import vorpy.symplectic_integration
 
 class ShootingMethodObjective:
-    def __init__ (self, *, dynamics_context, qp_0, t_max, t_delta):
+    def __init__ (self, *, dynamics_context, qp_0, t_max, t_delta, disable_salvage=False):
         self.__dynamics_context         = dynamics_context
         self.alpha                      = dynamics_context.alpha()
         self.beta                       = dynamics_context.beta()
@@ -21,6 +22,7 @@ class ShootingMethodObjective:
         self.__Q_global_min_index       = None
         self.__t_min                    = None
         self.__objective                = None
+        self.__disable_salvage          = disable_salvage
         self.flow_curve_was_salvaged    = False
 
     def configuration_space_dimension (self):
@@ -45,36 +47,37 @@ class ShootingMethodObjective:
                     order=order,
                     omega=omega
                 )
-                self.flow_curve_was_salvaged = False
+                self.flow_curve_was_salvaged        = False
             except vorpy.symplectic_integration.exceptions.SalvagedResultException as e:
                 print('salvaged results from exception encountered in nonseparable_hamiltonian.integrate: {0}'.format(e))
-                original_step_count = len(t_v)
-                self.__qp_v = qp_v  = e.salvaged_qp_v
-                self.__t_v  = t_v   = e.salvaged_t_v
-                self.flow_curve_was_salvaged = True
+                original_step_count             = len(t_v)
+                qp_v                            = e.salvaged_qp_v
+                t_v                             = e.salvaged_t_v
+                self.flow_curve_was_salvaged    = True
 
-                # TEMP: Plot this salvaged curve in order to diagnose what went wrong
-                op = orbit_plot.OrbitPlot(row_count=1, extra_col_count=0)
-                op.plot_curve(
-                    curve_description='salvaged curve - {0} steps out of {1}'.format(e.salvaged_qp_v.shape[0], original_step_count),
-                    axis_v=op.axis_vv[0],
-                    smo=self
-                )
-                op.plot_and_clear(
-                    filename=os.path.join(
-                        'heisenberg.custom_plot',
-                        'salvaged.obj:{0:.4e}.t_delta:{1:.3e}.t_max:{2:.3e}.ic:{3}.png'.format(
-                            self.objective(),
-                            self.t_delta,
-                            self.t_max,
-                            library.util.ndarray_as_single_line_string(self.qp_0)
+                if not self.__disable_salvage:
+                    # TEMP: Plot this salvaged curve in order to diagnose what went wrong
+                    op = orbit_plot.OrbitPlot(row_count=1, extra_col_count=0)
+                    op.plot_curve(
+                        curve_description='salvaged curve - {0} steps out of {1}'.format(e.salvaged_qp_v.shape[0], original_step_count),
+                        axis_v=op.axis_vv[0],
+                        smo=self
+                    )
+                    op.plot_and_clear(
+                        filename=os.path.join(
+                            'heisenberg.custom_plot',
+                            'salvaged.obj:{0:.4e}.t_delta:{1:.3e}.t_max:{2:.3e}.ic:{3}.png'.format(
+                                self.objective(),
+                                self.t_delta,
+                                self.t_max,
+                                util.ndarray_as_single_line_string(self.qp_0)
+                            )
                         )
                     )
-                )
 
             print('integration took {0} seconds'.format(time.time() - start_time))
 
-            self.__t_v = t_v
+            self.__t_v  = t_v
             self.__qp_v = qp_v
             assert self.__qp_v is not None
         return self.__qp_v
@@ -108,7 +111,6 @@ class ShootingMethodObjective:
     def Q_global_min_index (self):
         if self.__Q_global_min_index is None:
             self.compute_t_min_and_objective()
-            assert self.__Q_global_min_index is not None
         return self.__Q_global_min_index
 
     def __call__ (self):
@@ -160,7 +162,7 @@ class ShootingMethodObjective:
         vorpy.pickle.try_to_pickle(data=pickle_data, pickle_filename=filename, log_out=sys.stdout)
         print('wrote to "{0}"'.format(filename))
 
-def evaluate_shooting_method_objective (dynamics_context, qp_0, t_max, t_delta):
+def evaluate_shooting_method_objective (dynamics_context, qp_0, t_max, t_delta, disable_salvage=False):
     """A utility function for constructing a ShootingMethodObjective instance and evaluating it."""
-    return ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=t_delta)()
+    return ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=t_delta, disable_salvage=disable_salvage)()
 

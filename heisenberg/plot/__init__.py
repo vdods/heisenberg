@@ -18,23 +18,24 @@ def plot (dynamics_context, options, *, rng):
     if options.optimize_initial:
         if options.initial_2preimage is not None:
             X_0 = options.initial_2preimage
-            embedding = dynamics_context.embedding2
+            embedding = dynamics_context.embedding(2)
         elif options.initial_3preimage is not None:
             X_0 = options.initial_3preimage
-            embedding = dynamics_context.embedding3
+            embedding = dynamics_context.embedding(3)
         elif options.initial_5preimage is not None:
             X_0 = options.initial_5preimage
-            embedding = dynamics_context.embedding5
+            embedding = dynamics_context.embedding(5)
         elif options.initial is not None:
             X_0 = options.qp_0
             embedding = None
         else:
-            assert options.k is not None
-            X_0 = options.qp_0
-            embedding = None
+            assert options.initial_k_fold is not None
+            X_0 = options.initial_k_fold
+            embedding = dynamics_context.embedding(5)
 
+        disable_salvage = True
         optimizer = heisenberg.library.monte_carlo.MonteCarlo(
-            obj=lambda qp_0:heisenberg.library.shooting_method_objective.evaluate_shooting_method_objective(dynamics_context, qp_0, options.max_time, options.dt),
+            obj=lambda qp_0:heisenberg.library.shooting_method_objective.evaluate_shooting_method_objective(dynamics_context, qp_0, options.max_time, options.dt, disable_salvage),
             initial_parameters=X_0,
             inner_radius=1.0e-12,
             outer_radius=1.0e-1,
@@ -80,7 +81,8 @@ def plot (dynamics_context, options, *, rng):
             t_delta=options.dt,
             t_max=options.max_time,
             initial_condition=qp,
-            t_min=smo.t_min()
+            t_min=smo.t_min(),
+            k=options.k
         )
     )
 

@@ -80,8 +80,8 @@ class Base(hamiltonian_dynamics_context.HamiltonianDynamicsContext):
     @classmethod
     def alpha (cls):
         """Return the alpha value occurring in the fundamental solution to the sub-Riemannian Laplacian."""
-        return 2/cls.pi()
-        #return cls.pi()/8
+        #return 2/cls.pi()
+        return cls.pi()/8
 
     @classmethod
     def beta (cls):
@@ -122,6 +122,107 @@ class Symbolic(Base):
             (0.0, 1.0, p_z_solution)
         ))
 
+    @staticmethod
+    def valid_embedding_dimensions ():
+        return [1,2,3,5]
+
+    @staticmethod
+    def assert_is_valid_embedding_dimension (N):
+        assert N in Symbolic.valid_embedding_dimensions(), 'invalid N (which is {0}); must be one of {1}.'.format(N, Symbolic.valid_embedding_dimensions())
+
+    @classmethod
+    def embedding_solver (cls, N):
+        """
+        With qp denoting the (2,3)-shaped symbolic coordinates
+
+            [x  , y  , z  ]
+            [p_x, p_y, p_z],
+
+        this function symbolically solves
+
+            H(qp) = 0
+
+        for p_z, where particular submanifolds of the full 5-dimensional parameter space are used
+        for different values of the N-dimensional embedded parameter space.  N must be in [1,2,3,5].
+
+        If N = 1, then                       If N = 3, then
+
+            x   = 1,                             x is free,
+            y   = 0,                             y   = 0
+            z   = 0,                             z   = 0,
+            p_x = 0,                             p_x is free,
+            p_y is free,                         p_y is free,
+            p_z is solved for.                   p_z is solved for.
+
+        If N = 2, then                       If N = 5, then
+
+            x   = 1,                             x is free,
+            y   = 0,                             y is free,
+            z   = 0,                             z is free,
+            p_x is free,                         p_x is free,
+            p_y is free,                         p_y is free,
+            p_z is solved for.                   p_z is solved for.
+
+        The N = 5 case is the full parameterization of [one sheet of] the H = 0 submanifold.
+        """
+        Symbolic.assert_is_valid_embedding_dimension(N)
+
+        zero = sp.Integer(0)
+        one = sp.Integer(1)
+
+        x,y,z,p_x,p_y,p_z = sp.symbols(('x','y','z','p_x','p_y','p_z'))
+
+        # The embedding is different depending on the dimension.
+        if N == 1:
+            qp = np.array((
+                ( one,zero,zero),
+                (zero, p_y, p_z),
+            ))
+            slice_coordinates = np.array((qp[1,1], qp[1,2])) # This is (p_y,p_z)
+        elif N == 2:
+            qp = np.array((
+                (one,zero,zero),
+                (p_x, p_y, p_z),
+            ))
+            slice_coordinates = np.array((qp[1,0], qp[1,1], qp[1,2])) # This is (p_x,p_y,p_z)
+        elif N == 3:
+            qp = np.array((
+                (x  ,zero,zero),
+                (p_x, p_y, p_z),
+            ))
+            slice_coordinates = np.array((qp[0,0], qp[1,0], qp[1,1], qp[1,2])) # This is (x,p_x,p_y,p_z)
+        elif N == 5:
+            qp = np.array((
+                (x  , y  , z  ),
+                (p_x, p_y, p_z),
+            ))
+            slice_coordinates = np.array((qp[0,0], qp[0,1], qp[0,2], qp[1,0], qp[1,1], qp[1,2])) # This is (x,y,z,p_x,p_y,p_z)
+
+        print('qp:')
+        print(qp)
+        print('slice_coordinates: {0}'.format(slice_coordinates))
+        assert slice_coordinates.shape == (N+1,)
+        embedding_domain = slice_coordinates[:N]
+        print('embedding_domain: {0}'.format(embedding_domain))
+        assert embedding_domain.shape == (N,)
+        assert slice_coordinates[-1] == p_z
+
+        H = cls.H(qp)
+        #print('H(qp) = {0}'.format(H))
+        p_z_solution_v = sp.solve(H, p_z)
+        print('There are {0} solutions for the equation: {1} = 0'.format(len(p_z_solution_v), H))
+        for i,p_z_solution in enumerate(p_z_solution_v):
+            print('    solution {0}: p_z = {1}'.format(i, p_z_solution))
+        # Just take the last solution.
+        p_z_solution = p_z_solution_v[-1]
+
+        # Create the embedding, which maps embedding_domain |-> embedding,
+        # where in particular, the p_z coordinate has been replaced by its solution.
+        embedding = np.copy(qp)
+        embedding[1,2] = p_z_solution
+
+        return embedding_domain,embedding
+
 class Numeric(Base):
     @classmethod
     def sqrt (cls, x):
@@ -141,229 +242,27 @@ class Numeric(Base):
         #           [-4.67440934052728782e-04 9.80312987653756296e-01 6.32317054716479721e+00]]
         return np.array((4.62167379391418609e-01, -4.67440934052728782e-04, 9.80312987653756296e-01))
 
-    def __solve_for_embedding2 (self):
-        # Symbolically solve H(qp) = 0 for qp[1,2].
-        X = np.array(sp.symbols(('p_x','p_y','p_z')))
-        zero = sp.Integer(0)
-        one = sp.Integer(1)
-        qp = np.array(
-            (
-                ( one, zero, zero),
-                (X[0], X[1], X[2]),
-            ),
-            dtype=object
-        )
-        H = Symbolic.H(qp)
-        #print('H(qp) = {0}'.format(H))
-        p_z = qp[1,2] # Momentum for z coordinate
-        p_z_solution_v = sp.solve(H, p_z)
-        print('There are {0} solutions for the equation: {1} = 0'.format(len(p_z_solution_v), H))
-        for i,p_z_solution in enumerate(p_z_solution_v):
-            print('    solution {0}: p_z = {1}'.format(i, p_z_solution))
-        #print('len(p_z_solution_v) = {0}'.format(len(p_z_solution_v)))
-        #print('p_z_solution_v = {0}'.format(p_z_solution_v))
-        # Just take the last solution.
-        p_z_solution = p_z_solution_v[-1]
-        #print('p_z_solution = {0}'.format(p_z_solution))
-        # The domain for this function is
-        #     -sqrt(4/pi) <= p_x <= sqrt(4/pi)
+    @staticmethod
+    def embedding (N):
+        Symbolic.assert_is_valid_embedding_dimension(N)
 
-        self.symbolic_embedding2_domain = X[:2]
-        self.symbolic_embedding2 = np.array(
-            (
-                ( one, zero,         zero),
-                (X[0], X[1], p_z_solution),
-            ),
-            dtype=object
-        )
-        self.embedding2 = vorpy.symbolic.lambdified(
-            self.symbolic_embedding2,
-            self.symbolic_embedding2_domain,
-            replacement_d={
+        def symbolic_embedding_function_creator ():
+            embedding_domain,embedding  = Symbolic.embedding_solver(N)
+            replacement_d               = {
                 'array'         :'np.array',
                 'ndarray'       :'np.ndarray',
                 'dtype=object'  :'dtype=float',
                 'sqrt'          :'np.sqrt',
                 'pi'            :'np.pi',
-            },
-            #verbose=True
+            }
+            argument_id                 = 'X' # This is arbitrary, but should just avoid conflicting with any of the replacements.
+            import_v                    = ['import numpy as np']
+            decorator_v                 = []
+
+            return embedding, embedding_domain, replacement_d, argument_id, import_v, decorator_v
+
+        return vorpy.symbolic.cached_lambdified(
+            'heisenberg_dynamics_context__embedding_{0}'.format(N),
+            function_creator=symbolic_embedding_function_creator,
+            verbose=True
         )
-
-    def __solve_for_embedding3 (self):
-        # Symbolically solve H(qp) = 0 for qp[1,2].
-        X = np.array(sp.symbols(('x','p_x','p_y','p_z')))
-        zero = sp.Integer(0)
-        qp = np.array(
-            (
-                (X[0], zero, zero),
-                (X[1], X[2], X[3]),
-            ),
-            dtype=object
-        )
-        H = Symbolic.H(qp)
-        #print('H(qp) = {0}'.format(H))
-        p_z = qp[1,2] # Momentum for z coordinate
-        p_z_solution_v = sp.solve(H, p_z)
-        #print('len(p_z_solution_v) = {0}'.format(len(p_z_solution_v)))
-        #print('p_z_solution_v = {0}'.format(p_z_solution_v))
-        # Just take the last solution.
-        p_z_solution = p_z_solution_v[-1]
-        #print('p_z_solution = {0}'.format(p_z_solution))
-
-        self.symbolic_embedding3_domain = X[:3]
-        self.symbolic_embedding3 = np.array(
-            (
-                (X[0], zero,         zero),
-                (X[1], X[2], p_z_solution),
-            ),
-            dtype=object
-        )
-        self.embedding3 = vorpy.symbolic.lambdified(
-            self.symbolic_embedding3,
-            self.symbolic_embedding3_domain,
-            replacement_d={
-                'array'         :'np.array',
-                'ndarray'       :'np.ndarray',
-                'dtype=object'  :'dtype=float',
-                'sqrt'          :'np.sqrt',
-                'pi'            :'np.pi',
-            },
-            #verbose=True
-        )
-
-    def __solve_for_embedding5 (self):
-        # Symbolically solve H(qp) = 0 for qp[1,2].
-        X = np.array(sp.symbols(('x','y','z','p_x','p_y','p_z')))
-        zero = sp.Integer(0)
-        qp = np.array(
-            (
-                (X[0], X[1], X[2]),
-                (X[3], X[4], X[5]),
-            ),
-            dtype=object
-        )
-        H = Symbolic.H(qp)
-        #print('H(qp) = {0}'.format(H))
-        p_z = qp[1,2] # Momentum for z coordinate
-        p_z_solution_v = sp.solve(H, p_z)
-        #print('len(p_z_solution_v) = {0}'.format(len(p_z_solution_v)))
-        #print('p_z_solution_v = {0}'.format(p_z_solution_v))
-        # Just take the last solution.
-        p_z_solution = p_z_solution_v[-1]
-        #print('p_z_solution = {0}'.format(p_z_solution))
-
-        self.symbolic_embedding5_domain = X[:5]
-        self.symbolic_embedding5 = np.array(
-            (
-                (X[0], X[1],         X[2]),
-                (X[3], X[4], p_z_solution),
-            ),
-            dtype=object
-        )
-        self.embedding5 = vorpy.symbolic.lambdified(
-            self.symbolic_embedding5,
-            self.symbolic_embedding5_domain,
-            replacement_d={
-                'array'         :'np.array',
-                'ndarray'       :'np.ndarray',
-                'dtype=object'  :'dtype=float',
-                'sqrt'          :'np.sqrt',
-                'pi'            :'np.pi',
-            },
-            #verbose=True
-        )
-
-    def __init__ (self):
-        self.__solve_for_embedding2()
-        self.__solve_for_embedding3()
-        self.__solve_for_embedding5()
-
-    #@classmethod
-    #def initial_condition_preimage (cls):
-        ##return np.array((0.5, 1.0)) # original
-        ##return np.array((0.46307038, 0.9807273)) # once optimized
-        ##return np.array((0.4613605, 0.98053092)) # twice optimized
-        #return np.array((0.46200237, 0.97966453)) # thrice optimized
-
-    #def __init__ (self):
-        ## Symbolically solve H(qp) = 0 for qp[1,2].
-        #X = vorpy.symbolic.tensor('X', (3,))
-        #zero = sp.Integer(0)
-        #qp = np.array(
-            #(
-                #(X[0], zero, zero),
-                #(zero, X[1], X[2]),
-            #),
-            #dtype=object
-        #)
-        #H = Symbolic.H(qp)
-        #print('H(qp) = {0}'.format(H))
-        #p_z = qp[1,2] # Momentum for z coordinate
-        #p_z_solution_v = sp.solve(H, p_z)
-        #print('len(p_z_solution_v) = {0}'.format(len(p_z_solution_v)))
-        ##print('p_z_solution_v = {0}'.format(p_z_solution_v))
-        ## Just take the last solution.
-        #p_z_solution = p_z_solution_v[-1]
-        ##print('p_z_solution = {0}'.format(p_z_solution))
-
-        #self.symbolic_embedding_domain = X[:2]
-        #self.symbolic_embedding = np.array(
-            #(
-                #(X[0], zero,         zero),
-                #(zero, X[1], p_z_solution),
-            #),
-            #dtype=object
-        #)
-        #self.embedding = vorpy.symbolic.lambdified(
-            #self.symbolic_embedding,
-            #self.symbolic_embedding_domain,
-            #replacement_d={
-                #'array'         :'np.array',
-                #'ndarray'       :'np.ndarray',
-                #'dtype=object'  :'dtype=float',
-                #'sqrt'          :'np.sqrt',
-                #'pi'            :'np.pi',
-            #},
-            #verbose=True
-        #)
-
-    #@classmethod
-    #def initial_condition_preimage (cls):
-        ##return np.array((0.5, 0.0, 0.0, 0.0, 1.0)) # original
-        #return np.array((5.00647217e-01, 1.02238132e-03, -2.18960185e-04, 1.39439904e-03, 9.99489776e-01))
-
-    #def __init__ (self):
-        ## Symbolically solve H(qp) = 0 for qp[1,2].
-        #X = vorpy.symbolic.tensor('X', (6,))
-        #qp = X.reshape(2,3)
-        #H = Symbolic.H(qp)
-        #print('H(qp) = {0}'.format(H))
-        #p_z = qp[1,2] # Momentum for z coordinate
-        #p_z_solution_v = sp.solve(H, p_z)
-        #print('len(p_z_solution_v) = {0}'.format(len(p_z_solution_v)))
-        ##print('p_z_solution_v = {0}'.format(p_z_solution_v))
-        ## Just take the last solution.
-        #p_z_solution = p_z_solution_v[-1]
-        ##print('p_z_solution = {0}'.format(p_z_solution))
-
-        #self.symbolic_embedding_domain = X[:5]
-        #self.symbolic_embedding = np.array(
-            #(
-                #(X[0], X[1],         X[2]),
-                #(X[3], X[4], p_z_solution),
-            #),
-            #dtype=object
-        #)
-        #self.embedding = vorpy.symbolic.lambdified(
-            #self.symbolic_embedding,
-            #self.symbolic_embedding_domain,
-            #replacement_d={
-                #'array'         :'np.array',
-                #'ndarray'       :'np.ndarray',
-                #'dtype=object'  :'dtype=float',
-                #'sqrt'          :'np.sqrt',
-                #'pi'            :'np.pi',
-            #},
-            #verbose=True
-        #)
-

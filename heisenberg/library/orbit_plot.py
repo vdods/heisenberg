@@ -13,6 +13,7 @@ class OrbitPlot:
         flow_curve = smo.flow_curve()
         H_v = vorpy.apply_along_axes(heisenberg_dynamics_context.Numeric.H, (-2,-1), (flow_curve,), output_axis_v=(), func_output_shape=())
         abs_H_v = np.abs(H_v)
+        Q_global_min_index = smo.Q_global_min_index()
 
         axis_index = 0
 
@@ -22,12 +23,13 @@ class OrbitPlot:
         axis.plot(flow_curve[:,0,0], flow_curve[:,0,1])
         axis.plot(flow_curve[0,0,0], flow_curve[0,0,1], 'o', color='green', alpha=0.5)
         # TODO: Plot the interpolated position/momentum (based on smo.t_min() instead of Q_global_min_index)
-        axis.plot(flow_curve[smo.Q_global_min_index(),0,0], flow_curve[smo.Q_global_min_index(),0,1], 'o', color='red', alpha=0.5)
+        if Q_global_min_index is not None:
+            axis.plot(flow_curve[Q_global_min_index,0,0], flow_curve[Q_global_min_index,0,1], 'o', color='red', alpha=0.5)
         axis.set_aspect('equal')
         axis_index += 1
 
         axis = axis_v[axis_index]
-        axis.set_title('{0} curve z-position (green line indicates t_min)'.format(curve_description))
+        axis.set_title('{0} curve z-position (green line indicates t_min, which is {1:.10e})'.format(curve_description, smo.t_min()))
         axis.axhline(0, color='black')
         axis.plot(smo.t_v(), flow_curve[:,0,2])
         axis.axvline(smo.t_min(), color='green')
@@ -38,7 +40,8 @@ class OrbitPlot:
         #axis.plot(flow_curve[:,1,0], flow_curve[:,1,1])
         #axis.plot(flow_curve[0,1,0], flow_curve[0,1,1], 'o', color='green', alpha=0.5)
         ## TODO: Plot the interpolated position/momentum (based on smo.t_min() instead of Q_global_min_index)
-        #axis.plot(flow_curve[smo.Q_global_min_index(),1,0], flow_curve[smo.Q_global_min_index(),1,1], 'o', color='red', alpha=0.5)
+        #if Q_global_min_index is not None:
+        #    axis.plot(flow_curve[Q_global_min_index,1,0], flow_curve[Q_global_min_index,1,1], 'o', color='red', alpha=0.5)
         #axis.set_aspect('equal')
         #axis_index += 1
 
@@ -76,8 +79,10 @@ class OrbitPlot:
         print('wrote to file "{0}"'.format(filename))
         # VERY important to do this -- otherwise your memory will slowly fill up!
         # Not sure which one is actually sufficient
+        fig.close()
         plt.clf()
         plt.close(self.fig)
+        plt.close('all')
         del self.fig
         del self.axis_vv
 

@@ -23,6 +23,7 @@ Define R_Omega to give point closest to Omega(q,p).  Then f_Omega is defined as
 and the gradient of f_Omega depends on the gradient of Omega and R_Omega.
 
 TODO
+-   If --seed option isn't specified, get one from np.random.randint in the appropriate range.
 -   Make heisenberg.sample able to sample a mesh, so that the resulting data is easily representable,
     plottable, and manipulable.
 -   Make it so that heisenberg subprogram modules can be imported lightly -- so they don't import anything.

@@ -84,10 +84,8 @@ if num_initial_conditions_specified != 1:
 
 # Attempt to parse initial conditions.  Upon success, the attribute options.qp_0 should exist.
 if options.k is not None:
-    options.qp_0 = np.array([
-        [1.0,             0.0, 0.25*np.sqrt(options.k**4 * np.pi**2 * 0.0625 - 1.0)],
-        [0.0, 1.0 / options.k,                                                  0.0]
-    ])
+    options.initial_k_fold = np.array([1.0, 0.0, 0.25*np.sqrt(options.k**4 * np.pi**2 * 0.0625 - 1.0), 0.0, 1.0/options.k])
+    options.qp_0 = dynamics_context.embedding(5)(options.initial_k_fold)
 elif options.initial_2preimage is not None:
     # TODO: Refactor this checking to avoid code duplication
     try:
@@ -95,7 +93,7 @@ elif options.initial_2preimage is not None:
         expected_shape = (2,)
         if options.initial_2preimage.shape != expected_shape:
             raise ValueError('--initial-2preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_2preimage.shape, expected_shape))
-        options.qp_0 = dynamics_context.embedding2(options.initial_2preimage)
+        options.qp_0 = dynamics_context.embedding(2)(options.initial_2preimage)
     except ValueError as e:
         print('error parsing --initial-2preimage value: {0}'.format(str(e)))
         op.print_help()
@@ -106,7 +104,7 @@ elif options.initial_3preimage is not None:
         expected_shape = (3,)
         if options.initial_3preimage.shape != expected_shape:
             raise ValueError('--initial-3preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_3preimage.shape, expected_shape))
-        options.qp_0 = dynamics_context.embedding3(options.initial_3preimage)
+        options.qp_0 = dynamics_context.embedding(3)(options.initial_3preimage)
     except ValueError as e:
         print('error parsing --initial-3preimage value: {0}'.format(str(e)))
         op.print_help()
@@ -117,7 +115,7 @@ elif options.initial_5preimage is not None:
         expected_shape = (5,)
         if options.initial_5preimage.shape != expected_shape:
             raise ValueError('--initial-5preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_5preimage.shape, expected_shape))
-        options.qp_0 = dynamics_context.embedding5(options.initial_5preimage)
+        options.qp_0 = dynamics_context.embedding(5)(options.initial_5preimage)
     except ValueError as e:
         print('error parsing --initial-5preimage value: {0}'.format(str(e)))
         op.print_help()
