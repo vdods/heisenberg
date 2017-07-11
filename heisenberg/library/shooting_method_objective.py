@@ -164,5 +164,8 @@ class ShootingMethodObjective:
 
 def evaluate_shooting_method_objective (dynamics_context, qp_0, t_max, t_delta, disable_salvage=False):
     """A utility function for constructing a ShootingMethodObjective instance and evaluating it."""
-    return ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=t_delta, disable_salvage=disable_salvage)()
+    smo = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=t_delta, disable_salvage=disable_salvage)
+    objective = smo.objective()
+    assert not smo.flow_curve_was_salvaged, 'this should stop an optimization from continuing after being corrupted'
+    return objective
 
