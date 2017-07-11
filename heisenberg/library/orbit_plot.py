@@ -78,8 +78,7 @@ class OrbitPlot:
         plt.savefig(filename)
         print('wrote to file "{0}"'.format(filename))
         # VERY important to do this -- otherwise your memory will slowly fill up!
-        # Not sure which one is actually sufficient
-        fig.close()
+        # Not sure which one is actually sufficient -- apparently none of them are, YAY!
         plt.clf()
         plt.close(self.fig)
         plt.close('all')
