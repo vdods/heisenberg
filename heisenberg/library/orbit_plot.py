@@ -99,7 +99,7 @@ class OrbitPlot:
         elif quantity_to_plot == 'objective':
             assert objective_history_v is not None, 'must specify objective_history_v in order to plot {0}'.format(quantity_to_plot)
             title += '\nminimum objective value = {0:.17e}'.format(np.min(objective_history_v))
-            axis.semilogy(optimizer.obj_history_v)
+            axis.semilogy(objective_history_v)
         else:
             assert False, 'this should never happen'
 
