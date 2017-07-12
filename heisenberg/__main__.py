@@ -23,6 +23,7 @@ Define R_Omega to give point closest to Omega(q,p).  Then f_Omega is defined as
 and the gradient of f_Omega depends on the gradient of Omega and R_Omega.
 
 TODO
+-   Use ast.literal_eval (as in heisenberg.sample) to parse initial conditions options.
 -   Idea for cleaner and more organized option specification and validation:
     -   Make a class which adds each individual option and then can post-process and validate it after the
         options have been parsed by optparse.  This way, each subprogram can just list which ones it

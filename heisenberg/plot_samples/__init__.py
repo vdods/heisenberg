@@ -108,13 +108,13 @@ def plot_samples (dynamics_context, options, *, rng):
 
         ##scatterplot(w1, data_v[:,4], data_v[:,0], use_log=True) # objective
         #scatterplot(w1, data_v[:,4], data_v[:,0], use_log=False) # objective
-        scatterplot(w2, data_v[:,4], data_v[:,1], use_log=False) # t_min
-        #scatterplot(w3, data_v[:,4], data_v[:,2], use_log=True) # max_abs_H
+        #scatterplot(w2, data_v[:,4], data_v[:,2], use_log=True) # max_abs_H
+        scatterplot(w3, data_v[:,4], data_v[:,1], use_log=False) # t_min
         #scatterplot(w4, data_v[:,4], data_v[:,3], use_log=True) # max_abs_J_minus_J_0
 
         lineplot(w1, data_v[:,4], data_v[:,0], use_log=False) # objective
-        #lineplot(w2, data_v[:,4], data_v[:,1], use_log=False) # t_min
-        lineplot(w3, data_v[:,4], data_v[:,2], use_log=False) # max_abs_H
+        lineplot(w2, data_v[:,4], data_v[:,2], use_log=False) # max_abs_H
+        #lineplot(w3, data_v[:,4], data_v[:,1], use_log=False) # t_min
         lineplot(w4, data_v[:,4], data_v[:,3], use_log=False) # max_abs_J_minus_J_0
     elif dimension == 2:
         def color_scatterplot_2d (plot, point_v, value_v, *, use_log=False):

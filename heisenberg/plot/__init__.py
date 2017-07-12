@@ -15,6 +15,15 @@ def plot (dynamics_context, options, *, rng):
     smo_0 = heisenberg.library.shooting_method_objective.ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=options.qp_0, t_max=options.max_time, t_delta=options.dt)
     print('smo_0.objective() = {0}'.format(smo_0.objective()))
 
+    # Construct curve_description_v
+    curve_description_v = []
+    if not options.disable_plot_initial:
+        curve_description_v += ['initial curve']
+    if options.optimize_initial:
+        curve_description_v += ['optimized curve']
+
+    op = heisenberg.library.orbit_plot.OrbitPlot(curve_description_v=curve_description_v, quantity_to_plot_v=options.quantity_to_plot_v)
+
     if options.optimize_initial:
         if options.initial_2preimage is not None:
             X_0 = options.initial_2preimage
@@ -60,17 +69,15 @@ def plot (dynamics_context, options, *, rng):
         if embedding is not None:
             print('qp_opt embedding preimage; X_0 = {0}'.format(optimizer.parameter_history_v[-1]))
 
-        op = heisenberg.library.orbit_plot.OrbitPlot(row_count=2, extra_col_count=1)
-        op.plot_curve(curve_description='optimized', axis_v=op.axis_vv[1], smo=smo_opt)
+        op.plot_curve(curve_description='optimized curve', smo=smo_opt, objective_history_v=optimizer.obj_history_v, disable_plot_decoration=options.disable_plot_decoration)
 
-        axis = op.axis_vv[0][-1]
-        axis.set_title('objective function history')
-        axis.semilogy(optimizer.obj_history_v)
+        #axis = op.axis_vv[-1][-1]
+        #axis.set_title('objective function history')
+        #axis.semilogy(optimizer.obj_history_v)
 
         qp = qp_opt
         smo = smo_opt
     else:
-        op = heisenberg.library.orbit_plot.OrbitPlot(row_count=1, extra_col_count=0)
         qp = qp_0
         smo = smo_0
 
@@ -86,6 +93,11 @@ def plot (dynamics_context, options, *, rng):
         )
     )
 
-    op.plot_curve(curve_description='initial', axis_v=op.axis_vv[0], smo=smo_0)
-    op.plot_and_clear(filename=base_filename+'.'+options.plot_type)
+    if not options.disable_plot_initial:
+        print('plotting initial curve')
+        op.plot_curve(curve_description='initial curve', smo=smo_0, disable_plot_decoration=options.disable_plot_decoration)
+    else:
+        print('NOT plotting initial curve')
+
+    op.savefig_and_clear(filename=base_filename+'.'+options.plot_type)
     smo.pickle(base_filename+'.pickle')

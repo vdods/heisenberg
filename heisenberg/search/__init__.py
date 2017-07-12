@@ -75,9 +75,9 @@ def search (dynamics_context, options, *, rng):
                         )
                     )
 
-                    orbit_plot = heisenberg.library.orbit_plot.OrbitPlot(row_count=1, extra_col_count=0)
-                    orbit_plot.plot_curve(curve_description='initial', axis_v=orbit_plot.axis_vv[0], smo=smo_0)
-                    orbit_plot.plot_and_clear(filename=base_filename+'.'+options.plot_type)
+                    orbit_plot = heisenberg.library.orbit_plot.OrbitPlot(curve_description_v=['initial curve'], quantity_to_plot_v=options.quantity_to_plot_v)
+                    orbit_plot.plot_curve(curve_description='initial curve', smo=smo_0, disable_plot_decoration=options.disable_plot_decoration)
+                    orbit_plot.savefig_and_clear(filename=base_filename+'.'+options.plot_type)
                     smo_0.pickle(base_filename+'.pickle')
 
                 return
@@ -120,16 +120,16 @@ def search (dynamics_context, options, *, rng):
             )
         )
 
-        orbit_plot = heisenberg.library.orbit_plot.OrbitPlot(row_count=2, extra_col_count=1)
+        orbit_plot = heisenberg.library.orbit_plot.OrbitPlot(curve_description_v=['initial curve', 'optimized curve'], quantity_to_plot_v=options.quantity_to_plot_v)
 
-        orbit_plot.plot_curve(curve_description='initial', axis_v=orbit_plot.axis_vv[0], smo=smo_0)
-        orbit_plot.plot_curve(curve_description='optimized', axis_v=orbit_plot.axis_vv[1], smo=smo_opt)
+        orbit_plot.plot_curve(curve_description='initial curve', smo=smo_0, disable_plot_decoration=options.disable_plot_decoration)
+        orbit_plot.plot_curve(curve_description='optimized curve', smo=smo_opt, objective_history_v=optimizer.obj_history_v, disable_plot_decoration=options.disable_plot_decoration)
 
-        axis = orbit_plot.axis_vv[0][-1]
-        axis.set_title('objective function history')
-        axis.semilogy(optimizer.obj_history_v)
+        #axis = orbit_plot.axis_vv[0][-1]
+        #axis.set_title('objective function history')
+        #axis.semilogy(optimizer.obj_history_v)
 
-        orbit_plot.plot_and_clear(filename=base_filename+'.'+options.plot_type)
+        orbit_plot.savefig_and_clear(filename=base_filename+'.'+options.plot_type)
         smo_opt.pickle(base_filename+'.pickle')
 
     try:

@@ -55,17 +55,19 @@ class ShootingMethodObjective:
                 t_v                             = e.salvaged_t_v
                 self.flow_curve_was_salvaged    = True
 
+                # Set these here so that this ShootingMethodObjective is fully defined for use in OrbitPlot.plot_curve.
+                self.__t_v  = t_v
+                self.__qp_v = qp_v
+
+
                 if not self.__disable_salvage:
                     # TEMP: Plot this salvaged curve in order to diagnose what went wrong
-                    op = orbit_plot.OrbitPlot(row_count=1, extra_col_count=0)
-                    op.plot_curve(
-                        curve_description='salvaged curve - {0} steps out of {1}'.format(e.salvaged_qp_v.shape[0], original_step_count),
-                        axis_v=op.axis_vv[0],
-                        smo=self
-                    )
-                    op.plot_and_clear(
+                    curve_description = 'salvaged curve - {0} steps out of {1}'.format(e.salvaged_qp_v.shape[0], original_step_count)
+                    op = orbit_plot.OrbitPlot(curve_description_v=curve_description_v, quantity_to_plot_v='x,y;t,z;error(H);error(J);sqd;objective')
+                    op.plot_curve(curve_description=curve_description, smo=self, disable_plot_decoration=options.disable_plot_decoration)
+                    op.savefig_and_clear(
                         filename=os.path.join(
-                            'heisenberg.custom_plot',
+                            'heisenberg.custom_plot', # TODO: Specify salvaged result directory
                             'salvaged.obj:{0:.4e}.t_delta:{1:.3e}.t_max:{2:.3e}.ic:{3}.png'.format(
                                 self.objective(),
                                 self.t_delta,
