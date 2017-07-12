@@ -81,7 +81,8 @@ class Base(hamiltonian_dynamics_context.HamiltonianDynamicsContext):
     def alpha (cls):
         """Return the alpha value occurring in the fundamental solution to the sub-Riemannian Laplacian."""
         #return 2/cls.pi()
-        return cls.pi()/8
+        #return cls.pi()/8
+        return 1/(8*cls.pi())
 
     @classmethod
     def beta (cls):
