@@ -1,6 +1,7 @@
 import concurrent.futures
 import heisenberg.library.shooting_method_objective
 import heisenberg.util
+import itertools
 import numpy as np
 import os
 import sys
@@ -12,14 +13,14 @@ import vorpy.symplectic_integration.exceptions
 subprogram_description = 'Samples a specified parameter space of initial conditions, computing the corresponding integral curves, and computing and storing relevant data about the each curve in a file.  This is intended to sample various functions of the initial condition space, and can be used in later processing; see the heisenberg.plot_samples subprogram.'
 
 ## TODO: Come up with less generic name.
-#Sample = collections.namedtuple('Sample', ['initial2', 'qp_0', 'dt', 'max_time', 'objective', 't_min', 'max_abs_H', 'max_abs_J_minus_J_0', 'flow_curve_was_salvaged'])
-def make_sample (*, initial2, qp_0, dt, max_time, objective, t_min, max_abs_H, max_abs_J_minus_J_0, flow_curve_was_salvaged):
-    return (initial2, qp_0, dt, max_time, objective, t_min, max_abs_H, max_abs_J_minus_J_0, flow_curve_was_salvaged)
+#Sample = collections.namedtuple('Sample', ['initial', 'qp_0', 'dt', 'max_time', 'objective', 't_min', 'max_abs_H', 'max_abs_J_minus_J_0', 'flow_curve_was_salvaged'])
+def make_sample_result (*, initial, qp_0, dt, max_time, objective, t_min, max_abs_H, max_abs_J_minus_J_0, flow_curve_was_salvaged):
+    return (initial, qp_0, dt, max_time, objective, t_min, max_abs_H, max_abs_J_minus_J_0, flow_curve_was_salvaged)
 
 def worker (args):
     assert len(args) == 4
-    dynamics_context, initial2, dt, max_time = args[0], args[1], args[2], args[3]
-    qp_0 = dynamics_context.embedding(2)(initial2)
+    dynamics_context, initial, dt, max_time = args[0], args[1], args[2], args[3]
+    qp_0 = dynamics_context.embedding(initial.shape[0])(initial)
 
     try:
         # Use disable_salvage=True to avoid clogging up the place.
@@ -35,8 +36,8 @@ def worker (args):
         J_v -= J_0
         abs_J_minus_J_0 = np.abs(J_v)
 
-        sample = make_sample(
-            initial2=initial2,
+        sample_result = make_sample_result(
+            initial=initial,
             qp_0=qp_0,
             dt=dt,
             max_time=max_time,
@@ -46,11 +47,11 @@ def worker (args):
             max_abs_J_minus_J_0=np.max(abs_J_minus_J_0),
             flow_curve_was_salvaged=smo.flow_curve_was_salvaged
         )
-        print('recording sample {0}'.format(sample))
+        #print('recording sample {0}'.format(sample_result))
     except vorpy.symplectic_integration.exceptions.SalvagedResultException as e:
         print('caught exception "{0}" -- storing and continuing'.format(e))
-        sample = make_sample(
-            initial2=initial2,
+        sample_result = make_sample_result(
+            initial=initial,
             qp_0=qp_0,
             dt=dt,
             max_time=max_time,
@@ -61,7 +62,7 @@ def worker (args):
             flow_curve_was_salvaged=True
         )
 
-    return sample
+    return sample_result
 
 def sample (dynamics_context, options, *, rng):
     """
@@ -91,9 +92,10 @@ def sample (dynamics_context, options, *, rng):
         to them.  Perhaps there are regions which are continuous surrounding zeros the objective function.
     """
 
-    if options.seed is None:
-        print('--seed must be specified.')
-        sys.exit(-1)
+    if options.sampling_type == 'random':
+        if options.seed is None:
+            print('If --sampling-type=random, then --seed must be specified.')
+            sys.exit(-1)
 
     if options.sample_count <= 0:
         print('--sample-count option, if present, must specify a positive integer.')
@@ -109,17 +111,29 @@ def sample (dynamics_context, options, *, rng):
 
     heisenberg.util.ensure_dir_exists(options.samples_dir)
 
-    sample_v = []
+    sample_result_v = []
+
+    # Define sample_generator based on the sampling type.
+    if options.sampling_type == 'random':
+        def random_sample (rng):
+            return np.array([rng.uniform(low=options.sampling_domain_bound_v[axis,0], high=options.sampling_domain_bound_v[axis,1]) for axis in range(options.embedding_dimension)])
+        sample_generator = (random_sample(rng) for _ in options.sample_count)
+    elif options.sampling_type == 'ordered':
+        # Define uniform samplings of each axis in the sampling domain.
+        sample_vv = [np.linspace(options.sampling_domain_bound_v[axis,0], options.sampling_domain_bound_v[axis,1], options.sample_count_v[axis]) for axis in range(options.embedding_dimension)]
+        sample_generator = (np.array(sample) for sample in itertools.product(*sample_vv))
+    else:
+        assert False, 'this should never happen'
 
     if options.max_workers is None or options.max_workers > 1:
         # Map the worker function over multiple processes.
         with concurrent.futures.ProcessPoolExecutor(max_workers=options.max_workers) as executor:
             try:
-                sample_counter = range(options.sample_count)
+                #sample_counter = range(options.sample_count)
                 sample_index = 1
-                for sample in executor.map(worker, ((dynamics_context, heisenberg.util.random_embedding2_point(rng), options.dt, options.max_time) for _ in sample_counter), chunksize=options.worker_chunksize):
-                    sample_v.append(sample)
-                    print('**************** saving sample {0} (out of {1}): {2}'.format(sample_index, options.sample_count, sample))
+                for sample_result in executor.map(worker, ((dynamics_context, sample, options.dt, options.max_time) for sample in sample_generator), chunksize=options.worker_chunksize):
+                    sample_result_v.append(sample_result)
+                    print('**************** saving sample {0} (out of {1}): {2}'.format(sample_index, options.sample_count, sample_result))
                     sample_index += 1
             except (Exception,KeyboardInterrupt) as e:
                 print('encountered exception of type {0} during sample; calling executor.shutdown(wait=True), saving results, and exiting.  exception was: {1}'.format(type(e), e))
@@ -130,9 +144,9 @@ def sample (dynamics_context, options, *, rng):
     else:
         # Run the worker function in this single process.
         try:
-            while True:
-                sample = worker((dynamics_context, heisenberg.util.random_embedding2_point(rng), options.dt, options.max_time))
-                sample_v.append(sample)
+            for sample in sample_generator:
+                sample_result = worker((dynamics_context, sample, options.dt, options.max_time))
+                sample_result_v.append(sample_result)
         except (Exception,KeyboardInterrupt) as e:
             print('encountered exception of type {0} during sample; saving results and exiting.  exception was: {1}'.format(type(e), e))
             print('stack:')
@@ -140,8 +154,6 @@ def sample (dynamics_context, options, *, rng):
             traceback.print_tb(tb)
 
     print('saving results, and exiting.')
-    filename = os.path.join(options.samples_dir, 'sample_v.seed:{0}.count:{1}.pickle'.format(options.seed, len(sample_v)))
-    vorpy.pickle.try_to_pickle(data=sample_v, pickle_filename=filename, log_out=sys.stdout)
-
-
-
+    maybe_seed_string = 'seed:{0}.'.format(options.seed) if options.sampling_type == 'random' else ''
+    filename = os.path.join(options.samples_dir, 'sample_v.{0}count:{1}.pickle'.format(maybe_seed_string, len(sample_result_v)))
+    vorpy.pickle.try_to_pickle(data=sample_result_v, pickle_filename=filename, log_out=sys.stdout)

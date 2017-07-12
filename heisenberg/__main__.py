@@ -23,6 +23,13 @@ Define R_Omega to give point closest to Omega(q,p).  Then f_Omega is defined as
 and the gradient of f_Omega depends on the gradient of Omega and R_Omega.
 
 TODO
+-   Idea for cleaner and more organized option specification and validation:
+    -   Make a class which adds each individual option and then can post-process and validate it after the
+        options have been parsed by optparse.  This way, each subprogram can just list which ones it
+        wants, and all the post-processing and validation is taken care of automatically (and in a
+        separate place)
+-   Move all options validation into __main__.py in each subprogram, since that's where it's defined
+    and mostly handled.
 -   Make plotting interactive (pyplot vs pyqtgraph)
 -   Figure out how to use pyqtgraph for static plot generation with no windows or interaction.
 -   Figure out why OptionParser epilog strips out newlines.
