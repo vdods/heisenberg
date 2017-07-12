@@ -20,24 +20,35 @@ def read_sample_pickles (samples_dir, range_v):
     pickle_filename_v               = glob.glob(glob_pattern)
     print(pickle_filename_v)
     data_v                          = []
+    dimension_d                     = {1:0, 2:0}
     for pickle_filename in pickle_filename_v:
         sample_v                    = vorpy.pickle.unpickle(pickle_filename=pickle_filename, log_out=sys.stdout)
         for sample in sample_v:
-            initial2                = sample[0]
+            initial                 = sample[0]
             objective               = sample[4]
             t_min                   = sample[5]
             max_abs_H               = sample[6]
             max_abs_J_minus_J_0     = sample[7]
             if range_v[0] <= objective < range_v[1]:
-                data_v.append(np.array((initial2[0], initial2[1], objective, t_min, max_abs_H, max_abs_J_minus_J_0)))
+                # TEMP HACK -- probably just use a different function altogether, or use a different data structure
+                if initial.shape == (1,):
+                    dimension_d[1] += 1
+                    data_v.append(np.array((objective, t_min, max_abs_H, max_abs_J_minus_J_0, initial[0])))
+                else:
+                    dimension_d[2] += 1
+                    data_v.append(np.array((objective, t_min, max_abs_H, max_abs_J_minus_J_0, initial[0], initial[1])))
+
+    assert dimension_d[1] == 0 or dimension_d[2] == 0, 'inhomogeneous data (mixed dimensions)'
+    dimension = 1 if dimension_d[1] > 0 else 2
+
     if len(data_v) == 0:
         print('No data found in "{0}" files.'.format(glob_pattern))
-        return None
+        return None, dimension
     else:
-        return np.array(data_v)
+        return np.array(data_v), dimension
 
 def plot_samples (dynamics_context, options, *, rng):
-    data_v = read_sample_pickles(options.samples_dir, (1.0e-16, np.inf))
+    data_v,dimension = read_sample_pickles(options.samples_dir, (1.0e-16, np.inf))
     if data_v is None:
         return
 
@@ -52,11 +63,11 @@ def plot_samples (dynamics_context, options, *, rng):
     mw.setWindowTitle('(p_x,p_y) initial condition scatterplot')
 
     ## create areas to add plots
-    w1 = view.addPlot()
-    w2 = view.addPlot()
+    w1 = view.addPlot(title="objective function")
+    w2 = view.addPlot(title="t_min")
     view.nextRow()
-    w3 = view.addPlot()
-    w4 = view.addPlot()
+    w3 = view.addPlot(title="max(abs(H))")
+    w4 = view.addPlot(title="max(abs(J-J(0)))")
 
     ## Make all plots clickable
     lastClicked = []
@@ -69,37 +80,76 @@ def plot_samples (dynamics_context, options, *, rng):
             p.setPen('b', width=2)
         lastClicked = points
 
-    def color_scatterplot (plot, point_v, value_v, *, use_log=False):
-        if use_log:
-            func = np.log
-        else:
-            func = lambda x:x
+    if dimension == 1:
+        def scatterplot (plot, point_v, value_v, *, use_log=False):
+            assert np.all(np.isfinite(point_v))
+            filter_v = np.isfinite(value_v)
 
-        assert np.all(np.isfinite(point_v))
-        filter_v = np.isfinite(value_v)
+            filtered_point_v = point_v[filter_v]
+            filtered_value_v = value_v[filter_v]
 
-        filtered_point_v = point_v[filter_v]
-        filtered_value_v = value_v[filter_v]
+            brush = pg.mkBrush(255, 255, 255, 255)
+            s = pg.ScatterPlotItem(size=2, brush=brush)
+            plot.addItem(s)
+            s.addPoints(x=filtered_point_v, y=filtered_value_v)
+            s.sigClicked.connect(clicked)
+            plot.setLogMode(x=False, y=use_log)
+            return s
 
-        low = np.nanmin(func(filtered_value_v))
-        high = np.nanmax(func(filtered_value_v))
-        divisor = high - low
-        print('low = {0}, high = {1}, divisor = {2}'.format(low, high, divisor))
+        def lineplot (plot, point_v, value_v, *, use_log=False):
+            assert np.all(np.isfinite(point_v))
+            filter_v = np.isfinite(value_v)
 
-        def brush_from_objective (objective):
-            parameter = (func(objective) - low) / divisor
-            return pg.mkBrush(int(round(255*parameter)), int(round(255*(1.0-parameter))), 0, 255)
+            filtered_point_v = point_v[filter_v]
+            filtered_value_v = value_v[filter_v]
 
-        s = pg.ScatterPlotItem(size=10, pen=pg.mkPen(None))#, brush=pg.mkBrush(255, 255, 255, 128))
-        plot.addItem(s)
-        s.addPoints(x=filtered_point_v[:,0], y=filtered_point_v[:,1], brush=[brush_from_objective(objective) for objective in filtered_value_v])
-        s.sigClicked.connect(clicked)
-        return s
+            plot.plot(filtered_point_v, filtered_value_v)
+            plot.setLogMode(x=False, y=use_log)
 
-    color_scatterplot(w1, data_v[:,0:2], data_v[:,2], use_log=True) # objective
-    color_scatterplot(w2, data_v[:,0:2], data_v[:,3], use_log=False) # t_min
-    color_scatterplot(w3, data_v[:,0:2], data_v[:,4], use_log=True) # max_abs_H
-    color_scatterplot(w4, data_v[:,0:2], data_v[:,5], use_log=True) # max_abs_J_minus_J_0
+        ##scatterplot(w1, data_v[:,4], data_v[:,0], use_log=True) # objective
+        #scatterplot(w1, data_v[:,4], data_v[:,0], use_log=False) # objective
+        scatterplot(w2, data_v[:,4], data_v[:,1], use_log=False) # t_min
+        #scatterplot(w3, data_v[:,4], data_v[:,2], use_log=True) # max_abs_H
+        #scatterplot(w4, data_v[:,4], data_v[:,3], use_log=True) # max_abs_J_minus_J_0
+
+        lineplot(w1, data_v[:,4], data_v[:,0], use_log=False) # objective
+        #lineplot(w2, data_v[:,4], data_v[:,1], use_log=False) # t_min
+        lineplot(w3, data_v[:,4], data_v[:,2], use_log=False) # max_abs_H
+        lineplot(w4, data_v[:,4], data_v[:,3], use_log=False) # max_abs_J_minus_J_0
+    elif dimension == 2:
+        def color_scatterplot_2d (plot, point_v, value_v, *, use_log=False):
+            if use_log:
+                func = np.log
+            else:
+                func = lambda x:x
+
+            assert np.all(np.isfinite(point_v))
+            filter_v = np.isfinite(value_v)
+
+            filtered_point_v = point_v[filter_v]
+            filtered_value_v = value_v[filter_v]
+
+            low = np.nanmin(func(filtered_value_v))
+            high = np.nanmax(func(filtered_value_v))
+            divisor = high - low
+            print('low = {0}, high = {1}, divisor = {2}'.format(low, high, divisor))
+
+            def brush_from_objective (objective):
+                parameter = (func(objective) - low) / divisor
+                return pg.mkBrush(int(round(255*parameter)), int(round(255*(1.0-parameter))), 0, 255)
+
+            s = pg.ScatterPlotItem(size=10, pen=pg.mkPen(None))#, brush=pg.mkBrush(255, 255, 255, 128))
+            plot.addItem(s)
+            s.addPoints(x=filtered_point_v[:,0], y=filtered_point_v[:,1], brush=[brush_from_objective(objective) for objective in filtered_value_v])
+            s.sigClicked.connect(clicked)
+            return s
+
+        color_scatterplot_2d(w1, data_v[:,4:6], data_v[:,0], use_log=True) # objective
+        color_scatterplot_2d(w2, data_v[:,4:6], data_v[:,1], use_log=False) # t_min
+        color_scatterplot_2d(w3, data_v[:,4:6], data_v[:,2], use_log=True) # max_abs_H
+        color_scatterplot_2d(w4, data_v[:,4:6], data_v[:,3], use_log=True) # max_abs_J_minus_J_0
+    else:
+        assert False, 'dimension = {0}, which should never happen'.format(dimension)
 
     ## Start Qt event loop unless running in interactive mode.
     if (sys.flags.interactive != 1) or not hasattr(pyqtgraph.Qt.QtCore, 'PYQT_VERSION'):
