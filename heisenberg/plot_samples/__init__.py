@@ -2,6 +2,8 @@
 TODO:
 -   Feature: Clicking on a point in the parameter space plots the integral curve with that initial condition
     so that the parameter space can be explored interactively.
+-   Feature: Link the x axes for all the plots in 1D embedding domain.
+-
 """
 
 import glob
@@ -22,7 +24,14 @@ def read_sample_pickles (samples_dir, range_v):
     data_v                          = []
     dimension_d                     = {1:0, 2:0}
     for pickle_filename in pickle_filename_v:
-        sample_v                    = vorpy.pickle.unpickle(pickle_filename=pickle_filename, log_out=sys.stdout)
+        pickle_data                 = vorpy.pickle.unpickle(pickle_filename=pickle_filename, log_out=sys.stdout)
+        # TEMP legacy compatibility
+        if type(pickle_data) == list:
+            sample_v                = pickle_data
+        elif type(pickle_data) == dict:
+            sample_v                = pickle_data['sample_v']
+        else:
+            assert False, 'unknown data type {0} found in pickle'.format(type(pickle_data))
         for sample in sample_v:
             initial                 = sample[0]
             objective               = sample[4]

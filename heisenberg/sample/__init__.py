@@ -153,7 +153,13 @@ def sample (dynamics_context, options, *, rng):
             ex_type,ex,tb = sys.exc_info()
             traceback.print_tb(tb)
 
+    # Create the data structure that will be pickled.
+    data = {
+        'options': options,
+        'sample_v': sample_result_v,
+    }
+
     print('saving results, and exiting.')
     maybe_seed_string = 'seed:{0}.'.format(options.seed) if options.sampling_type == 'random' else ''
     filename = os.path.join(options.samples_dir, 'sample_v.{0}count:{1}.pickle'.format(maybe_seed_string, len(sample_result_v)))
-    vorpy.pickle.try_to_pickle(data=sample_result_v, pickle_filename=filename, log_out=sys.stdout)
+    vorpy.pickle.try_to_pickle(data=data, pickle_filename=filename, log_out=sys.stdout)
