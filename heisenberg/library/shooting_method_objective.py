@@ -62,8 +62,8 @@ class ShootingMethodObjective:
                 if not self.__disable_salvage:
                     # TEMP: Plot this salvaged curve in order to diagnose what went wrong
                     curve_description = 'salvaged curve - {0} steps out of {1}'.format(e.salvaged_qp_v.shape[0], original_step_count)
-                    op = orbit_plot.OrbitPlot(curve_description_v=curve_description_v, quantity_to_plot_v='x,y;t,z;error(H);error(J);sqd;objective')
-                    op.plot_curve(curve_description=curve_description, smo=self, disable_plot_decoration=options.disable_plot_decoration)
+                    op = orbit_plot.OrbitPlot(curve_description_v=[curve_description], quantity_to_plot_v=orbit_plot.default_quantity_to_plot_v)
+                    op.plot_curve(curve_description=curve_description, smo=self)
                     op.savefig_and_clear(
                         filename=os.path.join(
                             'heisenberg.custom_plot', # TODO: Specify salvaged result directory
@@ -168,6 +168,5 @@ def evaluate_shooting_method_objective (dynamics_context, qp_0, t_max, t_delta, 
     print('evaluate_shooting_method_objective; trying qp_0 = {0}'.format(qp_0))
     smo = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=t_delta, disable_salvage=disable_salvage)
     objective = smo.objective()
-    assert not smo.flow_curve_was_salvaged, 'this should stop an optimization from continuing after being corrupted'
     return objective
 

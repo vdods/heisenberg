@@ -24,8 +24,12 @@ valid_plot_to_include_title_d = {
     'objective'     : 'objective function history',
 }
 
+default_quantities_to_plot = 'x,y;t,z;error(H);error(J);sqd;objective'
+default_quantity_to_plot_v = default_quantities_to_plot.split(';')
+
 class OrbitPlot:
     def __init__ (self, *, curve_description_v, quantity_to_plot_v):
+        assert type(quantity_to_plot_v) == list
         assert len(frozenset(curve_description_v)) == len(curve_description_v), 'must specify unique values in curve_description_v'
         assert frozenset(quantity_to_plot_v).issubset(frozenset(valid_quantity_to_plot_v)), 'specified invalid elements of quantity_to_plot_v: {0}'.format(','.join(frozenset(quantity_to_plot_v).difference(frozenset(valid_quantity_to_plot_v))))
 

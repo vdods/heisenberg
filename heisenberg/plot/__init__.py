@@ -3,6 +3,8 @@ import heisenberg.library.orbit_plot
 import heisenberg.library.shooting_method_objective
 import heisenberg.util
 import os
+import sys
+import traceback
 
 subprogram_description = 'Plots an integral curve of the system using given initial condition, optionally running an optimization method to find a nearby curve that closes back up on itself.'
 
@@ -62,8 +64,11 @@ def plot (dynamics_context, options, *, rng):
                 print('i = {0}, obj = {1:.17e}'.format(i, optimizer.obj_history_v[-1]))
         except KeyboardInterrupt:
             print('got KeyboardInterrupt -- halting optimization, but will still plot current results')
-        except AssertionError:
-            print('got AssertionError -- halting optimization, but will plot last good results')
+        except AssertionError as e:
+            print('got AssertionError -- halting optimization, but will plot last good results; exception was {0}'.format(e))
+            print('stack:')
+            ex_type,ex,tb = sys.exc_info()
+            traceback.print_tb(tb)
 
         qp_opt = optimizer.embedded_parameter_history_v[-1]
         smo_opt = heisenberg.library.shooting_method_objective.ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_opt, t_max=options.max_time, t_delta=options.dt)

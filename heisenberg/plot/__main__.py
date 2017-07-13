@@ -84,14 +84,12 @@ op.add_option(
     default=False,
     help='Disables plotting certain non-essential labels and decoration.  Default behavior is to plot those things.'
 )
-
-default_quantity_to_plot_v = 'x,y;t,z;error(H);error(J);sqd;objective'
 op.add_option(
     '--quantities-to-plot',
     dest='quantities_to_plot',
     type='str',
-    default=default_quantity_to_plot_v,
-    help='Specifies which quantities to include in the plot.  Should be a semicolon-separated string, without spaces, with tokens selected from the following options: {0}.  Default is {1}'.format(';'.join(heisenberg.library.orbit_plot.valid_quantity_to_plot_v), default_quantity_to_plot_v)
+    default=heisenberg.library.orbit_plot.default_quantity_to_plot_v,
+    help='Specifies which quantities to include in the plot.  Should be a semicolon-separated string, without spaces, with tokens selected from the following options: {0}.  Default is {1}'.format(';'.join(heisenberg.library.orbit_plot.valid_quantity_to_plot_v), heisenberg.library.orbit_plot.default_quantity_to_plot_v)
 )
 
 options,args = op.parse_argv_and_validate()
