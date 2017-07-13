@@ -72,11 +72,11 @@ def plot_samples (dynamics_context, options, *, rng):
     mw.setWindowTitle('(p_x,p_y) initial condition scatterplot')
 
     ## create areas to add plots
-    w1 = view.addPlot(title="objective function")
-    w2 = view.addPlot(title="max(abs(H))")
+    w1 = view.addPlot(name='w1', title='objective')
+    w2 = view.addPlot(name='w2', title='max(abs(H))')
     view.nextRow()
-    w3 = view.addPlot(title="t_min")
-    w4 = view.addPlot(title="max(abs(J-J(0)))")
+    w3 = view.addPlot(name='w3', title='t_min')
+    w4 = view.addPlot(name='w4', title='max(abs(J-J(0)))')
 
     ## Make all plots clickable
     lastClicked = []
@@ -84,7 +84,7 @@ def plot_samples (dynamics_context, options, *, rng):
         global lastClicked
         for p in lastClicked:
             p.resetPen()
-        print("clicked points", points)
+        print('clicked points', points)
         for p in points:
             p.setPen('b', width=2)
         lastClicked = points
@@ -125,6 +125,11 @@ def plot_samples (dynamics_context, options, *, rng):
         lineplot(w2, data_v[:,4], data_v[:,2], use_log=False) # max_abs_H
         #lineplot(w3, data_v[:,4], data_v[:,1], use_log=False) # t_min
         lineplot(w4, data_v[:,4], data_v[:,3], use_log=False) # max_abs_J_minus_J_0
+
+        # Link all plots' x axes together
+        w2.setXLink('w1')
+        w3.setXLink('w1')
+        w4.setXLink('w1')
     elif dimension == 2:
         def color_scatterplot_2d (plot, point_v, value_v, *, use_log=False):
             if use_log:
