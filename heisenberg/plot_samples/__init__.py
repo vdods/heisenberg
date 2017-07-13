@@ -102,8 +102,8 @@ def plot_samples (dynamics_context, options, *, rng):
             p_y_min,objective   = heisenberg.library.util.quadratic_min_time_parameterized(p_y_v[s], objective_v[s])
             local_min_v.append((p_y_min,objective))
         print('local mins of objective function in (p_y, objective) form:')
-        for local_min in local_min_v:
-            print('    {0}'.format(local_min))
+        for p_y_min,objective in local_min_v:
+            print('    ({0}, {1:.17e})'.format(p_y_min, objective))
 
         def scatterplot (plot, point_v, value_v, *, use_log=False):
             assert np.all(np.isfinite(point_v))
