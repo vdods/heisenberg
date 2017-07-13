@@ -145,6 +145,46 @@ def plot_samples (dynamics_context, options, *, rng):
         w2.setXLink('w1')
         w3.setXLink('w1')
         w4.setXLink('w1')
+
+        # Create a vertical line on each plot that follows the mouse cursor
+        if True:
+            vline1 = pg.InfiniteLine(angle=90, movable=False)
+            vline2 = pg.InfiniteLine(angle=90, movable=False)
+            vline3 = pg.InfiniteLine(angle=90, movable=False)
+            vline4 = pg.InfiniteLine(angle=90, movable=False)
+
+            w1.addItem(vline1, ignoreBounds=True)
+            w2.addItem(vline2, ignoreBounds=True)
+            w3.addItem(vline3, ignoreBounds=True)
+            w4.addItem(vline4, ignoreBounds=True)
+
+            #label1 = pg.LabelItem(justify='right')
+            #label2 = pg.LabelItem(justify='right')
+            #label3 = pg.LabelItem(justify='right')
+            #label4 = pg.LabelItem(justify='right')
+
+            #w1.addItem(label1)
+            #w2.addItem(label2)
+            #w3.addItem(label3)
+            #w4.addItem(label4)
+
+            def mouse_moved (plot, event):
+                pos = event[0]  ## using signal proxy turns original arguments into a tuple
+                if plot.sceneBoundingRect().contains(pos):
+                    mouse_point = plot.vb.mapSceneToView(pos)
+                    #index = int(mouse_point.x())
+                    #if index >= 0 and index < len(p_y_v):
+                        #label1.setText('<span style="font-size: 12pt">x={0}, <span style="color: red">p_y={1}</span>, <span style="color: green">objective={2}</span>'.format(mouse_point.x(), p_y_v[index], objective_v[index]))
+                    vline1.setPos(mouse_point.x())
+                    vline2.setPos(mouse_point.x())
+                    vline3.setPos(mouse_point.x())
+                    vline4.setPos(mouse_point.x())
+                    #hLine.setPos(mouse_point.y())
+
+            proxy1 = pg.SignalProxy(w1.scene().sigMouseMoved, rateLimit=60, slot=lambda event:mouse_moved(w1,event))
+            proxy2 = pg.SignalProxy(w2.scene().sigMouseMoved, rateLimit=60, slot=lambda event:mouse_moved(w2,event))
+            proxy3 = pg.SignalProxy(w3.scene().sigMouseMoved, rateLimit=60, slot=lambda event:mouse_moved(w3,event))
+            proxy4 = pg.SignalProxy(w4.scene().sigMouseMoved, rateLimit=60, slot=lambda event:mouse_moved(w4,event))
     elif dimension == 2:
         def color_scatterplot_2d (plot, point_v, value_v, *, use_log=False):
             if use_log:
