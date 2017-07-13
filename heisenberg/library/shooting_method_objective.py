@@ -59,7 +59,6 @@ class ShootingMethodObjective:
                 self.__t_v  = t_v
                 self.__qp_v = qp_v
 
-
                 if not self.__disable_salvage:
                     # TEMP: Plot this salvaged curve in order to diagnose what went wrong
                     curve_description = 'salvaged curve - {0} steps out of {1}'.format(e.salvaged_qp_v.shape[0], original_step_count)
@@ -166,6 +165,7 @@ class ShootingMethodObjective:
 
 def evaluate_shooting_method_objective (dynamics_context, qp_0, t_max, t_delta, disable_salvage=False):
     """A utility function for constructing a ShootingMethodObjective instance and evaluating it."""
+    print('evaluate_shooting_method_objective; trying qp_0 = {0}'.format(qp_0))
     smo = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=t_delta, disable_salvage=disable_salvage)
     objective = smo.objective()
     assert not smo.flow_curve_was_salvaged, 'this should stop an optimization from continuing after being corrupted'
