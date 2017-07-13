@@ -1,3 +1,4 @@
+import heisenberg.library.orbit_plot
 import heisenberg.util
 import numpy as np
 import optparse
@@ -28,6 +29,20 @@ class OptionParser:
             type='int',
             help='Specifies the seed to use for pseudorandom number generation.  Using the same seed should produce the same sequence of random numbers, and therefore provide reproducible program execution.'
         )
+        self.__op.add_option(
+            '--quantities-to-plot',
+            dest='quantities_to_plot',
+            type='str',
+            default=heisenberg.library.orbit_plot.default_quantities_to_plot,
+            help='Specifies which quantities to include in the plot.  Should be a semicolon-separated string, without spaces, with tokens selected from the following options: {0}.  Default is {1}'.format(';'.join(heisenberg.library.orbit_plot.valid_quantity_to_plot_v), heisenberg.library.orbit_plot.default_quantity_to_plot_v)
+        )
+        self.__op.add_option(
+            '--disable-plot-decoration',
+            dest='disable_plot_decoration',
+            action='store_true',
+            default=False,
+            help='Disables plotting certain non-essential labels and decoration.  Default behavior is to plot those things.'
+        )
 
         supported_plot_type_d = heisenberg.util.get_supported_plot_type_d()
         ext_v = sorted(list(supported_plot_type_d.keys()))
@@ -57,6 +72,15 @@ class OptionParser:
             print('required option --max-time was not specified.')
             self.__op.print_help()
             return None,None
+
+        assert options.quantities_to_plot is not None
+        print('options.quantities_to_plot = ', options.quantities_to_plot)
+        quantity_to_plot_v = options.quantities_to_plot.split(';')
+        if not frozenset(quantity_to_plot_v).issubset(frozenset(heisenberg.library.orbit_plot.valid_quantity_to_plot_v)):
+            print('specified invalid elements in --quantities-to-plot: {0}'.format(','.join(frozenset(quantity_to_plot_v).difference(frozenset(heisenberg.library.orbit_plot.valid_quantity_to_plot_v)))))
+            self.__op.print_help()
+            return None,None
+        options.quantity_to_plot_v = quantity_to_plot_v
 
         return options,args
 

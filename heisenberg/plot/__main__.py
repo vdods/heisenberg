@@ -77,20 +77,6 @@ op.add_option(
     default=False,
     help='Disables plotting the initial curve; only has effect if --optimize-initial is specified.'
 )
-op.add_option(
-    '--disable-plot-decoration',
-    dest='disable_plot_decoration',
-    action='store_true',
-    default=False,
-    help='Disables plotting certain non-essential labels and decoration.  Default behavior is to plot those things.'
-)
-op.add_option(
-    '--quantities-to-plot',
-    dest='quantities_to_plot',
-    type='str',
-    default=heisenberg.library.orbit_plot.default_quantity_to_plot_v,
-    help='Specifies which quantities to include in the plot.  Should be a semicolon-separated string, without spaces, with tokens selected from the following options: {0}.  Default is {1}'.format(';'.join(heisenberg.library.orbit_plot.valid_quantity_to_plot_v), heisenberg.library.orbit_plot.default_quantity_to_plot_v)
-)
 
 options,args = op.parse_argv_and_validate()
 if options is None:
@@ -173,10 +159,6 @@ elif options.initial is not None:
         sys.exit(-1)
 else:
     assert False, 'this should never happen because of the check with num_initial_conditions_specified'
-
-# Parse options.quantities_to_plot
-options.quantity_to_plot_v = options.quantities_to_plot.split(';')
-assert all(plot_to_include in heisenberg.library.orbit_plot.valid_quantity_to_plot_v for plot_to_include in options.quantity_to_plot_v)
 
 rng = np.random.RandomState(options.seed)
 heisenberg.plot.plot(dynamics_context, options, rng=rng)
