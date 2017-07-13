@@ -25,7 +25,10 @@ def plot (dynamics_context, options, *, rng):
     op = heisenberg.library.orbit_plot.OrbitPlot(curve_description_v=curve_description_v, quantity_to_plot_v=options.quantity_to_plot_v)
 
     if options.optimize_initial:
-        if options.initial_2preimage is not None:
+        if options.initial_1preimage is not None:
+            X_0 = options.initial_1preimage
+            embedding = dynamics_context.embedding(1)
+        elif options.initial_2preimage is not None:
             X_0 = options.initial_2preimage
             embedding = dynamics_context.embedding(2)
         elif options.initial_3preimage is not None:

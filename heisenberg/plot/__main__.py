@@ -21,16 +21,22 @@ op.add_option(
     help='Specifies that the given value, call it k, should be used in a particular form of initial condition intended to produce a k-fold symmetric orbit -- experimental.'
 )
 op.add_option(
+    '--initial-1preimage',
+    dest='initial_1preimage',
+    type='string',
+    help='Specifies the preimage of the initial conditions with respect to the [p_y] |-> [[1,0,0],[0,p_y,p_z]] embedding.  Should have the form [p_y], where p_y is a floating point literal.'
+)
+op.add_option(
     '--initial-2preimage',
     dest='initial_2preimage',
     type='string',
-    help='Specifies the preimage of the initial conditions with respect to the [p_x,p_y] |-> [[x,y,z],[p_x,p_y,p_z]] embedding.  Should have the form [p_x,p_y], where each of p_x,p_y are floating point literals.'
+    help='Specifies the preimage of the initial conditions with respect to the [p_x,p_y] |-> [[1,0,0],[p_x,p_y,p_z]] embedding.  Should have the form [p_x,p_y], where each of p_x,p_y are floating point literals.'
 )
 op.add_option(
     '--initial-3preimage',
     dest='initial_3preimage',
     type='string',
-    help='Specifies the preimage of the initial conditions with respect to the [x,p_x,p_y] |-> [[x,y,z],[p_x,p_y,p_z]] embedding.  Should have the form [x,p_x,p_y], where each of x,y,z are floating point literals.'
+    help='Specifies the preimage of the initial conditions with respect to the [x,p_x,p_y] |-> [[x,0,0],[p_x,p_y,p_z]] embedding.  Should have the form [x,p_x,p_y], where each of x,y,z are floating point literals.'
 )
 op.add_option(
     '--initial-5preimage',
@@ -93,6 +99,7 @@ if options is None:
     sys.exit(-1)
 
 num_initial_conditions_specified = sum([
+    options.initial_1preimage is not None,
     options.initial_2preimage is not None,
     options.initial_3preimage is not None,
     options.initial_5preimage is not None,
@@ -100,7 +107,7 @@ num_initial_conditions_specified = sum([
     options.k is not None
 ])
 if num_initial_conditions_specified != 1:
-    print('Some initial condition option must be specified; --k-fold-initial, --initial-2preimage, --initial-3preimage, --initial-5preimage, --initial.  However, {0} of those were specified.'.format(num_initial_conditions_specified))
+    print('Some initial condition option must be specified; --k-fold-initial, --initial-2preimage, --initial-1preimage, --initial-3preimage, --initial-5preimage, --initial.  However, {0} of those were specified.'.format(num_initial_conditions_specified))
     op.print_help()
     sys.exit(-1)
 
@@ -110,8 +117,19 @@ if num_initial_conditions_specified != 1:
 if options.k is not None:
     options.initial_k_fold = np.array([1.0, 0.0, 0.25*np.sqrt(options.k**4 * np.pi**2 * 0.0625 - 1.0), 0.0, 1.0/options.k])
     options.qp_0 = dynamics_context.embedding(5)(options.initial_k_fold)
-elif options.initial_2preimage is not None:
+elif options.initial_1preimage is not None:
     # TODO: Refactor this checking to avoid code duplication
+    try:
+        options.initial_1preimage = heisenberg.util.csv_as_ndarray(heisenberg.util.pop_brackets_off_of(options.initial_1preimage), float)
+        expected_shape = (1,)
+        if options.initial_1preimage.shape != expected_shape:
+            raise ValueError('--initial-1preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_1preimage.shape, expected_shape))
+        options.qp_0 = dynamics_context.embedding(1)(options.initial_1preimage)
+    except ValueError as e:
+        print('error parsing --initial-1preimage value: {0}'.format(str(e)))
+        op.print_help()
+        sys.exit(-1)
+elif options.initial_2preimage is not None:
     try:
         options.initial_2preimage = heisenberg.util.csv_as_ndarray(heisenberg.util.pop_brackets_off_of(options.initial_2preimage), float)
         expected_shape = (2,)
