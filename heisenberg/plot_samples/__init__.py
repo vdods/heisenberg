@@ -7,6 +7,7 @@ TODO:
 """
 
 import glob
+import heisenberg.library.util
 import numpy as np
 import os
 import pyqtgraph as pg
@@ -90,6 +91,20 @@ def plot_samples (dynamics_context, options, *, rng):
         lastClicked = points
 
     if dimension == 1:
+        # Compute all local minima of the objective function
+        p_y_v                   = data_v[:,4]
+        objective_v             = data_v[:,0]
+        local_min_index_v       = [i for i in range(1,len(objective_v)-1) if objective_v[i-1] > objective_v[i] and objective_v[i] < objective_v[i+1]]
+        # Use quadratic fit to compute time of local mins at sub-sample accuracy.
+        local_min_v             = []
+        for local_min_index in local_min_index_v:
+            s                   = slice(local_min_index-1, local_min_index+2)
+            p_y_min,objective   = heisenberg.library.util.quadratic_min_time_parameterized(p_y_v[s], objective_v[s])
+            local_min_v.append((p_y_min,objective))
+        print('local mins of objective function in (p_y, objective) form:')
+        for local_min in local_min_v:
+            print('    {0}'.format(local_min))
+
         def scatterplot (plot, point_v, value_v, *, use_log=False):
             assert np.all(np.isfinite(point_v))
             filter_v = np.isfinite(value_v)
