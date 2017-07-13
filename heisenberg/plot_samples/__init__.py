@@ -64,9 +64,9 @@ def plot_samples (dynamics_context, options, *, rng):
 
     ## create areas to add plots
     w1 = view.addPlot(title="objective function")
-    w2 = view.addPlot(title="t_min")
+    w2 = view.addPlot(title="max(abs(H))")
     view.nextRow()
-    w3 = view.addPlot(title="max(abs(H))")
+    w3 = view.addPlot(title="t_min")
     w4 = view.addPlot(title="max(abs(J-J(0)))")
 
     ## Make all plots clickable
