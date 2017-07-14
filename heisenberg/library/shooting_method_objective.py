@@ -165,7 +165,7 @@ class ShootingMethodObjective:
 
 def evaluate_shooting_method_objective (dynamics_context, qp_0, t_max, t_delta, disable_salvage=False):
     """A utility function for constructing a ShootingMethodObjective instance and evaluating it."""
-    print('evaluate_shooting_method_objective; trying qp_0 = {0}'.format(qp_0))
+    #print('evaluate_shooting_method_objective; trying qp_0 = {0}'.format(qp_0))
     smo = ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=t_delta, disable_salvage=disable_salvage)
     objective = smo.objective()
     return objective
