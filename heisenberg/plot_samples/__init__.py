@@ -62,6 +62,10 @@ def plot_samples (dynamics_context, options, *, rng):
     if data_v is None:
         return
 
+    if options.use_white_background:
+        pg.setConfigOption('background', 'w')
+        pg.setConfigOption('foreground', 'k')
+
     print('number of points: {0}'.format(data_v.shape[0]))
 
     app = pyqtgraph.Qt.QtGui.QApplication([])

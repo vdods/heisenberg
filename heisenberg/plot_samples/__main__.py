@@ -19,6 +19,13 @@ op.add_option(
     type='str',
     help='Specify the directory that sample_v.*.pickle files will be written to.'
 )
+op.add_option(
+    '--use-white-background',
+    dest='use_white_background',
+    default=False,
+    action='store_true',
+    help='Specify that the plotting should be done on a white background.'
+)
 
 options,args = op.parse_argv_and_validate()
 if options is None:
