@@ -42,7 +42,7 @@ class OptionParser:
             dest='quantities_to_plot',
             type='str',
             default=heisenberg.library.orbit_plot.default_quantities_to_plot,
-            help='Specifies which quantities to include in the plot.  Should be a semicolon-separated string, without spaces, with tokens selected from the following options: {0}.  Default is {1}'.format(';'.join(heisenberg.library.orbit_plot.valid_quantity_to_plot_v), heisenberg.library.orbit_plot.default_quantity_to_plot_v)
+            help='Specifies which quantities to include in the plot.  Should be a semicolon-separated string, without spaces, with tokens selected from the following options: {0}.  Default is {1}'.format(';'.join(heisenberg.library.orbit_plot.valid_quantity_to_plot_v), heisenberg.library.orbit_plot.default_quantities_to_plot)
         )
         self.__op.add_option(
             '--disable-plot-decoration',
@@ -82,7 +82,7 @@ class OptionParser:
             return None,None
 
         assert options.quantities_to_plot is not None
-        print('options.quantities_to_plot = ', options.quantities_to_plot)
+        print('options.quantities_to_plot =', options.quantities_to_plot)
         quantity_to_plot_v = options.quantities_to_plot.split(';')
         if not frozenset(quantity_to_plot_v).issubset(frozenset(heisenberg.library.orbit_plot.valid_quantity_to_plot_v)):
             print('specified invalid elements in --quantities-to-plot: {0}'.format(','.join(frozenset(quantity_to_plot_v).difference(frozenset(heisenberg.library.orbit_plot.valid_quantity_to_plot_v)))))
