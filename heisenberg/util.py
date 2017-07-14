@@ -11,7 +11,7 @@ def construct_base_filename (*, obj, t_delta, t_max, initial_condition, t_min, k
     return base_filename
 
 def random_embedding2_point (rng):
-    C = 2.0
+    C = 0.4
     #epsilon = 1.0e-5
     epsilon = 0.0
     # Perturb the bounds for p_x by epsilon away from the actual bound.
