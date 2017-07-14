@@ -48,8 +48,11 @@ def worker (args):
             flow_curve_was_salvaged=smo.flow_curve_was_salvaged
         )
         #print('recording sample {0}'.format(sample_result))
-    except vorpy.symplectic_integration.exceptions.SalvagedResultException as e:
+    except Exception as e:
         print('caught exception "{0}" -- storing and continuing'.format(e))
+        print('stack:')
+        ex_type,ex,tb = sys.exc_info()
+        traceback.print_tb(tb)
         sample_result = make_sample_result(
             initial=initial,
             qp_0=qp_0,
@@ -59,7 +62,7 @@ def worker (args):
             t_min=np.nan,
             max_abs_H=np.nan,
             max_abs_J_minus_J_0=np.nan,
-            flow_curve_was_salvaged=True
+            flow_curve_was_salvaged=True # Change this to "exception occurred" and store info about exception
         )
 
     return sample_result
