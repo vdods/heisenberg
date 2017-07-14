@@ -117,7 +117,7 @@ def sample (dynamics_context, options, *, rng):
     if options.sampling_type == 'random':
         def random_sample (rng):
             return np.array([rng.uniform(low=options.sampling_domain_bound_v[axis,0], high=options.sampling_domain_bound_v[axis,1]) for axis in range(options.embedding_dimension)])
-        sample_generator = (random_sample(rng) for _ in options.sample_count)
+        sample_generator = (random_sample(rng) for _ in range(options.sample_count))
     elif options.sampling_type == 'ordered':
         # Define uniform samplings of each axis in the sampling domain.
         sample_vv = [np.linspace(options.sampling_domain_bound_v[axis,0], options.sampling_domain_bound_v[axis,1], options.sample_count_v[axis]) for axis in range(options.embedding_dimension)]
