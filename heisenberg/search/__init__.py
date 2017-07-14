@@ -86,8 +86,8 @@ def search (dynamics_context, options, *, rng):
         optimizer = heisenberg.library.monte_carlo.MonteCarlo(
             obj=lambda qp_0:heisenberg.library.shooting_method_objective.evaluate_shooting_method_objective(dynamics_context, qp_0, t_max, options.dt),
             initial_parameters=X_0,
-            inner_radius=1.0e-12,
-            outer_radius=1.0e-1,
+            inner_radius=options.optimization_annulus_bound_v[0],
+            outer_radius=options.optimization_annulus_bound_v[-1],
             rng_seed=options.seed,
             embedding=dynamics_context.embedding(2)
         )

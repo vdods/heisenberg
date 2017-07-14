@@ -1,3 +1,4 @@
+import ast
 import heisenberg.library.orbit_plot
 import heisenberg.util
 import numpy as np
@@ -28,6 +29,13 @@ class OptionParser:
             default=666,
             type='int',
             help='Specifies the seed to use for pseudorandom number generation.  Using the same seed should produce the same sequence of random numbers, and therefore provide reproducible program execution.'
+        )
+        self.__op.add_option(
+            '--optimization-annulus-bounds',
+            dest='optimization_annulus_bounds',
+            type='string',
+            default='[1.0e-12,1.0e-1]',
+            help='Specifies the interval over which to randomly draw radii (uniform on log(r)) for the optimization procedure.  Should have the form [low,high], where low and high are floating point literals and low <= high.  If it is desired for the optimization to not leave the local minimum\'s neighborhood, than a suitably small upper bound must be chosen.  Default is [1.0e-12,1.0e-1].'
         )
         self.__op.add_option(
             '--quantities-to-plot',
@@ -81,6 +89,19 @@ class OptionParser:
             self.__op.print_help()
             return None,None
         options.quantity_to_plot_v = quantity_to_plot_v
+
+        # Parse options.optimization_annulus_bounds
+        try:
+            options.optimization_annulus_bound_v = ast.literal_eval(options.optimization_annulus_bounds)
+            print('parsed {0} as {1}'.format(options.optimization_annulus_bounds, options.optimization_annulus_bound_v))
+            assert type(options.optimization_annulus_bound_v) == list, 'expected bracketed pair of floating point literals'
+            assert len(options.optimization_annulus_bound_v) == 2, 'expected pair of floating point literals (but got {0} of them)'.format(len(options.optimization_annulus_bound_v))
+            options.optimization_annulus_bound_v = np.array(options.optimization_annulus_bound_v)
+            assert options.optimization_annulus_bound_v[0] <= options.optimization_annulus_bound_v[1], 'expected low <= high (but low = {0} and high = {1})'.format(options.optimization_annulus_bound_v[0], options.optimization_annulus_bound_v[1])
+        except Exception as e:
+            print('error {0} parsing --optimization-annulus-bounds value'.format(e))
+            self.__op.print_help()
+            return None,None
 
         return options,args
 
