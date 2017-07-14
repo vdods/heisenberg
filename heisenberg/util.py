@@ -16,7 +16,7 @@ def random_embedding2_point (rng):
     epsilon = 0.0
     # Perturb the bounds for p_x by epsilon away from the actual bound.
     return np.array([
-        rng.uniform(-np.sqrt(4/np.pi)+epsilon, np.sqrt(4/np.pi)-epsilon),
+        rng.uniform(-np.sqrt(1/(4*np.pi))+epsilon, np.sqrt(1/(4*np.pi))-epsilon),
         rng.uniform(0.0, C)
     ])
 

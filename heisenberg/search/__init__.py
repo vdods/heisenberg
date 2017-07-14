@@ -28,8 +28,8 @@ def search (dynamics_context, options, *, rng):
         #X_0[1] = np.abs(X_0[1]) # So we only bother pointing upward
 
         # NOTE: The goal here is to sample uniformly over the domain:
-        #     -sqrt(4/pi) <= p_x <= sqrt(4/pi)
-        #               0 <= p_y <= C
+        #     -sqrt(1/(4*pi)) <= p_x <= sqrt(1/(4*pi))
+        #                   0 <= p_y <= C
         # for some arbitrary positive bound C, say 2.
 
         #C = 2.0
@@ -37,7 +37,7 @@ def search (dynamics_context, options, *, rng):
         #epsilon = 0.0
         ## Perturb the bounds for p_x by epsilon away from the actual bound.
         #X_0 = np.array([
-            #rng.uniform(-np.sqrt(4/np.pi)+epsilon, np.sqrt(4/np.pi)-epsilon),
+            #rng.uniform(-np.sqrt(1/(4*np.pi))+epsilon, np.sqrt(1/(4*np.pi))-epsilon),
             #rng.uniform(0.0, C)
         #])
         X_0 = heisenberg.util.random_embedding2_point(rng)

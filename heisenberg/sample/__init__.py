@@ -69,14 +69,14 @@ def sample (dynamics_context, options, *, rng):
     Program to search for orbits in the 2D embedding space:
     -   Generate random points in the domain
 
-            -sqrt(4/pi) <= p_x <= sqrt(4/pi)
-                     -C <= p_y <= C
+            -sqrt(1/(4*pi)) <= p_x <= sqrt(1/(4*pi))
+                         -C <= p_y <= C
 
         for some arbitrary positive constant C, say 2.  Due to a discrete symmetry in the system
         (reflection), p_y can be taken to be nonnegative.  Thus the domain can be
 
-            -sqrt(4/pi) <= p_x <= sqrt(4/pi)
-                      0 <= p_y <= C
+            -sqrt(1/(4*pi)) <= p_x <= sqrt(1/(4*pi))
+                          0 <= p_y <= C
 
     -   For each of these, compute the embedding qp_0 into phase space and use that as the initial
         condition for the flow curve.  Use some fixed dt and max_time.
