@@ -1,5 +1,8 @@
 *.pyc
 *.png
+*.pdf
+*.svg
+*.zip
 *.pickle
 core
 *.pyprof
