@@ -164,3 +164,8 @@ for subprogram_module in subprogram_module_v:
     print()
     print(heisenberg.util.wrap_and_indent(text=subprogram_module.subprogram_description, indent_count=2))
     print()
+
+# TEMP -- print out the solutions
+import heisenberg.library.heisenberg_dynamics_context
+
+heisenberg.library.heisenberg_dynamics_context.Symbolic.embedding_solver(N=2, sheet_index=1)

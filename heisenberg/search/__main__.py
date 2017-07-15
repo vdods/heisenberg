@@ -8,8 +8,6 @@ import sys
 # https://github.com/matplotlib/matplotlib/issues/5907 says this should fix "Exceeded cell block limit" problems
 matplotlib.rcParams['agg.path.chunksize'] = 10000
 
-heisenberg.library.heisenberg_dynamics_context.Symbolic.embedding_solver(2)
-
 dynamics_context = heisenberg.library.heisenberg_dynamics_context.Numeric()
 
 op = heisenberg.option_parser.OptionParser(module=heisenberg.search)
