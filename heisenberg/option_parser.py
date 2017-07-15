@@ -38,6 +38,20 @@ class OptionParser:
             help='Specifies the interval over which to randomly draw radii (uniform on log(r)) for the optimization procedure.  Should have the form [low,high], where low and high are floating point literals and low <= high.  If it is desired for the optimization to not leave the local minimum\'s neighborhood, than a suitably small upper bound must be chosen.  Default is [1.0e-12,1.0e-1].'
         )
         self.__op.add_option(
+            '--cut-off-initial-curve-tail',
+            dest='cut_off_initial_curve_tail',
+            action='store_true',
+            default=False,
+            help='Specifies that the initial curve data should be plotted trimmed exactly to the approximate period t_min (i.e. cut off the curve\'s "tail").  This presents a cleaner looking approximately periodic curve without any overlap.  The default is to not cut off the initial curve tail.'
+        )
+        self.__op.add_option(
+            '--dont-cut-off-optimized-curve-tail',
+            dest='cut_off_optimized_curve_tail',
+            action='store_false',
+            default=True,
+            help='Specifies that the optimized curve data should extend past the the approximate period t_min (i.e. don\'t cut off the curve\'s "tail").  This presents a somewhat messier looking approximately periodic curve because of the overlap, except that it carries more information.  The default is to cut off the optimized curve tail.'
+        )
+        self.__op.add_option(
             '--quantities-to-plot',
             dest='quantities_to_plot',
             type='str',

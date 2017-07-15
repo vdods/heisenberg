@@ -77,7 +77,7 @@ def plot (dynamics_context, options, *, rng):
         if embedding is not None:
             print('qp_opt embedding preimage; X_0 = {0}'.format(optimizer.parameter_history_v[-1]))
 
-        op.plot_curve(curve_description='optimized curve', smo=smo_opt, objective_history_v=optimizer.obj_history_v, disable_plot_decoration=options.disable_plot_decoration)
+        op.plot_curve(curve_description='optimized curve', smo=smo_opt, objective_history_v=optimizer.obj_history_v, cut_off_curve_tail=options.cut_off_optimized_curve_tail, disable_plot_decoration=options.disable_plot_decoration)
 
         #axis = op.axis_vv[-1][-1]
         #axis.set_title('objective function history')
@@ -103,7 +103,7 @@ def plot (dynamics_context, options, *, rng):
 
     if not options.disable_plot_initial:
         print('plotting initial curve')
-        op.plot_curve(curve_description='initial curve', smo=smo_0, disable_plot_decoration=options.disable_plot_decoration)
+        op.plot_curve(curve_description='initial curve', smo=smo_0, cut_off_curve_tail=options.cut_off_initial_curve_tail, disable_plot_decoration=options.disable_plot_decoration)
     else:
         print('NOT plotting initial curve')
 

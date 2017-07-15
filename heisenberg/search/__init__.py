@@ -76,7 +76,7 @@ def search (dynamics_context, options, *, rng):
                     )
 
                     orbit_plot = heisenberg.library.orbit_plot.OrbitPlot(curve_description_v=['initial curve'], quantity_to_plot_v=options.quantity_to_plot_v)
-                    orbit_plot.plot_curve(curve_description='initial curve', smo=smo_0, disable_plot_decoration=options.disable_plot_decoration)
+                    orbit_plot.plot_curve(curve_description='initial curve', smo=smo_0, cut_off_curve_tail=options.cut_off_initial_curve_tail, disable_plot_decoration=options.disable_plot_decoration)
                     orbit_plot.savefig_and_clear(filename=base_filename+'.'+options.plot_type)
                     smo_0.pickle(base_filename+'.pickle')
 
@@ -122,8 +122,8 @@ def search (dynamics_context, options, *, rng):
 
         orbit_plot = heisenberg.library.orbit_plot.OrbitPlot(curve_description_v=['initial curve', 'optimized curve'], quantity_to_plot_v=options.quantity_to_plot_v)
 
-        orbit_plot.plot_curve(curve_description='initial curve', smo=smo_0, disable_plot_decoration=options.disable_plot_decoration)
-        orbit_plot.plot_curve(curve_description='optimized curve', smo=smo_opt, objective_history_v=optimizer.obj_history_v, disable_plot_decoration=options.disable_plot_decoration)
+        orbit_plot.plot_curve(curve_description='initial curve', smo=smo_0, cut_off_curve_tail=options.cut_off_initial_curve_tail, disable_plot_decoration=options.disable_plot_decoration)
+        orbit_plot.plot_curve(curve_description='optimized curve', smo=smo_opt, objective_history_v=optimizer.obj_history_v, cut_off_curve_tail=options.cut_off_optimized_curve_tail, disable_plot_decoration=options.disable_plot_decoration)
 
         #axis = orbit_plot.axis_vv[0][-1]
         #axis.set_title('objective function history')
