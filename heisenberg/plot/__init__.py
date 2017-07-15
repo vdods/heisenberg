@@ -27,25 +27,16 @@ def plot (dynamics_context, options, *, rng):
     op = heisenberg.library.orbit_plot.OrbitPlot(curve_description_v=curve_description_v, quantity_to_plot_v=options.quantity_to_plot_v)
 
     if options.optimize_initial:
-        if options.initial_1preimage is not None:
-            X_0 = options.initial_1preimage
-            embedding = dynamics_context.embedding(1)
-        elif options.initial_2preimage is not None:
-            X_0 = options.initial_2preimage
-            embedding = dynamics_context.embedding(2)
-        elif options.initial_3preimage is not None:
-            X_0 = options.initial_3preimage
-            embedding = dynamics_context.embedding(3)
-        elif options.initial_5preimage is not None:
-            X_0 = options.initial_5preimage
-            embedding = dynamics_context.embedding(5)
+        if options.initial_preimage is not None:
+            X_0 = options.initial_preimage
+            embedding = dynamics_context.embedding(N=options.embedding_dimension, sheet_index=options.embedding_solution_sheet_index)
         elif options.initial is not None:
             X_0 = options.qp_0
             embedding = None
         else:
             assert options.initial_k_fold is not None
             X_0 = options.initial_k_fold
-            embedding = dynamics_context.embedding(5)
+            embedding = dynamics_context.embedding(N=5, sheet_index=1)
 
         disable_salvage = True
         optimizer = heisenberg.library.monte_carlo.MonteCarlo(

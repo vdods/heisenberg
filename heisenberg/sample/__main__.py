@@ -35,12 +35,6 @@ op.add_option(
     help='Optionally specify the max number of processes this program should use concurrently.  Default is the number of processors.'
 )
 op.add_option(
-    '--embedding-dimension',
-    dest='embedding_dimension',
-    choices=['1', '2', '3', '5'],
-    help='Specifies the dimension of the parameter space in which to sample.  Must be one of [1, 2, 3, 5].'
-)
-op.add_option(
     '--sampling-domain',
     dest='sampling_domain',
     default=None,

@@ -18,9 +18,9 @@ def make_sample_result (*, initial, qp_0, dt, max_time, objective, t_min, max_ab
     return (initial, qp_0, dt, max_time, objective, t_min, max_abs_H, max_abs_J_minus_J_0, flow_curve_was_salvaged)
 
 def worker (args):
-    assert len(args) == 4
-    dynamics_context, initial, dt, max_time = args[0], args[1], args[2], args[3]
-    qp_0 = dynamics_context.embedding(initial.shape[0])(initial)
+    assert len(args) == 6, 'passed wrong number of arguments to worker function'
+    dynamics_context, initial, dt, max_time, embedding_dimension, embedding_solution_sheet_index = args[0], args[1], args[2], args[3], args[4], args[5]
+    qp_0 = dynamics_context.embedding(N=embedding_dimension, sheet_index=embedding_solution_sheet_index)(initial)
 
     try:
         # Use disable_salvage=True to avoid clogging up the place.
@@ -134,7 +134,8 @@ def sample (dynamics_context, options, *, rng):
             try:
                 #sample_counter = range(options.sample_count)
                 sample_index = 1
-                for sample_result in executor.map(worker, ((dynamics_context, sample, options.dt, options.max_time) for sample in sample_generator), chunksize=options.worker_chunksize):
+                print('options:', options)
+                for sample_result in executor.map(worker, ((dynamics_context, sample, options.dt, options.max_time, options.embedding_dimension, options.embedding_solution_sheet_index) for sample in sample_generator), chunksize=options.worker_chunksize):
                     sample_result_v.append(sample_result)
                     print('**************** saving sample {0} (out of {1}): {2}'.format(sample_index, options.sample_count, sample_result))
                     sample_index += 1
@@ -148,7 +149,7 @@ def sample (dynamics_context, options, *, rng):
         # Run the worker function in this single process.
         try:
             for sample in sample_generator:
-                sample_result = worker((dynamics_context, sample, options.dt, options.max_time))
+                sample_result = worker((dynamics_context, sample, options.dt, options.max_time, options.embedding_dimension, options.embedding_solution_sheet_index))
                 sample_result_v.append(sample_result)
         except (Exception,KeyboardInterrupt) as e:
             print('encountered exception of type {0} during sample; saving results and exiting.  exception was: {1}'.format(type(e), e))

@@ -24,6 +24,20 @@ class OptionParser:
             help='Specifies the max time to integrate the curve to.'
         )
         self.__op.add_option(
+            '--embedding-dimension',
+            dest='embedding_dimension',
+            default=1,
+            type='int',
+            help='Specifies the dimension of the embedding to use; the embedding solves for p_z in terms of the specified coordinates, with zero or more coordinates held constant depending on the dimension.  Valid choices for this option are {0}.  Default value is 1.  See also --embedding-solution-sheet-index.  If value is 1, then embedding is [p_y] |-> [[1,0,0],[0,p_y,p_z]].  If value is 2, then embedding is [p_x,p_y] |-> [[1,0,0],[p_x,p_y,p_z]].  If value is 3, then embedding is [x,p_x,p_y] |-> [[x,0,0],[p_x,p_y,p_z]].  If value is 5, then embedding is [x,y,z,p_x,p_y] |-> [[x,y,z],[p_x,p_y,p_z]].'.format(', '.join(str(d) for d in heisenberg.library.heisenberg_dynamics_context.Symbolic.valid_embedding_dimensions()))
+        )
+        self.__op.add_option(
+            '--embedding-solution-sheet-index',
+            dest='embedding_solution_sheet_index',
+            default=0,
+            type='int',
+            help='Specifies which sheet of the solution for the embedding to use.  There are two sheets, 0 and 1.  Default value is 0.  See also --embedding-dimension.'
+        )
+        self.__op.add_option(
             '--seed',
             dest='seed',
             default=666,
@@ -92,6 +106,16 @@ class OptionParser:
 
         if options.max_time is None:
             print('required option --max-time was not specified.')
+            self.__op.print_help()
+            return None,None
+
+        if options.embedding_dimension not in heisenberg.library.heisenberg_dynamics_context.Symbolic.valid_embedding_dimensions():
+            print('specified invalid value for --embedding-dimension.')
+            self.__op.print_help()
+            return None,None
+
+        if options.embedding_solution_sheet_index not in [0,1]:
+            print('specified invalid value for --embedding-solution-sheet-index.')
             self.__op.print_help()
             return None,None
 

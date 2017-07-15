@@ -132,7 +132,7 @@ class Symbolic(Base):
         assert N in Symbolic.valid_embedding_dimensions(), 'invalid N (which is {0}); must be one of {1}.'.format(N, Symbolic.valid_embedding_dimensions())
 
     @classmethod
-    def embedding_solver (cls, N):
+    def embedding_solver (cls, *, N, sheet_index):
         """
         With qp denoting the (2,3)-shaped symbolic coordinates
 
@@ -167,6 +167,7 @@ class Symbolic(Base):
         The N = 5 case is the full parameterization of [one sheet of] the H = 0 submanifold.
         """
         Symbolic.assert_is_valid_embedding_dimension(N)
+        assert 0 <= sheet_index < 2
 
         zero = sp.Integer(0)
         one = sp.Integer(1)
@@ -214,8 +215,8 @@ class Symbolic(Base):
         print('There are {0} solutions for the equation: {1} = 0'.format(len(p_z_solution_v), H))
         for i,p_z_solution in enumerate(p_z_solution_v):
             print('    solution {0}: p_z = {1}'.format(i, p_z_solution))
-        # Just take the last solution.
-        p_z_solution = p_z_solution_v[-1]
+        # Take the solution specified by sheet_index
+        p_z_solution = p_z_solution_v[sheet_index]
 
         # Create the embedding, which maps embedding_domain |-> embedding,
         # where in particular, the p_z coordinate has been replaced by its solution.
@@ -244,11 +245,11 @@ class Numeric(Base):
         return np.array((4.62167379391418609e-01, -4.67440934052728782e-04, 9.80312987653756296e-01))
 
     @staticmethod
-    def embedding (N):
+    def embedding (*, N, sheet_index):
         Symbolic.assert_is_valid_embedding_dimension(N)
 
         def symbolic_embedding_function_creator ():
-            embedding_domain,embedding  = Symbolic.embedding_solver(N)
+            embedding_domain,embedding  = Symbolic.embedding_solver(N=N, sheet_index=sheet_index)
             replacement_d               = {
                 'array'         :'np.array',
                 'ndarray'       :'np.ndarray',
@@ -263,7 +264,7 @@ class Numeric(Base):
             return embedding, embedding_domain, replacement_d, argument_id, import_v, decorator_v
 
         return vorpy.symbolic.cached_lambdified(
-            'heisenberg_dynamics_context__embedding_{0}'.format(N),
+            'heisenberg_dynamics_context__embedding_{0}_{1}'.format(N, sheet_index),
             function_creator=symbolic_embedding_function_creator,
             verbose=False
         )

@@ -44,7 +44,7 @@ def search (dynamics_context, options, *, rng):
 
         #X_0 = np.array([4.53918797113298744e-01,-6.06738228528062038e-04,1.75369725636529949e+00])
 
-        qp_0 = dynamics_context.embedding(2)(X_0)
+        qp_0 = dynamics_context.embedding(N=2, sheet_index=1)(X_0)
         print('randomly generated initial condition preimage: X_0:')
         print(X_0)
         #print('embedding of randomly generated initial condition preimage: qp_0:')
@@ -89,7 +89,7 @@ def search (dynamics_context, options, *, rng):
             inner_radius=options.optimization_annulus_bound_v[0],
             outer_radius=options.optimization_annulus_bound_v[-1],
             rng_seed=options.seed,
-            embedding=dynamics_context.embedding(2)
+            embedding=dynamics_context.embedding(N=2, sheet_index=1)
         )
         try:
             actual_iteration_count = 0

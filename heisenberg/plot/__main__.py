@@ -1,3 +1,4 @@
+import ast
 import heisenberg.library.heisenberg_dynamics_context
 import heisenberg.library.orbit_plot
 import heisenberg.option_parser
@@ -21,28 +22,10 @@ op.add_option(
     help='Specifies that the given value, call it k, should be used in a particular form of initial condition intended to produce a k-fold symmetric orbit -- experimental.'
 )
 op.add_option(
-    '--initial-1preimage',
-    dest='initial_1preimage',
+    '--initial-preimage',
+    dest='initial_preimage',
     type='string',
-    help='Specifies the preimage of the initial conditions with respect to the [p_y] |-> [[1,0,0],[0,p_y,p_z]] embedding.  Should have the form [p_y], where p_y is a floating point literal.'
-)
-op.add_option(
-    '--initial-2preimage',
-    dest='initial_2preimage',
-    type='string',
-    help='Specifies the preimage of the initial conditions with respect to the [p_x,p_y] |-> [[1,0,0],[p_x,p_y,p_z]] embedding.  Should have the form [p_x,p_y], where each of p_x,p_y are floating point literals.'
-)
-op.add_option(
-    '--initial-3preimage',
-    dest='initial_3preimage',
-    type='string',
-    help='Specifies the preimage of the initial conditions with respect to the [x,p_x,p_y] |-> [[x,0,0],[p_x,p_y,p_z]] embedding.  Should have the form [x,p_x,p_y], where each of x,y,z are floating point literals.'
-)
-op.add_option(
-    '--initial-5preimage',
-    dest='initial_5preimage',
-    type='string',
-    help='Specifies the preimage of the initial conditions with respect to the [x,y,z,p_x,p_y] |-> [[x,y,z],[p_x,p_y,p_z]] embedding.  Should have the form [x,y,z,p_x,p_y], where each of x,y,z are floating point literals.'
+    help='Specifies the preimage of the initial conditions with respect to the embedding map specified by the --embedding-dimension and --embedding-solution-sheet-index option values.  Should have the form [x_1,...,x_n], where n is the embedding dimension and x_i is a floating point literal for each i.'
 )
 op.add_option(
     '--initial',
@@ -83,15 +66,12 @@ if options is None:
     sys.exit(-1)
 
 num_initial_conditions_specified = sum([
-    options.initial_1preimage is not None,
-    options.initial_2preimage is not None,
-    options.initial_3preimage is not None,
-    options.initial_5preimage is not None,
+    options.initial_preimage is not None,
     options.initial is not None,
     options.k is not None
 ])
 if num_initial_conditions_specified != 1:
-    print('Some initial condition option must be specified; --k-fold-initial, --initial-2preimage, --initial-1preimage, --initial-3preimage, --initial-5preimage, --initial.  However, {0} of those were specified.'.format(num_initial_conditions_specified))
+    print('Some initial condition option must be specified; --k-fold-initial, --initial-preimage, --initial.  However, {0} of those were specified.'.format(num_initial_conditions_specified))
     op.print_help()
     sys.exit(-1)
 
@@ -100,50 +80,16 @@ if num_initial_conditions_specified != 1:
 # Attempt to parse initial conditions.  Upon success, the attribute options.qp_0 should exist.
 if options.k is not None:
     options.initial_k_fold = np.array([1.0, 0.0, 0.25*np.sqrt(options.k**4 * np.pi**2 * 0.0625 - 1.0), 0.0, 1.0/options.k])
-    options.qp_0 = dynamics_context.embedding(5)(options.initial_k_fold)
-elif options.initial_1preimage is not None:
-    # TODO: Refactor this checking to avoid code duplication
+    options.qp_0 = dynamics_context.embedding(N=5, sheet_index=1)(options.initial_k_fold)
+elif options.initial_preimage is not None:
     try:
-        options.initial_1preimage = heisenberg.util.csv_as_ndarray(heisenberg.util.pop_brackets_off_of(options.initial_1preimage), float)
-        expected_shape = (1,)
-        if options.initial_1preimage.shape != expected_shape:
-            raise ValueError('--initial-1preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_1preimage.shape, expected_shape))
-        options.qp_0 = dynamics_context.embedding(1)(options.initial_1preimage)
-    except ValueError as e:
-        print('error parsing --initial-1preimage value: {0}'.format(str(e)))
-        op.print_help()
-        sys.exit(-1)
-elif options.initial_2preimage is not None:
-    try:
-        options.initial_2preimage = heisenberg.util.csv_as_ndarray(heisenberg.util.pop_brackets_off_of(options.initial_2preimage), float)
-        expected_shape = (2,)
-        if options.initial_2preimage.shape != expected_shape:
-            raise ValueError('--initial-2preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_2preimage.shape, expected_shape))
-        options.qp_0 = dynamics_context.embedding(2)(options.initial_2preimage)
-    except ValueError as e:
-        print('error parsing --initial-2preimage value: {0}'.format(str(e)))
-        op.print_help()
-        sys.exit(-1)
-elif options.initial_3preimage is not None:
-    try:
-        options.initial_3preimage = heisenberg.util.csv_as_ndarray(heisenberg.util.pop_brackets_off_of(options.initial_3preimage), float)
-        expected_shape = (3,)
-        if options.initial_3preimage.shape != expected_shape:
-            raise ValueError('--initial-3preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_3preimage.shape, expected_shape))
-        options.qp_0 = dynamics_context.embedding(3)(options.initial_3preimage)
-    except ValueError as e:
-        print('error parsing --initial-3preimage value: {0}'.format(str(e)))
-        op.print_help()
-        sys.exit(-1)
-elif options.initial_5preimage is not None:
-    try:
-        options.initial_5preimage = heisenberg.util.csv_as_ndarray(heisenberg.util.pop_brackets_off_of(options.initial_5preimage), float)
-        expected_shape = (5,)
-        if options.initial_5preimage.shape != expected_shape:
-            raise ValueError('--initial-5preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_5preimage.shape, expected_shape))
-        options.qp_0 = dynamics_context.embedding(5)(options.initial_5preimage)
-    except ValueError as e:
-        print('error parsing --initial-5preimage value: {0}'.format(str(e)))
+        options.initial_preimage = np.array(ast.literal_eval(options.initial_preimage))
+        expected_shape = (options.embedding_dimension,)
+        if options.initial_preimage.shape != expected_shape:
+            raise ValueError('--initial-preimage value had the wrong number of components (got {0} but expected {1}).'.format(options.initial_preimage.shape, expected_shape))
+        options.qp_0 = dynamics_context.embedding(N=options.embedding_dimension, sheet_index=options.embedding_solution_sheet_index)(options.initial_preimage)
+    except Exception as e:
+        print('error parsing --initial-preimage value; error was {0}'.format(e))
         op.print_help()
         sys.exit(-1)
 elif options.initial is not None:
