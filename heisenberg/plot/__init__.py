@@ -70,10 +70,6 @@ def plot (dynamics_context, options, *, rng):
 
         op.plot_curve(curve_description='optimized curve', smo=smo_opt, objective_history_v=optimizer.obj_history_v, cut_off_curve_tail=options.cut_off_optimized_curve_tail, disable_plot_decoration=options.disable_plot_decoration)
 
-        #axis = op.axis_vv[-1][-1]
-        #axis.set_title('objective function history')
-        #axis.semilogy(optimizer.obj_history_v)
-
         qp = qp_opt
         smo = smo_opt
     else:
