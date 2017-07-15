@@ -70,7 +70,7 @@ class OptionParser:
             dest='quantities_to_plot',
             type='str',
             default=heisenberg.library.orbit_plot.default_quantities_to_plot,
-            help='Specifies which quantities to include in the plot.  Should be a semicolon-separated string, without spaces, with tokens selected from the following options: {0}.  Default is {1}'.format(';'.join(heisenberg.library.orbit_plot.valid_quantity_to_plot_v), heisenberg.library.orbit_plot.default_quantities_to_plot)
+            help='Specifies which quantities to include in the plot.  Should be a semicolon-separated string, without spaces, with tokens selected from the following options: {0}.  Note that because the value for this option may contain semicolons, which are a special character for some shells, you should quote the value, e.g. --quantities-to-plot="x,y;t,z;sqd".  Default value is {1}'.format(';'.join(heisenberg.library.orbit_plot.valid_quantity_to_plot_v), heisenberg.library.orbit_plot.default_quantities_to_plot)
         )
         self.__op.add_option(
             '--disable-plot-decoration',
