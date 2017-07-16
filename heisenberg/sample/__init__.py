@@ -114,6 +114,10 @@ def sample (dynamics_context, options, *, rng):
 
     heisenberg.util.ensure_dir_exists(options.samples_dir)
 
+    # Ensure that the requested embedding is already vorpy.symbolic.cache_lambdified, because otherwise
+    # the worker processes somehow crash, not being able to generate it themselves.
+    dynamics_context.embedding(N=options.embedding_dimension, sheet_index=options.embedding_solution_sheet_index)
+
     sample_result_v = []
 
     # Define sample_generator based on the sampling type.
