@@ -131,7 +131,6 @@ class OptionParser:
         # Parse options.optimization_annulus_bounds
         try:
             options.optimization_annulus_bound_v = ast.literal_eval(options.optimization_annulus_bounds)
-            print('parsed {0} as {1}'.format(options.optimization_annulus_bounds, options.optimization_annulus_bound_v))
             assert type(options.optimization_annulus_bound_v) == list, 'expected bracketed pair of floating point literals'
             assert len(options.optimization_annulus_bound_v) == 2, 'expected pair of floating point literals (but got {0} of them)'.format(len(options.optimization_annulus_bound_v))
             options.optimization_annulus_bound_v = np.array(options.optimization_annulus_bound_v)
