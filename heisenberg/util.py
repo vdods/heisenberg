@@ -4,10 +4,14 @@ import numpy as np
 import os
 import textwrap
 
-def construct_base_filename (*, obj, t_delta, t_max, initial_condition, t_min, k=None):
+def construct_base_filename (*, symmetry_order_estimate, symmetry_class_estimate, obj, t_delta, t_max, initial_condition, t_min):
     base_filename = 'obj:{0:.4e}.dt:{1:.3e}.t_max:{2:.3e}.ic:{3}.t_min:{4:.4e}'.format(obj, t_delta, t_max, heisenberg.library.util.ndarray_as_single_line_string(initial_condition), t_min)
-    if k is not None:
-        base_filename = 'k:{0}.{1}'.format(k, base_filename)
+    # Prepend symmetry_class_estimate
+    if symmetry_class_estimate is not None:
+        base_filename = 'class:{0}.{1}'.format(symmetry_class_estimate, base_filename)
+    # order goes first because it's a more significant classification.
+    if symmetry_order_estimate is not None:
+        base_filename = 'order:{0}.{1}'.format(symmetry_order_estimate, base_filename)
     return base_filename
 
 def random_embedding2_point (rng):

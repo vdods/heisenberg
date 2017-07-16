@@ -79,12 +79,13 @@ def plot (dynamics_context, options, *, rng):
     base_filename = os.path.join(
         options.output_dir,
         heisenberg.util.construct_base_filename(
+            symmetry_order_estimate=smo.symmetry_order_estimate(),
+            symmetry_class_estimate=smo.symmetry_class_estimate(),
             obj=smo.objective(),
             t_delta=options.dt,
             t_max=options.max_time,
             initial_condition=qp,
-            t_min=smo.t_min(),
-            k=options.k
+            t_min=smo.t_min()
         )
     )
 

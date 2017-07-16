@@ -1,16 +1,25 @@
 from . import heisenberg_dynamics_context
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.fftpack
+from . import util
 import vorpy
 
 # Short names identifying the different kinds of plots that can be created
 valid_quantity_to_plot_v = [
     'x,y',
     't,z',
+    'p_x,p_y',
+    't,p_z',
     'error(H)',
     'error(J)',
     'sqd',
     'objective',
+    'resampled-x,y',
+    'fft-x,y',
+    'class-signal',
+    'resampled-t,z',
+    'fft-t,z',
 ]
 
 valid_plot_to_include_title_d = {
@@ -22,9 +31,14 @@ valid_plot_to_include_title_d = {
     'error(J)'      : 'abs(J - J(t=0))',
     'sqd'           : 'squared distance from initial',
     'objective'     : 'objective function history',
+    'resampled-x,y' : 'testing x,y portion of resampled_flow_curve',
+    'fft-x,y'       : 'testing fft_xy_resampled_flow_curve',
+    'class-signal'  : 'testing class-signal',
+    'resampled-t,z' : 'testing t,z portion of resampled_flow_curve',
+    'fft-t,z'       : 'testing fft_z_resampled_flow_curve',
 }
 
-default_quantities_to_plot = 'x,y;t,z;error(H);error(J);sqd;objective'
+default_quantities_to_plot = 'x,y;t,z;error(H);error(J);sqd;class-signal;objective'
 default_quantity_to_plot_v = default_quantities_to_plot.split(';')
 
 class OrbitPlot:
@@ -39,7 +53,8 @@ class OrbitPlot:
         row_count               = len(curve_description_v)
         col_count               = len(quantity_to_plot_v)
 
-        self.fig,self.axis_vv   = plt.subplots(row_count, col_count, squeeze=False, figsize=(15*col_count,15*row_count))
+        size                    = 10
+        self.fig,self.axis_vv   = plt.subplots(row_count, col_count, squeeze=False, figsize=(size*col_count,size*row_count))
 
     def plot_curve_quantity (self, *, axis, curve_description, quantity_to_plot, smo, objective_history_v=None, cut_off_curve_tail=False, disable_plot_decoration=False):
         """
@@ -119,6 +134,57 @@ class OrbitPlot:
             assert objective_history_v is not None, 'must specify objective_history_v in order to plot {0}'.format(quantity_to_plot)
             title += '\nminimum objective value = {0:.17e}'.format(np.min(objective_history_v))
             axis.semilogy(objective_history_v)
+        elif quantity_to_plot == 'resampled-x,y':
+            #sample_count    = 1024
+            sample_count    = 128
+            rfc             = smo.resampled_flow_curve(sample_count=sample_count)
+            axis.plot(0, 0, 'o', color='black')
+            axis.scatter(rfc[:end_t_index,0,0], rfc[:end_t_index,0,1], color='black', s=1)
+            axis.plot(rfc[0,0,0], rfc[0,0,1], 'o', color='green', alpha=0.5)
+            axis.set_aspect('equal')
+        elif quantity_to_plot == 'fft-x,y':
+            sample_count    = 1024
+            fft_xy_rfc      = smo.fft_xy_resampled_flow_curve(sample_count=sample_count)
+            fft_freq        = np.round(scipy.fftpack.fftfreq(sample_count, d=1.0/sample_count)).astype(int)
+            axis.semilogy(fft_freq, np.abs(fft_xy_rfc), 'o')
+        elif quantity_to_plot == 'class-signal':
+            symmetry_order_estimate = smo.symmetry_order_estimate()
+            symmetry_class_estimate = smo.symmetry_class_estimate()
+            symmetry_class_signal_v = smo.symmetry_class_signal_v()
+            axis.axvline(symmetry_class_estimate, color='green')
+            axis.semilogy(symmetry_class_signal_v, 'o')
+            title += '\nclass_signal; class estimate = {0}, order estimate: {1}'.format(symmetry_class_estimate, symmetry_order_estimate)
+        elif quantity_to_plot == 'resampled-t,z':
+            sample_count    = 128
+            rt              = smo.resampled_time(sample_count=sample_count)
+            rfc             = smo.resampled_flow_curve(sample_count=sample_count)
+            axis.plot(rt, rfc[:end_t_index,0,2], 'o')
+        elif quantity_to_plot == 'fft-t,z':
+            #n = 8
+            #sample_count = 4*n
+            sample_count = 1024 # TODO: Need to pick this more intelligently
+            z_rfc = smo.resampled_flow_curve(sample_count=sample_count)[:,0,2]
+            fft_z_rfc = smo.fft_z_resampled_flow_curve(sample_count=sample_count)
+
+            fft_freq = scipy.fftpack.fftfreq(len(fft_z_rfc))
+            #print('fft_freq:')
+            #print('    \n'.join(str(f) for f in fft_freq))
+            #axis.plot(fft_freq, np.real(fft_z_rfc), 'o', color='green')
+            #axis.plot(fft_freq, np.imag(fft_z_rfc), 'o', color='blue')
+            #axis.semilogy(fft_freq, np.abs(fft_z_rfc), 'o')
+            abs_fft_z_rfc = np.abs(fft_z_rfc)
+            # Calculate the strongest mode -- put into descending order -- strongest first
+            strength_sorted_mode_index = np.argsort(abs_fft_z_rfc)[::-1]
+            assert len(strength_sorted_mode_index) == len(fft_freq)
+            # Make a copy in which the upper half of the indices negative.
+            signed_strength_sorted_mode_index = np.copy(strength_sorted_mode_index)
+            for i in range(len(signed_strength_sorted_mode_index)):
+                if signed_strength_sorted_mode_index[i] >= sample_count//2:
+                    signed_strength_sorted_mode_index[i] -= sample_count
+            axis.axvline(strength_sorted_mode_index[0], color='green')
+            axis.axvline(strength_sorted_mode_index[1], color='blue')
+            axis.semilogy(abs_fft_z_rfc, 'o')
+            title += '\nstrongest and second strongest modes: {0} and {1}'.format(signed_strength_sorted_mode_index[0], signed_strength_sorted_mode_index[1])
         else:
             assert False, 'this should never happen'
 

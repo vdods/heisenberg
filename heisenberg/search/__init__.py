@@ -67,6 +67,8 @@ def search (dynamics_context, options, *, rng):
                     base_filename = os.path.join(
                         abortive_dir,
                         heisenberg.util.construct_base_filename(
+                            symmetry_order_estimate=smo_0.symmetry_order_estimate(),
+                            symmetry_class_estimate=smo_0.symmetry_class_estimate(),
                             obj=smo_0.objective(),
                             t_delta=options.dt,
                             t_max=t_max,
@@ -112,6 +114,8 @@ def search (dynamics_context, options, *, rng):
         base_filename = os.path.join(
             output_dir,
             heisenberg.util.construct_base_filename(
+                symmetry_order_estimate=smo_opt.symmetry_order_estimate(),
+                symmetry_class_estimate=smo_opt.symmetry_class_estimate(),
                 obj=smo_opt.objective(),
                 t_delta=options.dt,
                 t_max=t_max,
