@@ -309,7 +309,7 @@ class ShootingMethodObjective:
             self.__t_min                        = np.nan
             self.__objective                    = np.nan
 
-    def pickle (self, filename):
+    def data_to_pickle (self):
         # First, ensure everything is computed.
         pickle_data = {
             'alpha':self.alpha,
@@ -328,9 +328,7 @@ class ShootingMethodObjective:
         # ensure that self.flow_curve() has been called before assigning the flow_curve_was_salvaged
         # attribute in the dict.
         pickle_data['flow_curve_was_salvaged'] = self.flow_curve_was_salvaged,
-
-        vorpy.pickle.try_to_pickle(data=pickle_data, pickle_filename=filename, log_out=sys.stdout)
-        print('wrote to "{0}"'.format(filename))
+        return pickle_data
 
 def evaluate_shooting_method_objective (dynamics_context, qp_0, t_max, t_delta, disable_salvage=False):
     """A utility function for constructing a ShootingMethodObjective instance and evaluating it."""

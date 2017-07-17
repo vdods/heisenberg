@@ -4,6 +4,7 @@
 *.svg
 *.zip
 *.pickle
+*.summary
 core
 *.pyprof
 *.kate-swp

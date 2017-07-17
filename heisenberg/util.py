@@ -2,6 +2,7 @@ import heisenberg.library.util
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import subprocess
 import textwrap
 
 def construct_base_filename (*, symmetry_order_estimate, symmetry_class_estimate, obj, t_delta, t_max, initial_condition, t_min):
@@ -13,6 +14,73 @@ def construct_base_filename (*, symmetry_order_estimate, symmetry_class_estimate
     if symmetry_order_estimate is not None:
         base_filename = 'order:{0}.{1}'.format(symmetry_order_estimate, base_filename)
     return base_filename
+
+__indent = '    '
+
+def write_human_readable_value (f, name, value, indent_level=0):
+    if type(value) == dict:
+        write_human_readable_dict(f, name, value, indent_level)
+    elif type(value) == list:
+        write_human_readable_list(f, name, value, indent_level)
+    elif type(value) == np.ndarray:
+        write_human_readable_list(f, name, value.tolist(), indent_level, type_name_override='numpy.ndarray')
+    else:
+        f.write(__indent*indent_level)
+        if name is not None:
+            f.write(name+' : ')
+        f.write(str(value)+'\n')
+
+def write_human_readable_dict (f, dict_name, dict_value, indent_level=0):
+    label = dict_name+' ' if dict_name is not None else ''
+    f.write(__indent*indent_level)
+    if dict_name is not None:
+        f.write(dict_name+' ')
+    f.write('(dict; {0} items):\n'.format(len(dict_value)))
+    # Get the keys in sorted order
+    key_v = sorted(list(dict_value.keys()))
+    for key in key_v:
+        value = dict_value[key]
+        write_human_readable_value(f, repr(key), value, indent_level+1)
+
+__max_print_list_element_count = 10
+
+def write_human_readable_list (f, list_name, list_value, indent_level=0, type_name_override=None):
+    f.write(__indent*indent_level)
+    if list_name is not None:
+        f.write(list_name+' ')
+    type_name = type_name_override if type_name_override is not None else 'list'
+    f.write('({0}; {1} items):\n'.format(type_name, len(list_value)))
+    if len(list_value) > __max_print_list_element_count:
+        assert __max_print_list_element_count//2 + (__max_print_list_element_count+1)//2 == __max_print_list_element_count
+        for value in list_value[:__max_print_list_element_count//2]:
+            write_human_readable_value(f, None, value, indent_level+1)
+        write_human_readable_value(f, None, '... (excessive items omitted) ...', indent_level+1)
+        for value in list_value[-(__max_print_list_element_count+1)//2:]:
+            write_human_readable_value(f, None, value, indent_level+1)
+    else:
+        for value in list_value:
+            write_human_readable_value(f, None, value, indent_level+1)
+
+def write_human_readable_summary (*, data, filename):
+    """
+    I would use JSON here, but the json module doesn't automatically serialize numpy.ndarray,
+    which is pretty stupid.
+    """
+    with open(filename, 'wt') as f:
+        f.write('human-readable summary for\n')
+        f.write(filename)
+        f.write('\n\n')
+        write_human_readable_value(f, 'pickle contents', data)
+
+def get_git_commit ():
+    try:
+        working_copy_has_changed    = subprocess.getstatusoutput('git diff --quiet')[0] != 0
+        git_describe                = subprocess.check_output(['git', 'describe', '--abbrev=40', '--always']).decode('utf-8').strip()
+        if working_copy_has_changed:
+            git_describe += '-with-changed-working-copy'
+        return git_describe
+    except Exception as e:
+        return '<could not retrieve current git commit>'
 
 def random_embedding2_point (rng):
     C = 0.4

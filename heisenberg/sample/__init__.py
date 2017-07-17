@@ -163,11 +163,13 @@ def sample (dynamics_context, options, *, rng):
 
     # Create the data structure that will be pickled.
     data = {
-        'options': options,
+        'options': vars(options), # vars ensures it's a dict, and not a stupid optparse.Values object.
         'sample_v': sample_result_v,
     }
 
     print('saving results, and exiting.')
     maybe_seed_string = 'seed:{0}.'.format(options.seed) if options.sampling_type == 'random' else ''
-    filename = os.path.join(options.samples_dir, 'sample_v.{0}count:{1}.pickle'.format(maybe_seed_string, len(sample_result_v)))
-    vorpy.pickle.try_to_pickle(data=data, pickle_filename=filename, log_out=sys.stdout)
+    base_filename = os.path.join(options.samples_dir, 'sample_v.{0}count:{1}'.format(maybe_seed_string, len(sample_result_v)))
+    vorpy.pickle.try_to_pickle(data=data, pickle_filename=base_filename+'.pickle', log_out=sys.stdout)
+    # Also create a human-readable summary of the pickle data.
+    heisenberg.util.write_human_readable_summary(data=data, filename=base_filename+'.summary')

@@ -5,6 +5,7 @@ import heisenberg.util
 import os
 import sys
 import traceback
+import vorpy.pickle
 
 subprogram_description = 'Plots an integral curve of the system using given initial condition, optionally running an optimization method to find a nearby curve that closes back up on itself.'
 
@@ -96,4 +97,9 @@ def plot (dynamics_context, options, *, rng):
         print('NOT plotting initial curve')
 
     op.savefig_and_clear(filename=base_filename+'.'+options.plot_type)
-    smo.pickle(base_filename+'.pickle')
+    # Put together the data to pickle
+    pickle_data = smo.data_to_pickle()
+    pickle_data['options'] = vars(options) # vars ensures it's a dict, and not a stupid optparse.Values object.
+    vorpy.pickle.try_to_pickle(data=pickle_data, pickle_filename=base_filename+'.pickle')
+    # Also create a human-readable summary of the pickle data.
+    heisenberg.util.write_human_readable_summary(data=pickle_data, filename=base_filename+'.summary')

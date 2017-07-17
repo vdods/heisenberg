@@ -7,6 +7,7 @@ import numpy as np
 import os
 import sys
 import traceback
+import vorpy.pickle
 
 subprogram_description = 'Search a specified parameter space for initial conditions for curves.  Once a curve is found that comes close enough to closing back up on itself, an optimization method is used to attempt to alter the initial conditions so that the curve closes back up on itself.  The result is integral curves which approximate closed solutions to within numerical accuracy.'
 
@@ -80,7 +81,12 @@ def search (dynamics_context, options, *, rng):
                     orbit_plot = heisenberg.library.orbit_plot.OrbitPlot(curve_description_v=['initial curve'], quantity_to_plot_v=options.quantity_to_plot_v)
                     orbit_plot.plot_curve(curve_description='initial curve', smo=smo_0, cut_off_curve_tail=options.cut_off_initial_curve_tail, disable_plot_decoration=options.disable_plot_decoration)
                     orbit_plot.savefig_and_clear(filename=base_filename+'.'+options.plot_type)
-                    smo_0.pickle(base_filename+'.pickle')
+                    # Put together the data to pickle
+                    pickle_data = smo_0.data_to_pickle()
+                    pickle_data['options'] = vars(options) # vars ensures it's a dict, and not a stupid optparse.Values object.
+                    vorpy.pickle.try_to_pickle(data=pickle_data, pickle_filename=base_filename+'.pickle')
+                    # Also create a human-readable summary of the pickle data.
+                    heisenberg.util.write_human_readable_summary(data=pickle_data, filename=base_filename+'.summary')
 
                 return
         flow_curve_0 = smo_0.flow_curve()
@@ -134,7 +140,12 @@ def search (dynamics_context, options, *, rng):
         #axis.semilogy(optimizer.obj_history_v)
 
         orbit_plot.savefig_and_clear(filename=base_filename+'.'+options.plot_type)
-        smo_opt.pickle(base_filename+'.pickle')
+        # Put together the data to pickle
+        pickle_data = smo_opt.data_to_pickle()
+        pickle_data['options'] = vars(options) # vars ensures it's a dict, and not a stupid optparse.Values object.
+        vorpy.pickle.try_to_pickle(data=pickle_data, pickle_filename=base_filename+'.pickle')
+        # Also create a human-readable summary of the pickle data.
+        heisenberg.util.write_human_readable_summary(data=pickle_data, filename=base_filename+'.summary')
 
     try:
         while True:

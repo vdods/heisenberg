@@ -3,6 +3,7 @@ import heisenberg.library.orbit_plot
 import heisenberg.util
 import numpy as np
 import optparse
+import sys
 
 class OptionParser:
     def __init__ (self, *, module):
@@ -139,6 +140,12 @@ class OptionParser:
             print('error {0} parsing --optimization-annulus-bounds value'.format(e))
             self.__op.print_help()
             return None,None
+
+        # Retrieve and add the git commit (if available)
+        options.heisenberg_git_commit = heisenberg.util.get_git_commit()
+
+        # Add the commandline used in this OptionParser
+        options.argv = sys.argv
 
         return options,args
 
