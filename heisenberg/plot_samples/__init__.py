@@ -8,10 +8,12 @@ TODO:
 
 import glob
 import heisenberg.library.util
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pyqtgraph as pg
 import pyqtgraph.Qt
+import scipy.interpolate
 import sys
 import vorpy.pickle
 
@@ -74,14 +76,20 @@ def plot_samples (dynamics_context, options, *, rng):
     view = pg.GraphicsLayoutWidget()  ## GraphicsView with GraphicsLayout inserted by default
     mw.setCentralWidget(view)
     mw.show()
-    mw.setWindowTitle('(p_x,p_y) initial condition scatterplot')
+    #mw.setWindowTitle('(p_x,p_y) initial condition scatterplot')
 
     ## create areas to add plots
     w1 = view.addPlot(name='w1', title='objective')
-    w2 = view.addPlot(name='w2', title='max(abs(H))')
     view.nextRow()
     w3 = view.addPlot(name='w3', title='t_min')
-    w4 = view.addPlot(name='w4', title='max(abs(J-J(0)))')
+    #w3 = None
+
+    #view.nextRow()
+    #w2 = view.addPlot(name='w2', title='max(abs(H))')
+    w2 = None
+    #view.nextRow()
+    #w4 = view.addPlot(name='w4', title='max(abs(J-J(0)))')
+    w4 = None
 
     ## Make all plots clickable
     lastClicked = []
@@ -98,16 +106,29 @@ def plot_samples (dynamics_context, options, *, rng):
         # Compute all local minima of the objective function
         p_y_v                   = data_v[:,4]
         objective_v             = data_v[:,0]
+        t_min_v                 = data_v[:,1]
         local_min_index_v       = [i for i in range(1,len(objective_v)-1) if objective_v[i-1] > objective_v[i] and objective_v[i] < objective_v[i+1]]
         # Use quadratic fit to compute time of local mins at sub-sample accuracy.
         local_min_v             = []
         for local_min_index in local_min_index_v:
             s                   = slice(local_min_index-1, local_min_index+2)
-            p_y_min,objective   = heisenberg.library.util.quadratic_min_time_parameterized(p_y_v[s], objective_v[s])
-            local_min_v.append((p_y_min,objective))
-        print('local mins of objective function in (p_y, objective) form:')
-        for p_y_min,objective in local_min_v:
-            print('    ({0}, {1:.17e})'.format(p_y_min, objective))
+            # Just take the "local" slice of p_y_v and objective_v
+            p_y_local_v         = p_y_v[s]
+            objective_local_v   = objective_v[s]
+            p_y_min,objective   = heisenberg.library.util.quadratic_min_time_parameterized(p_y_local_v, objective_local_v)
+            assert p_y_local_v[0] < p_y_min < p_y_local_v[-1], 'p_y_min is outside the neighborhood of the local min -- this should be impossible'
+
+            t_min_local_v       = t_min_v[s]
+            #print('p_y_local_v = {0}, t_min_local_v = {1}, p_y_min = {2}'.format(p_y_local_v, t_min_local_v, p_y_min))
+            period              = np.interp(p_y_min, p_y_local_v, t_min_local_v)
+
+            local_min_v.append((p_y_min, objective, period))
+        #print('local mins of objective function in (p_y, objective, period) form:')
+        #for p_y_min,objective,period in local_min_v:
+            #print('    ({0}, {1:.17e}, {2})'.format(p_y_min, objective, period))
+        print('shell commands to plot each of these:')
+        for p_y_min,objective,period in local_min_v:
+            print('/usr/bin/time --verbose python3 -m heisenberg.plot --dt=0.005 --max-time={0} --initial-preimage=[{1}] --embedding-dimension=1 --embedding-solution-sheet-index=1 --output-dir=OUTPUTDIR --quantities-to-plot="x,y;t,z;error(H);error(J);sqd;class-signal;objective" --plot-type=pdf'.format(period*1.1, p_y_min))
 
         def scatterplot (plot, point_v, value_v, *, use_log=False):
             assert np.all(np.isfinite(point_v))
@@ -134,43 +155,113 @@ def plot_samples (dynamics_context, options, *, rng):
             plot.plot(filtered_point_v, filtered_value_v)
             plot.setLogMode(x=False, y=use_log)
 
-        ##scatterplot(w1, data_v[:,4], data_v[:,0], use_log=True) # objective
-        #scatterplot(w1, data_v[:,4], data_v[:,0], use_log=False) # objective
-        #scatterplot(w2, data_v[:,4], data_v[:,2], use_log=True) # max_abs_H
-        scatterplot(w3, data_v[:,4], data_v[:,1], use_log=False) # t_min
-        #scatterplot(w4, data_v[:,4], data_v[:,3], use_log=True) # max_abs_J_minus_J_0
+        if w1 is not None:
+            w1.setLabel('bottom', 'p_y')
+            lineplot(w1, data_v[:,4], data_v[:,0], use_log=False) # objective
+        if w2 is not None:
+            w2.setLabel('bottom', 'p_y')
+            lineplot(w2, data_v[:,4], data_v[:,2], use_log=False) # max_abs_H
+        if w3 is not None:
+            w3.setLabel('bottom', 'p_y')
+            scatterplot(w3, data_v[:,4], data_v[:,1], use_log=False) # t_min
+        if w4 is not None:
+            w4.setLabel('bottom', 'p_y')
+            lineplot(w4, data_v[:,4], data_v[:,3], use_log=False) # max_abs_J_minus_J_0
 
-        lineplot(w1, data_v[:,4], data_v[:,0], use_log=False) # objective
-        lineplot(w2, data_v[:,4], data_v[:,2], use_log=False) # max_abs_H
-        #lineplot(w3, data_v[:,4], data_v[:,1], use_log=False) # t_min
-        lineplot(w4, data_v[:,4], data_v[:,3], use_log=False) # max_abs_J_minus_J_0
+        # Make some static plots
+        if True:
+            row_height  = 5
+            col_width   = 10
+            row_count   = 2
+            col_count   = 1
+            fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(col_width*col_count,row_height*row_count))
+
+            axis = axis_vv[0][0]
+            axis.set_title('objective function value of orbit with initial p_y')
+            axis.set_xlabel('p_y')
+            axis.set_ylabel('objective')
+            axis.plot(data_v[:,4], data_v[:,0])
+
+            axis = axis_vv[1][0]
+            axis.set_title('objective-minimizing time (t_min) of orbit with initial p_y')
+            axis.set_xlabel('p_y')
+            axis.set_ylabel('t_min')
+            axis.scatter(data_v[:,4], data_v[:,1], s=1)
+
+            fig.tight_layout()
+            filename = os.path.join(options.samples_dir, 'objective-and-t_min.pdf')
+            plt.savefig(filename, bbox_inches='tight')
+            print('wrote to "{0}"'.format(filename))
+            plt.close('all') # Does this work?  Who knows.
+
+        if True:
+            row_height  = 5
+            col_width   = 10
+            row_count   = 1
+            col_count   = 1
+            fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(col_width*col_count,row_height*row_count))
+
+            axis = axis_vv[0][0]
+            axis.set_title('objective function value of orbit with initial p_y')
+            axis.set_xlabel('p_y')
+            axis.set_ylabel('objective')
+            axis.plot(data_v[:,4], data_v[:,0])
+
+            fig.tight_layout()
+            filename = os.path.join(options.samples_dir, 'objective.pdf')
+            plt.savefig(filename, bbox_inches='tight')
+            print('wrote to "{0}"'.format(filename))
+            plt.close('all') # Does this work?  Who knows.
+
+        if True:
+            row_height  = 5
+            col_width   = 10
+            row_count   = 1
+            col_count   = 1
+            fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(col_width*col_count,row_height*row_count))
+
+            axis = axis_vv[0][0]
+            axis.set_title('objective-minimizing time (t_min) of orbit with initial p_y')
+            axis.set_xlabel('p_y')
+            axis.set_ylabel('t_min')
+            axis.scatter(data_v[:,4], data_v[:,1], s=1)
+
+            fig.tight_layout()
+            filename = os.path.join(options.samples_dir, 't_min.pdf')
+            plt.savefig(filename, bbox_inches='tight')
+            print('wrote to "{0}"'.format(filename))
+            plt.close('all') # Does this work?  Who knows.
+
+
+
+
 
         # Link all plots' x axes together
-        w2.setXLink('w1')
-        w3.setXLink('w1')
-        w4.setXLink('w1')
+        if w1 is not None:
+            if w2 is not None:
+                w2.setXLink('w1')
+            if w3 is not None:
+                w3.setXLink('w1')
+            if w4 is not None:
+                w4.setXLink('w1')
 
         # Create a vertical line on each plot that follows the mouse cursor
-        if True:
-            vline1 = pg.InfiniteLine(angle=90, movable=False)
-            vline2 = pg.InfiniteLine(angle=90, movable=False)
-            vline3 = pg.InfiniteLine(angle=90, movable=False)
-            vline4 = pg.InfiniteLine(angle=90, movable=False)
+        if False:
+            if w1 is not None:
+                vline1 = pg.InfiniteLine(angle=90, movable=False)
+                w1.addItem(vline1, ignoreBounds=True)
 
-            w1.addItem(vline1, ignoreBounds=True)
-            w2.addItem(vline2, ignoreBounds=True)
-            w3.addItem(vline3, ignoreBounds=True)
-            w4.addItem(vline4, ignoreBounds=True)
+            if w2 is not None:
+                vline2 = pg.InfiniteLine(angle=90, movable=False)
+                w2.addItem(vline2, ignoreBounds=True)
 
-            #label1 = pg.LabelItem(justify='right')
-            #label2 = pg.LabelItem(justify='right')
-            #label3 = pg.LabelItem(justify='right')
-            #label4 = pg.LabelItem(justify='right')
+            if w3 is not None:
+                vline3 = pg.InfiniteLine(angle=90, movable=False)
+                w3.addItem(vline3, ignoreBounds=True)
 
-            #w1.addItem(label1)
-            #w2.addItem(label2)
-            #w3.addItem(label3)
-            #w4.addItem(label4)
+            if w4 is not None:
+                vline4 = pg.InfiniteLine(angle=90, movable=False)
+                w4.addItem(vline4, ignoreBounds=True)
 
             def mouse_moved (plot, event):
                 pos = event[0]  ## using signal proxy turns original arguments into a tuple
@@ -179,16 +270,24 @@ def plot_samples (dynamics_context, options, *, rng):
                     #index = int(mouse_point.x())
                     #if index >= 0 and index < len(p_y_v):
                         #label1.setText('<span style="font-size: 12pt">x={0}, <span style="color: red">p_y={1}</span>, <span style="color: green">objective={2}</span>'.format(mouse_point.x(), p_y_v[index], objective_v[index]))
-                    vline1.setPos(mouse_point.x())
-                    vline2.setPos(mouse_point.x())
-                    vline3.setPos(mouse_point.x())
-                    vline4.setPos(mouse_point.x())
+                    if w1 is not None:
+                        vline1.setPos(mouse_point.x())
+                    if w2 is not None:
+                        vline2.setPos(mouse_point.x())
+                    if w3 is not None:
+                        vline3.setPos(mouse_point.x())
+                    if w4 is not None:
+                        vline4.setPos(mouse_point.x())
                     #hLine.setPos(mouse_point.y())
 
-            proxy1 = pg.SignalProxy(w1.scene().sigMouseMoved, rateLimit=60, slot=lambda event:mouse_moved(w1,event))
-            proxy2 = pg.SignalProxy(w2.scene().sigMouseMoved, rateLimit=60, slot=lambda event:mouse_moved(w2,event))
-            proxy3 = pg.SignalProxy(w3.scene().sigMouseMoved, rateLimit=60, slot=lambda event:mouse_moved(w3,event))
-            proxy4 = pg.SignalProxy(w4.scene().sigMouseMoved, rateLimit=60, slot=lambda event:mouse_moved(w4,event))
+            if w1 is not None:
+                proxy1 = pg.SignalProxy(w1.scene().sigMouseMoved, rateLimit=60, slot=lambda event:mouse_moved(w1,event))
+            if w2 is not None:
+                proxy2 = pg.SignalProxy(w2.scene().sigMouseMoved, rateLimit=60, slot=lambda event:mouse_moved(w2,event))
+            if w3 is not None:
+                proxy3 = pg.SignalProxy(w3.scene().sigMouseMoved, rateLimit=60, slot=lambda event:mouse_moved(w3,event))
+            if w4 is not None:
+                proxy4 = pg.SignalProxy(w4.scene().sigMouseMoved, rateLimit=60, slot=lambda event:mouse_moved(w4,event))
     elif dimension == 2:
         def color_scatterplot_2d (plot, point_v, value_v, *, use_log=False):
             if use_log:
@@ -217,14 +316,82 @@ def plot_samples (dynamics_context, options, *, rng):
             s.sigClicked.connect(clicked)
             return s
 
-        color_scatterplot_2d(w1, data_v[:,4:6], data_v[:,0], use_log=True) # objective
-        color_scatterplot_2d(w2, data_v[:,4:6], data_v[:,1], use_log=False) # t_min
-        color_scatterplot_2d(w3, data_v[:,4:6], data_v[:,2], use_log=True) # max_abs_H
-        color_scatterplot_2d(w4, data_v[:,4:6], data_v[:,3], use_log=True) # max_abs_J_minus_J_0
+        if w1 is not None:
+            color_scatterplot_2d(w1, data_v[:,4:6], data_v[:,0], use_log=True) # objective
+        if w2 is not None:
+            color_scatterplot_2d(w2, data_v[:,4:6], data_v[:,1], use_log=False) # t_min
+        if w3 is not None:
+            color_scatterplot_2d(w3, data_v[:,4:6], data_v[:,2], use_log=True) # max_abs_H
+        if w4 is not None:
+            color_scatterplot_2d(w4, data_v[:,4:6], data_v[:,3], use_log=True) # max_abs_J_minus_J_0
+
+        # Make some static plot(s)
+        if True:
+            row_height  = 10
+            col_width   = 10
+            row_count   = 1
+            col_count   = 1
+            fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(col_width*col_count,row_height*row_count))
+
+            initial_v = data_v[:,-2:]
+            initial_min_v = np.min(initial_v, axis=0)
+            initial_max_v = np.max(initial_v, axis=0)
+            value_v = data_v[:,0]
+
+            assert np.all(np.isfinite(initial_v))
+            filter_v = np.isfinite(value_v)
+
+            filtered_initial_v = initial_v[filter_v]
+            filtered_value_v = value_v[filter_v]
+
+            use_log = True
+            if use_log:
+                func = np.log
+            else:
+                func = lambda x:x
+
+            low = np.nanmin(func(filtered_value_v))
+            high = np.nanmax(func(filtered_value_v))
+            divisor = high - low
+            print('low = {0}, high = {1}, divisor = {2}'.format(low, high, divisor))
+
+            def unstretch (objective):
+                return (func(objective) - low) / divisor
+
+            unstretched_filtered_value_v = np.apply_along_axis(unstretch, 0, filtered_value_v)
+
+            # Define the grid, ensuring that the x grid point count is odd, so that it covers the central axis.
+            x_v = np.linspace(initial_min_v[0], initial_max_v[0], 401)
+            y_v = np.linspace(initial_min_v[1], initial_max_v[1], 401)
+            z_v = scipy.interpolate.griddata((filtered_initial_v[:,0], filtered_initial_v[:,1]), unstretched_filtered_value_v, (x_v[None,:], y_v[:,None]), method='cubic')
+            print('x_v.shape = {0}'.format(x_v.shape))
+            print('y_v.shape = {0}'.format(y_v.shape))
+            print('z_v.shape = {0}'.format(z_v.shape))
+
+            #contour_level_v = [10.0**p for p in range(-11,3)]
+            contour_level_v = np.linspace(0.0, 1.0, 11)
+
+            axis = axis_vv[0][0]
+            axis.set_title('objective function value of orbit with initial (p_x,p_y)')
+            axis.contour(x_v, y_v, z_v, contour_level_v, linewidths=0.5, colors='k')
+            axis.contourf(x_v, y_v, z_v, contour_level_v, cmap=plt.cm.jet)
+            axis.set_aspect('equal')
+            #axis.set_aspect(0.5)
+            axis.scatter(filtered_initial_v[:,0], filtered_initial_v[:,1], color='black', alpha=0.1, s=1)
+            #axis.colorbar()
+            axis.set_xlim(initial_min_v[0], initial_max_v[0])
+            axis.set_ylim(initial_min_v[1], initial_max_v[1])
+
+            fig.tight_layout()
+            filename = os.path.join(options.samples_dir, 'objective.pdf')
+            plt.savefig(filename, bbox_inches='tight')
+            print('wrote to "{0}"'.format(filename))
+            plt.close('all') # Does this work?  Who knows.
+
     else:
         assert False, 'dimension = {0}, which should never happen'.format(dimension)
 
-    ## Start Qt event loop unless running in interactive mode.
-    if (sys.flags.interactive != 1) or not hasattr(pyqtgraph.Qt.QtCore, 'PYQT_VERSION'):
-        pyqtgraph.Qt.QtGui.QApplication.instance().exec_()
+    ### Start Qt event loop unless running in interactive mode.
+    #if (sys.flags.interactive != 1) or not hasattr(pyqtgraph.Qt.QtCore, 'PYQT_VERSION'):
+        #pyqtgraph.Qt.QtGui.QApplication.instance().exec_()
 
