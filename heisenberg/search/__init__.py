@@ -86,7 +86,7 @@ def search (dynamics_context, options, *, rng):
                     pickle_data['options'] = vars(options) # vars ensures it's a dict, and not a stupid optparse.Values object.
                     vorpy.pickle.try_to_pickle(data=pickle_data, pickle_filename=base_filename+'.pickle')
                     # Also create a human-readable summary of the pickle data.
-                    heisenberg.util.write_human_readable_summary(data=pickle_data, filename=base_filename+'.summary')
+                    heisenberg.util.write_human_readable_summary(data=pickle_data, filename=base_filename)
 
                 return
         flow_curve_0 = smo_0.flow_curve()
@@ -145,7 +145,7 @@ def search (dynamics_context, options, *, rng):
         pickle_data['options'] = vars(options) # vars ensures it's a dict, and not a stupid optparse.Values object.
         vorpy.pickle.try_to_pickle(data=pickle_data, pickle_filename=base_filename+'.pickle')
         # Also create a human-readable summary of the pickle data.
-        heisenberg.util.write_human_readable_summary(data=pickle_data, filename=base_filename+'.summary')
+        heisenberg.util.write_human_readable_summary(data=pickle_data, filename=base_filename)
 
     try:
         while True:

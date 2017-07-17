@@ -55,7 +55,7 @@ def write_human_readable_list (f, list_name, list_value, indent_level=0, type_na
         for value in list_value[:__max_print_list_element_count//2]:
             write_human_readable_value(f, None, value, indent_level+1)
         write_human_readable_value(f, None, '... (excessive items omitted) ...', indent_level+1)
-        for value in list_value[-(__max_print_list_element_count+1)//2:]:
+        for value in list_value[-((__max_print_list_element_count+1)//2):]:
             write_human_readable_value(f, None, value, indent_level+1)
     else:
         for value in list_value:
