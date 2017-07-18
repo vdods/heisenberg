@@ -23,6 +23,7 @@ Define R_Omega to give point closest to Omega(q,p).  Then f_Omega is defined as
 and the gradient of f_Omega depends on the gradient of Omega and R_Omega.
 
 TODO
+-   Create "turn-key" examples which replicate research by running a single command.
 -   Use ast.literal_eval (as in heisenberg.sample) to parse initial conditions options.
 -   Idea for cleaner and more organized option specification and validation:
     -   Make a class which adds each individual option and then can post-process and validate it after the

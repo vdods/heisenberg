@@ -1,5 +1,6 @@
+# Kepler-Heisenberg Problem Computational Tool Suite
+
 Code for numerical computation in research on orbital dynamics in the Heisenberg group.
-No warranty is provided -- use at your own risk.
 
 #### Contributors
 
@@ -8,7 +9,6 @@ No warranty is provided -- use at your own risk.
 
 #### Contents
 
--   [attic](https://github.com/vdods/heisenberg/tree/master/attic) : Directory containing deprecated code.
 -   [heisenberg](https://github.com/vdods/heisenberg/tree/master/heisenberg) : Top-level program
     (and module) to explain and redirect to all the specific subprograms of this project.
 -   [heisenberg.library](https://github.com/vdods/heisenberg/tree/master/heisenberg/library) :
@@ -31,6 +31,10 @@ No warranty is provided -- use at your own risk.
     to alter the initial conditions so that the curve closes back up on itself.  The result is
     integral curves which approximate closed solutions to within numerical accuracy.
 
+Additionally, though not still actively part of the project:
+
+-   [attic](https://github.com/vdods/heisenberg/tree/master/attic) : Directory containing deprecated code.
+
 #### Invoking Subprograms
 
 The following command, when executed from this project's root directory, will print a directory of
@@ -44,13 +48,16 @@ Examples of invoking specific subprograms:
 
     python3 -m heisenberg.search --dt=0.001 --max-time=100 --output-dir=search-output --abortive-subdir=abortive --seed=75912763
 
-#### Resources on markdown (which is what the .md extension in README.md stands for):
+#### License and Attribution
 
--   [github-specific markdown info](https://help.github.com/articles/github-flavored-markdown)
--   [general markdown info](https://help.github.com/articles/markdown-basics)
--   [live, web-based markdown editor/viewer](http://www.markdownviewer.com/)
+This project is held under Copyright (2014-2017) by Victor Dods and is released as free, open-source software
+under the [MIT License](LICENSE.md), without warranty.
 
-#### To-Do List
+If you use any code from this project, I'd love to hear about what you're applying it to!  Send me an email about it at
+`victor <dot> dods <at-sign> gmail <dot> com`
 
--   Clean up source and place old/experimental source code in clearly separate directory.
--   Create "turn-key" examples which replicate research by running a single command.
+It is requested, though not required, that any use of the code from this project in a derivative work be cited/acknowledged
+in the relevant documentation for the derivative work.  The citation should include:
+-   Author: `Victor Dods`
+-   The name of this project: `Kepler-Heisenberg Problem Computational Tool Suite`
+-   The public link to this github repository: `https://github.com/vdods/heisenberg`
