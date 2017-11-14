@@ -5,8 +5,8 @@ import os
 import subprocess
 import textwrap
 
-def construct_base_filename (*, symmetry_order_estimate, symmetry_class_estimate, obj, t_delta, t_max, initial_condition, t_min):
-    base_filename = 'obj:{0:.4e}.dt:{1:.3e}.t_max:{2:.3e}.ic:{3}.t_min:{4:.4e}'.format(obj, t_delta, t_max, heisenberg.library.util.ndarray_as_single_line_string(initial_condition), t_min)
+def construct_base_filename (*, symmetry_order_estimate, symmetry_class_estimate, obj, t_delta, t_max, initial_condition, sheet_index, t_min):
+    base_filename = 'obj:{0:.4e}.dt:{1:.3e}.t_max:{2:.3e}.ic:{3}.sheet_index:{4}.t_min:{5:.4e}'.format(obj, t_delta, t_max, heisenberg.library.util.ndarray_as_single_line_string(initial_condition), sheet_index, t_min)
     # Prepend symmetry_class_estimate
     if symmetry_class_estimate is not None:
         base_filename = 'class:{0}.{1}'.format(symmetry_class_estimate, base_filename)

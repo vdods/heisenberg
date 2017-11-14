@@ -19,12 +19,12 @@ def make_sample_result (*, initial, qp_0, dt, max_time, objective, t_min, max_ab
 
 def worker (args):
     assert len(args) == 6, 'passed wrong number of arguments to worker function'
-    dynamics_context, initial, dt, max_time, embedding_dimension, embedding_solution_sheet_index = args[0], args[1], args[2], args[3], args[4], args[5]
-    qp_0 = dynamics_context.embedding(N=embedding_dimension, sheet_index=embedding_solution_sheet_index)(initial)
+    dynamics_context, initial_preimage, dt, max_time, embedding_dimension, embedding_solution_sheet_index = args[0], args[1], args[2], args[3], args[4], args[5]
+    qp_0 = dynamics_context.embedding(N=embedding_dimension, sheet_index=embedding_solution_sheet_index)(initial_preimage)
 
     try:
         # Use disable_salvage=True to avoid clogging up the place.
-        smo = heisenberg.library.shooting_method_objective.ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=max_time, t_delta=dt, disable_salvage=True)
+        smo = heisenberg.library.shooting_method_objective.ShootingMethodObjective(dynamics_context=dynamics_context, preimage_qp_0=initial_preimage, qp_0=qp_0, t_max=max_time, t_delta=dt, disable_salvage=True)
 
         flow_curve = smo.flow_curve()
         objective = smo.objective()
@@ -37,7 +37,7 @@ def worker (args):
         abs_J_minus_J_0 = np.abs(J_v)
 
         sample_result = make_sample_result(
-            initial=initial,
+            initial=initial_preimage,
             qp_0=qp_0,
             dt=dt,
             max_time=max_time,

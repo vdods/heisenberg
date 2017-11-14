@@ -12,10 +12,11 @@ import vorpy.pickle
 import vorpy.symplectic_integration
 
 class ShootingMethodObjective:
-    def __init__ (self, *, dynamics_context, qp_0, t_max, t_delta, disable_salvage=False):
+    def __init__ (self, *, dynamics_context, preimage_qp_0=None, qp_0, t_max, t_delta, disable_salvage=False):
         self.__dynamics_context                 = dynamics_context
         self.alpha                              = dynamics_context.alpha()
         self.beta                               = dynamics_context.beta()
+        self.preimage_qp_0                      = preimage_qp_0
         self.qp_0                               = qp_0
         self.__t_v                              = None
         self.__qp_v                             = None
@@ -315,6 +316,8 @@ class ShootingMethodObjective:
             'alpha':self.alpha,
             'beta':self.beta,
             't_v':self.t_v(),
+            'initial_preimage':self.preimage_qp_0,
+            'initial':self.qp_0,
             'qp_v':self.flow_curve(),
             'Q_v':self.Q_v(),
             'Q_global_min_index':self.Q_global_min_index(),

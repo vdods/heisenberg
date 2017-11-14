@@ -45,7 +45,9 @@ def search (dynamics_context, options, *, rng):
 
         #X_0 = np.array([4.53918797113298744e-01,-6.06738228528062038e-04,1.75369725636529949e+00])
 
-        qp_0 = dynamics_context.embedding(N=2, sheet_index=1)(X_0)
+        sheet_index = 1
+        embedding = dynamics_context.embedding(N=2, sheet_index=sheet_index)
+        qp_0 = embedding(X_0)
         print('randomly generated initial condition preimage: X_0:')
         print(X_0)
         #print('embedding of randomly generated initial condition preimage: qp_0:')
@@ -54,7 +56,7 @@ def search (dynamics_context, options, *, rng):
         # TODO: Pick a large-ish t_max, then cluster the local mins, and then from the lowest cluster,
         # pick the corresponding to the lowest time value, and then make t_max 15% larger than that.
         while True:
-            smo_0 = heisenberg.library.shooting_method_objective.ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_0, t_max=t_max, t_delta=options.dt)
+            smo_0 = heisenberg.library.shooting_method_objective.ShootingMethodObjective(dynamics_context=dynamics_context, preimage_qp_0=X_0, qp_0=qp_0, t_max=t_max, t_delta=options.dt)
             print('smo_0.objective() = {0:.17e}, smo.t_min() = {1}'.format(smo_0.objective(), smo_0.t_min()))
             if smo_0.objective() < options.abortive_threshold:
                 break
@@ -74,6 +76,7 @@ def search (dynamics_context, options, *, rng):
                             t_delta=options.dt,
                             t_max=t_max,
                             initial_condition=qp_0,
+                            sheet_index=sheet_index,
                             t_min=smo_0.t_min()
                         )
                     )
@@ -97,7 +100,7 @@ def search (dynamics_context, options, *, rng):
             inner_radius=options.optimization_annulus_bound_v[0],
             outer_radius=options.optimization_annulus_bound_v[-1],
             rng_seed=options.seed,
-            embedding=dynamics_context.embedding(N=2, sheet_index=1)
+            embedding=embedding
         )
         try:
             actual_iteration_count = 0
@@ -111,7 +114,7 @@ def search (dynamics_context, options, *, rng):
             print('got AssertionError -- halting optimization, but will plot last good results')
 
         qp_opt = optimizer.embedded_parameter_history_v[-1]
-        smo_opt = heisenberg.library.shooting_method_objective.ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_opt, t_max=t_max, t_delta=options.dt)
+        smo_opt = heisenberg.library.shooting_method_objective.ShootingMethodObjective(dynamics_context=dynamics_context, preimage_qp_0=optimizer.parameter_history_v[-1], qp_0=qp_opt, t_max=t_max, t_delta=options.dt)
         flow_curve_opt = smo_opt.flow_curve()
 
         print('qp_opt = {0}'.format(qp_opt))
@@ -126,6 +129,7 @@ def search (dynamics_context, options, *, rng):
                 t_delta=options.dt,
                 t_max=t_max,
                 initial_condition=qp_opt,
+                sheet_index=sheet_index,
                 t_min=smo_opt.t_min()
             )
         )

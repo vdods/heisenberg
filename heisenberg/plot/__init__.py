@@ -15,7 +15,7 @@ def plot (dynamics_context, options, *, rng):
 
     # Plot given curve
     qp_0 = options.qp_0
-    smo_0 = heisenberg.library.shooting_method_objective.ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=options.qp_0, t_max=options.max_time, t_delta=options.dt)
+    smo_0 = heisenberg.library.shooting_method_objective.ShootingMethodObjective(dynamics_context=dynamics_context, preimage_qp_0=options.initial_preimage, qp_0=options.qp_0, t_max=options.max_time, t_delta=options.dt)
     print('smo_0.objective() = {0}'.format(smo_0.objective()))
 
     # Construct curve_description_v
@@ -63,7 +63,7 @@ def plot (dynamics_context, options, *, rng):
             traceback.print_tb(tb)
 
         qp_opt = optimizer.embedded_parameter_history_v[-1]
-        smo_opt = heisenberg.library.shooting_method_objective.ShootingMethodObjective(dynamics_context=dynamics_context, qp_0=qp_opt, t_max=options.max_time, t_delta=options.dt)
+        smo_opt = heisenberg.library.shooting_method_objective.ShootingMethodObjective(dynamics_context=dynamics_context, preimage_qp_0=optimizer.parameter_history_v[-1], qp_0=qp_opt, t_max=options.max_time, t_delta=options.dt)
 
         print('qp_opt = {0}'.format(qp_opt))
         if embedding is not None:
@@ -86,6 +86,7 @@ def plot (dynamics_context, options, *, rng):
             t_delta=options.dt,
             t_max=options.max_time,
             initial_condition=qp,
+            sheet_index=options.embedding_solution_sheet_index,
             t_min=smo.t_min()
         )
     )
