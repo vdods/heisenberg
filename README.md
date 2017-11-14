@@ -61,3 +61,7 @@ in the relevant documentation for the derivative work.  The citation should incl
 -   Author: `Victor Dods`
 -   The name of this project: `Kepler-Heisenberg Problem Computational Tool Suite`
 -   The public link to this github repository: `https://github.com/vdods/heisenberg`
+
+#### TODO List
+
+A software project is never truly finished.  See the list of TODOs [here](TODO.md).
