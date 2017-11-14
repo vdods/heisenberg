@@ -128,10 +128,30 @@ TODO
         heisenberg.plot_samples
 -   Make subprograms for reproducing specific results.
 -   Minimal, quick design for "nice plots"
-
     -   Want SVG output of just (x,y) curve, with no axes, but with plotting the sun (origin) and initial point.
     -   Nice to have: SVG output of (x,y,z) curve in 3D.
+-   Bug: In heisenberg.search, bug encountered in abortive condition:
 
+        curve did not nearly close up -- retrying with higher t_max: 192.216796875
+        t_max (192.216796875) was raised too many times, exceeding --max-time value of 192.2, before nearly closing up -- aborting
+        strength-sorted modes (only the first few):
+            0 : 1.719029e+02 (freq = 0)
+            1 : 1.546591e+02 (freq = 1)
+            2 : 1.987003e+01 (freq = 2)
+            3 : 1.083982e+01 (freq = 3)
+            4 : 7.366250e+00 (freq = 4)
+        encountered exception of type <class 'ValueError'> during try_random_initial_condition; skipping.  exception was: Invalid number of FFT data points (0) specified.
+        stack:
+        File "/home/vdods/files/github/vdods/heisenberg/heisenberg/search/__init__.py", line 157, in search
+            try_random_initial_condition()
+        File "/home/vdods/files/github/vdods/heisenberg/heisenberg/search/__init__.py", line 74, in try_random_initial_condition
+            symmetry_class_estimate=smo_0.symmetry_class_estimate(),
+        File "/home/vdods/files/github/vdods/heisenberg/heisenberg/library/shooting_method_objective.py", line 225, in symmetry_class_estimate
+            abs_fft_xy_rfc  = np.abs(self.fft_xy_resampled_flow_curve(sample_count=scipy.fftpack.next_fast_len(order_estimate*mode_wraps)))
+        File "/home/vdods/files/github/vdods/heisenberg/heisenberg/library/shooting_method_objective.py", line 154, in fft_xy_resampled_flow_curve
+            fft_xy_rfc = scipy.fftpack.fft(xy_rfc)
+        File "/usr/local/lib/python3.5/dist-packages/scipy/fftpack/basic.py", line 282, in fft
+            "(%d) specified." % n)
 """
 
 import heisenberg
