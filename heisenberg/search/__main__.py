@@ -24,7 +24,7 @@ op.add_option(
     dest='abortive_threshold',
     default=0.1,
     type='float',
-    help='Sets the threshold below which a candidate curve\'s objective function will qualify it for running through the optimizer to attempt to close it.'
+    help='Sets the threshold below which a candidate curve\'s objective function will qualify it for running through the optimizer to attempt to close it.  The default is 0.1 -- changing this has not really produced better results, so it is recommended to keep the default.'
 )
 op.add_option(
     '--output-dir',
@@ -38,6 +38,13 @@ op.add_option(
     action='store_true',
     default=False,
     help='If specified, disables the saving of data upon discovery of an "abortive" search result.  Default behavior is to save data to the "abortive" subdirectory of the directory specified by --output-dir.'
+)
+op.add_option(
+    '--exit-after-number-of-successes',
+    dest='exit_after_number_of_successes',
+    default=0,
+    type='int',
+    help='Specifies the number of "successes" after which to stop searching.  A "success" is defined by having found a curve that came close enough to closing up to then perform an optimization to refine it into a fully-closed curve.  Specifying any non-positive number indicates that there should be no limit.  The default value is 0.'
 )
 
 options,args = op.parse_argv_and_validate()

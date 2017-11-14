@@ -22,6 +22,16 @@ def search (dynamics_context, options, *, rng):
     np.set_printoptions(formatter={'float':heisenberg.library.util.float_formatter})
 
     def try_random_initial_condition ():
+        """
+        This function will pick a random initial condition in the specified parameter space, integrate the corresponding
+        curve, and check if it comes close enough (in phase space) to closing back up on itself to warrant running
+        an optimization method to attempt to close the curve.
+
+        It will return True if the initial condition produced a curve that came close enough to closing back on itself
+        (this is defined as a "success"), and will return False otherwise (defined as a "failure", which will be recorded
+        in the set of "abortive" curves if that functionality hasn't been disabled).
+        """
+
         ##X_0 = rng.randn(*heisenberg.library.heisenberg_dynamics_context.Numeric.initial_condition_preimage().shape)
         #X_0 = rng.randn(2)
         ## NOTE: This somewhat biases the generation of random initial conditions
@@ -91,7 +101,10 @@ def search (dynamics_context, options, *, rng):
                     # Also create a human-readable summary of the pickle data.
                     heisenberg.util.write_human_readable_summary(data=pickle_data, filename=base_filename)
 
-                return
+                # Return False to indicate failure (this curve did not come close enough to closing up to warrant optimizing)
+                return False
+
+        # Save the initial curve for use in optimization.
         flow_curve_0 = smo_0.flow_curve()
 
         optimizer = heisenberg.library.monte_carlo.MonteCarlo(
@@ -151,10 +164,28 @@ def search (dynamics_context, options, *, rng):
         # Also create a human-readable summary of the pickle data.
         heisenberg.util.write_human_readable_summary(data=pickle_data, filename=base_filename+'.summary')
 
+        # Return True to indicate success
+        return True
+
+    # Here is the main body of the search subprogram.
     try:
+        # The "--exit-after-number-of-successes" option specifies that the limit only applies if this value is positive.
+        check_success_count_to_exit = options.exit_after_number_of_successes > 0
         while True:
+            # The number of successes for use in the "--exit-after-number-of-successes" option logic
+            success_count = 0
             try:
-                try_random_initial_condition()
+                succeeded = try_random_initial_condition()
+                if succeeded:
+                    success_count += 1
+                    if check_success_count_to_exit:
+                        if success_count >= options.exit_after_number_of_successes:
+                            # The limit has been reached.  Break out of the infinite loop.
+                            print('The limit {0} of successes specified by the --exit-after-number-of-successes option has been reached.  Exiting.'.format(options.exit_after_number_of_successes))
+                            break
+                        else:
+                            # The limit has not been reached.  Print a progress statement.
+                            print('{0} out of {1} successes.  Continuing search procedure.'.format(success_count, options.exit_after_number_of_successes))
             except Exception as e:
                 print('encountered exception of type {0} during try_random_initial_condition; skipping.  exception was: {1}'.format(type(e), e))
                 print('stack:')
