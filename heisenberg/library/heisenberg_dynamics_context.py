@@ -27,9 +27,11 @@ class Base(hamiltonian_dynamics_context.HamiltonianDynamicsContext):
         # mu        := r_squared**2 + beta*z**2
         # then
         # V = -alpha / sqrt(mu)
+        alpha     = 1/(8*cls.pi())
+        beta      = 16
         r_squared = qp[0,0]**2 + qp[0,1]**2
-        mu        = r_squared**2 + cls.beta()*qp[0,2]**2
-        return -cls.alpha() / cls.sqrt(mu)
+        mu        = r_squared**2 + beta*qp[0,2]**2
+        return -alpha / cls.sqrt(mu)
 
     @classmethod
     def H (cls, qp):
@@ -43,15 +45,17 @@ class Base(hamiltonian_dynamics_context.HamiltonianDynamicsContext):
     def dH_dq (cls, q, p):
         assert np.all(np.isfinite(q)), 'encountered non-finite q: {0}. p: {1}'.format(q, p)
         assert np.all(np.isfinite(p)), 'encountered non-finite p: {0}. q: {1}'.format(p, q)
-        P_x = p[0] - q[1]*p[2]/2
-        P_y = p[1] + q[0]*p[2]/2
-        r_squared = q[0]**2 + q[1]**2
-        mu = r_squared**2 + cls.beta()*q[2]**2
-        alpha_times_mu_to_neg_three_halves = cls.alpha() / cls.sqrt(mu)**3
+        alpha                              = 1/(8*cls.pi())
+        beta                               = 16
+        P_x                                = p[0] - q[1]*p[2]/2
+        P_y                                = p[1] + q[0]*p[2]/2
+        r_squared                          = q[0]**2 + q[1]**2
+        mu                                 = r_squared**2 + beta*q[2]**2
+        alpha_times_mu_to_neg_three_halves = alpha / cls.sqrt(mu)**3
         return np.array((
              P_y*p[2]/2 + alpha_times_mu_to_neg_three_halves*r_squared*2*q[0],
             -P_x*p[2]/2 + alpha_times_mu_to_neg_three_halves*r_squared*2*q[1],
-             cls.beta()*alpha_times_mu_to_neg_three_halves*q[2]
+             beta*alpha_times_mu_to_neg_three_halves*q[2]
         ))
 
     @classmethod
@@ -76,18 +80,6 @@ class Base(hamiltonian_dynamics_context.HamiltonianDynamicsContext):
     def pi (cls):
         """Return the value pi."""
         pass
-
-    @classmethod
-    def alpha (cls):
-        """Return the alpha value occurring in the fundamental solution to the sub-Riemannian Laplacian."""
-        #return 2/cls.pi()
-        #return cls.pi()/8
-        return 1/(8*cls.pi())
-
-    @classmethod
-    def beta (cls):
-        """Return the beta value occurring in the fundamental solution to the sub-Riemannian Laplacian."""
-        return 16
 
 class Symbolic(Base):
     @classmethod
