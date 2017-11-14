@@ -200,21 +200,21 @@ class Symbolic(Base):
             ))
             slice_coordinates = np.array((qp[0,0], qp[0,1], qp[0,2], qp[1,0], qp[1,1], qp[1,2])) # This is (x,y,z,p_x,p_y,p_z)
 
-        print('qp:')
-        print(qp)
-        print('slice_coordinates: {0}'.format(slice_coordinates))
+        #print('qp:')
+        #print(qp)
+        #print('slice_coordinates: {0}'.format(slice_coordinates))
         assert slice_coordinates.shape == (N+1,)
         embedding_domain = slice_coordinates[:N]
-        print('embedding_domain: {0}'.format(embedding_domain))
+        #print('embedding_domain: {0}'.format(embedding_domain))
         assert embedding_domain.shape == (N,)
         assert slice_coordinates[-1] == p_z
 
         H = cls.H(qp)
         #print('H(qp) = {0}'.format(H))
         p_z_solution_v = sp.solve(H, p_z)
-        print('There are {0} solutions for the equation: {1} = 0'.format(len(p_z_solution_v), H))
-        for i,p_z_solution in enumerate(p_z_solution_v):
-            print('    solution {0}: p_z = {1}'.format(i, p_z_solution))
+        #print('There are {0} solutions for the equation: {1} = 0'.format(len(p_z_solution_v), H))
+        #for i,p_z_solution in enumerate(p_z_solution_v):
+            #print('    solution {0}: p_z = {1}'.format(i, p_z_solution))
         # Take the solution specified by sheet_index
         p_z_solution = p_z_solution_v[sheet_index]
 
