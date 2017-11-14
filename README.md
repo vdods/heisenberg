@@ -1,6 +1,7 @@
 # Kepler-Heisenberg Problem Computational Tool Suite
 
-Code for numerical computation in research on orbital dynamics in the Heisenberg group.
+Code for numerical computation in research on orbital dynamics in the Kepler-Heisenberg problem
+(solving for sun/planet dynamics in the Heisenberg group) -- a collaboration with Corey Shanbrom.
 
 #### Contributors
 
@@ -31,7 +32,7 @@ Code for numerical computation in research on orbital dynamics in the Heisenberg
     to alter the initial conditions so that the curve closes back up on itself.  The result is
     integral curves which approximate closed solutions to within numerical accuracy.
 
-Additionally, though not still actively part of the project:
+Additional content that is no longer an active part of the project:
 
 -   [attic](https://github.com/vdods/heisenberg/tree/master/attic) : Directory containing deprecated code.
 
@@ -44,9 +45,9 @@ the available subprograms.
 
 Examples of invoking specific subprograms:
 
-    python3 -m heisenberg.plot --dt=0.003 --max-time=23 --initial-3preimage=[0.5,0,1]
+    python3 -m heisenberg.plot --dt=0.003 --max-time=40 --embedding-dimension=2 --initial-preimage=[0,0.2] --output-dir=plot-example --plot-type=pdf
 
-    python3 -m heisenberg.search --dt=0.001 --max-time=100 --output-dir=search-output --abortive-subdir=abortive --seed=75912763
+    python3 -m heisenberg.search --dt=1.0e-2 --max-time=1.922e2 --seed=123456789 --embedding-dimension=2 --embedding-solution-sheet-index=0 --cut-off-initial-curve-tail --plot-type=png --output-dir=search-example
 
 #### License and Attribution
 
