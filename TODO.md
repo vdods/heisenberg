@@ -15,8 +15,6 @@ to ever be completely finished.  One can consider software development to be an 
 -   Make plotting interactive (pyplot vs pyqtgraph)
 -   Figure out how to use pyqtgraph for static plot generation with no windows or interaction.
 -   Figure out why OptionParser epilog strips out newlines.
--   If --seed option isn't specified, get one from np.random.randint in the appropriate range -- OR
-    probably better is to require the --seed option, so that there is never nondeterministic output.
 -   Make it so that heisenberg subprogram modules can be imported lightly -- so they don't import anything.
 -   Replace the `options` param in the various subprograms' functions with specific params (maybe?)
 -   Make a setup.py and define "entry points" for scripts (mainly `heisenberg` script):
@@ -24,11 +22,8 @@ to ever be completely finished.  One can consider software development to be an 
 -   Make 3d plot option.
 -   optparse is apparently deprecated -- switch to argparse https://docs.python.org/3/howto/argparse.html
 -   Create a quadratic_min_time_parameterized which takes more than 3 points and does a least-squares fit.
--   Ensure that the objective function as computed in ShootingMethodObjective is nonnegative.  Maybe
-    compute the quadratic fit (or something analogous) in log space, and then convert back to get the
-    objective function value?
 -   Change the search mechanism for increasing time such that no redundant integration is done, but
-    simply the integrator continues at the time it left off.
+    simply continue the integration at the time it left off.
 -   Examine following hypothesis: Z curve for quasi-periodic orbit is a sine wave (or whatever periodic
     function) of decreasing amplitude and increasing frequency (or vice versa, depending on if the orbit
     is spiraling in or out), perhaps this can be expressed simply as being a rotated and dilated (and
@@ -79,3 +74,9 @@ to ever be completely finished.  One can consider software development to be an 
             fft_xy_rfc = scipy.fftpack.fft(xy_rfc)
         File "/usr/local/lib/python3.5/dist-packages/scipy/fftpack/basic.py", line 282, in fft
             "(%d) specified." % n)
+
+-   Add following info to output of summary files:
+    -   Duration of execution
+    -   What processor it was run on, how many cores, threads, how much memory was used (max), etc.
+    -   Some indication of if it had to share processing time with other significant processes
+    -   Amount of disk space used by files written
