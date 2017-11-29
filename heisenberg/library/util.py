@@ -34,6 +34,16 @@ def quadratic_min_time_parameterized (t_v, f_v):
 
     return t_min,q_min
 
+def exp_quadratic_min_time_parameterized (t_v, f_v):
+    # The choice of epsilon should depend on the function being fit.
+    epsilon = 1.0e-10
+    t_min,q_min = quadratic_min_time_parameterized(t_v, np.log(f_v + epsilon))
+    q_min = np.exp(q_min) - epsilon
+    # Clip q_min at 0 just in case, since nonnegative is the whole point of this fanciness.
+    if q_min < 0.0:
+        q_min = 0.0
+    return t_min,q_min
+
 # Set numpy to print floats with full precision in scientific notation.
 def float_formatter (x):
     return '{0:.17e}'.format(x)

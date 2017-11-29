@@ -296,7 +296,7 @@ class ShootingMethodObjective:
                 # sub-sample accuracy when calculating the objective function value.
                 assert 1 <= _Q_global_min_index < len(Q_v)-1
                 s                               = slice(_Q_global_min_index-1, _Q_global_min_index+2)
-                self.__t_min,self.__objective   = util.quadratic_min_time_parameterized(t_v[s], Q_v[s])
+                self.__t_min,self.__objective   = util.exp_quadratic_min_time_parameterized(t_v[s], Q_v[s])
                 # Some tests show this discrepancy to be on the order of 1.0e-9
                 #print('self.__objective - Q_v[_Q_global_min_index] = {0}'.format(self.__objective - Q_v[_Q_global_min_index]))
             else:
