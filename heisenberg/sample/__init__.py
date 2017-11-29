@@ -104,11 +104,11 @@ def sample (dynamics_context, options, *, rng):
         print('--sample-count option, if present, must specify a positive integer.')
         sys.exit(-1)
 
-    if options.max_workers <= 0:
+    if options.worker_chunksize <= 0:
         print('--worker-chunksize option, if present, must specify a positive integer.')
         sys.exit(-1)
 
-    if options.max_workers <= 0:
+    if options.max_workers is not None and options.max_workers <= 0:
         print('--max-workers option, if present, must specify a positive integer.')
         sys.exit(-1)
 
