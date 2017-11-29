@@ -51,5 +51,9 @@ options,args = op.parse_argv_and_validate()
 if options is None:
     sys.exit(-1)
 
+if options.embedding_dimension != 2 or options.embedding_solution_sheet_index != 1:
+    print('Error: The heisenberg.search subprogram requires --embedding-dimension=2 and --embedding-solution-sheet-index=1 (this restriction is artificial and may be removed later).')
+    sys.exit(-1)
+
 rng = np.random.RandomState(options.seed)
 heisenberg.search.search(dynamics_context, options, rng=rng)
