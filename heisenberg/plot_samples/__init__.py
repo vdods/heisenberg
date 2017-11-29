@@ -263,6 +263,10 @@ def plot_samples (dynamics_context, options, *, rng):
             if w4 is not None:
                 proxy4 = pg.SignalProxy(w4.scene().sigMouseMoved, rateLimit=60, slot=lambda event:mouse_moved(w4,event))
     elif dimension == 2:
+        # NOTE
+        # NOTE: In this whole section, the p_x and p_y initial condition coordinates are switched to be plotted (p_y,p_x).
+        # NOTE
+
         def color_scatterplot_2d (plot, point_v, value_v, *, use_log=False):
             if use_log:
                 func = np.log
@@ -286,7 +290,7 @@ def plot_samples (dynamics_context, options, *, rng):
 
             s = pg.ScatterPlotItem(size=10, pen=pg.mkPen(None))#, brush=pg.mkBrush(255, 255, 255, 128))
             plot.addItem(s)
-            s.addPoints(x=filtered_point_v[:,0], y=filtered_point_v[:,1], brush=[brush_from_objective(objective) for objective in filtered_value_v])
+            s.addPoints(x=filtered_point_v[:,1], y=filtered_point_v[:,0], brush=[brush_from_objective(objective) for objective in filtered_value_v])
             s.sigClicked.connect(clicked)
             return s
 
@@ -335,9 +339,9 @@ def plot_samples (dynamics_context, options, *, rng):
             unstretched_filtered_value_v = np.apply_along_axis(unstretch, 0, filtered_value_v)
 
             # Define the grid, ensuring that the x grid point count is odd, so that it covers the central axis.
-            x_v = np.linspace(initial_min_v[0], initial_max_v[0], 401)
-            y_v = np.linspace(initial_min_v[1], initial_max_v[1], 401)
-            z_v = scipy.interpolate.griddata((filtered_initial_v[:,0], filtered_initial_v[:,1]), unstretched_filtered_value_v, (x_v[None,:], y_v[:,None]), method='cubic')
+            x_v = np.linspace(initial_min_v[1], initial_max_v[1], 401)
+            y_v = np.linspace(initial_min_v[0], initial_max_v[0], 401)
+            z_v = scipy.interpolate.griddata((filtered_initial_v[:,1], filtered_initial_v[:,0]), unstretched_filtered_value_v, (x_v[None,:], y_v[:,None]), method='cubic')
             print('x_v.shape = {0}'.format(x_v.shape))
             print('y_v.shape = {0}'.format(y_v.shape))
             print('z_v.shape = {0}'.format(z_v.shape))
@@ -346,15 +350,15 @@ def plot_samples (dynamics_context, options, *, rng):
             contour_level_v = np.linspace(0.0, 1.0, 11)
 
             axis = axis_vv[0][0]
-            axis.set_title('objective function value of orbit with initial (p_x,p_y)')
+            axis.set_title('objective function value of orbit with initial (p_y,p_x)')
             axis.contour(x_v, y_v, z_v, contour_level_v, linewidths=0.5, colors='k')
             axis.contourf(x_v, y_v, z_v, contour_level_v, cmap=plt.cm.jet)
             axis.set_aspect('equal')
             #axis.set_aspect(0.5)
-            axis.scatter(filtered_initial_v[:,0], filtered_initial_v[:,1], color='black', alpha=0.1, s=1)
+            axis.scatter(filtered_initial_v[:,1], filtered_initial_v[:,0], color='black', alpha=0.1, s=1)
             #axis.colorbar()
-            axis.set_xlim(initial_min_v[0], initial_max_v[0])
-            axis.set_ylim(initial_min_v[1], initial_max_v[1])
+            axis.set_xlim(initial_min_v[1], initial_max_v[1])
+            axis.set_ylim(initial_min_v[0], initial_max_v[0])
 
             fig.tight_layout()
             filename = os.path.join(options.samples_dir, 'objective.pdf')
