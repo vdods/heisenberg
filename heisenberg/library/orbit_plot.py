@@ -76,7 +76,7 @@ class OrbitPlot:
             flow_curve = smo.flow_curve()
 
             axis.plot(0, 0, 'o', color='black')
-            axis.plot(flow_curve[:end_t_index,0,0], flow_curve[:end_t_index,0,1])
+            axis.plot(flow_curve[:end_t_index,0,0], flow_curve[:end_t_index,0,1], color='black')
             axis.plot(flow_curve[0,0,0], flow_curve[0,0,1], 'o', color='green', alpha=0.5)
             # TODO: Plot the interpolated position/momentum (based on smo.t_min() instead of Q_global_min_index)
             if Q_global_min_index is not None and not disable_plot_decoration:
@@ -88,7 +88,7 @@ class OrbitPlot:
             else:
                 title += ' (t_min is {0:.10e})'.format(smo.t_min())
             axis.axhline(0, color='black')
-            axis.plot(smo.t_v()[:end_t_index], smo.flow_curve()[:end_t_index,0,2])
+            axis.plot(smo.t_v()[:end_t_index], smo.flow_curve()[:end_t_index,0,2], color='black')
             if not actually_cut_off_curve_tail:
                 axis.axvline(smo.t_min(), color='red')
         elif quantity_to_plot == 'p_x,p_y':
@@ -96,7 +96,7 @@ class OrbitPlot:
             Q_global_min_index = smo.Q_global_min_index()
 
             axis.plot(0, 0, 'o', color='black')
-            axis.plot(flow_curve[:end_t_index,1,0], flow_curve[:end_t_index,1,1])
+            axis.plot(flow_curve[:end_t_index,1,0], flow_curve[:end_t_index,1,1], color='black')
             axis.plot(flow_curve[0,1,0], flow_curve[0,1,1], 'o', color='green', alpha=0.5)
             # TODO: Plot the interpolated position/momentum (based on smo.t_min() instead of Q_global_min_index)
             if not actually_cut_off_curve_tail and not disable_plot_decoration:
@@ -108,32 +108,32 @@ class OrbitPlot:
             else:
                 title += ' (t_min is {0:.10e})'.format(smo.t_min())
             axis.axhline(0, color='black')
-            axis.plot(smo.t_v()[:end_t_index], smo.flow_curve()[:end_t_index,1,2])
+            axis.plot(smo.t_v()[:end_t_index], smo.flow_curve()[:end_t_index,1,2], color='black')
             if not actually_cut_off_curve_tail:
                 axis.axvline(smo.t_min(), color='red')
         elif quantity_to_plot == 'error(H)':
             H_v = vorpy.apply_along_axes(heisenberg_dynamics_context.Numeric.H, (-2,-1), (smo.flow_curve(),), output_axis_v=(), func_output_shape=())
             abs_H_v = np.abs(H_v)
             title += ' (should stay close to 0)\nmax(abs(H)) = {0:.2e}, H(t=0) = {1:e}'.format(np.max(abs_H_v), H_v[0])
-            axis.semilogy(smo.t_v()[:end_t_index], abs_H_v[:end_t_index])
+            axis.semilogy(smo.t_v()[:end_t_index], abs_H_v[:end_t_index], color='black')
         elif quantity_to_plot == 'error(J)':
             J_v = vorpy.apply_along_axes(heisenberg_dynamics_context.Numeric.J, (-2,-1), (smo.flow_curve(),), output_axis_v=(), func_output_shape=())
             J_0 = J_v[0]
             J_v -= J_0
             abs_J_minus_J_0 = np.abs(J_v)
             title += ' (should stay close to 0)\nJ(t=0) = {0}; max(abs(J - J(t=0))) = {1:.2e}'.format(J_0, np.max(abs_J_minus_J_0))
-            axis.semilogy(smo.t_v()[:end_t_index], abs_J_minus_J_0[:end_t_index])
+            axis.semilogy(smo.t_v()[:end_t_index], abs_J_minus_J_0[:end_t_index], color='black')
             if not actually_cut_off_curve_tail:
                 axis.axvline(smo.t_min(), color='red')
         elif quantity_to_plot == 'sqd':
             title += '\nt_min = {0:.10e}, min sqd = {1:.17e}'.format(smo.t_min(), smo.objective())
-            axis.semilogy(smo.t_v()[:end_t_index], smo.Q_v()[:end_t_index])
+            axis.semilogy(smo.t_v()[:end_t_index], smo.Q_v()[:end_t_index], color='black')
             if not actually_cut_off_curve_tail:
                 axis.axvline(smo.t_min(), color='red')
         elif quantity_to_plot == 'objective':
             assert objective_history_v is not None, 'must specify objective_history_v in order to plot {0}'.format(quantity_to_plot)
             title += '\nminimum objective value = {0:.17e}'.format(np.min(objective_history_v))
-            axis.semilogy(objective_history_v)
+            axis.semilogy(objective_history_v, color='black')
         elif quantity_to_plot == 'resampled-x,y':
             #sample_count    = 1024
             sample_count    = 128
@@ -146,19 +146,19 @@ class OrbitPlot:
             sample_count    = 1024
             fft_xy_rfc      = smo.fft_xy_resampled_flow_curve(sample_count=sample_count)
             fft_freq        = np.round(scipy.fftpack.fftfreq(sample_count, d=1.0/sample_count)).astype(int)
-            axis.semilogy(fft_freq, np.abs(fft_xy_rfc), 'o')
+            axis.semilogy(fft_freq, np.abs(fft_xy_rfc), 'o', color='black')
         elif quantity_to_plot == 'class-signal':
             symmetry_order_estimate = smo.symmetry_order_estimate()
             symmetry_class_estimate = smo.symmetry_class_estimate()
             symmetry_class_signal_v = smo.symmetry_class_signal_v()
             axis.axvline(symmetry_class_estimate, color='green')
-            axis.semilogy(symmetry_class_signal_v, 'o')
+            axis.semilogy(symmetry_class_signal_v, 'o', color='black')
             title += '\nclass_signal; class estimate = {0}, order estimate: {1}'.format(symmetry_class_estimate, symmetry_order_estimate)
         elif quantity_to_plot == 'resampled-t,z':
             sample_count    = 128
             rt              = smo.resampled_time(sample_count=sample_count)
             rfc             = smo.resampled_flow_curve(sample_count=sample_count)
-            axis.plot(rt, rfc[:end_t_index,0,2], 'o')
+            axis.plot(rt, rfc[:end_t_index,0,2], 'o', color='black')
         elif quantity_to_plot == 'fft-t,z':
             #n = 8
             #sample_count = 4*n
@@ -183,7 +183,7 @@ class OrbitPlot:
                     signed_strength_sorted_mode_index[i] -= sample_count
             axis.axvline(strength_sorted_mode_index[0], color='green')
             axis.axvline(strength_sorted_mode_index[1], color='blue')
-            axis.semilogy(abs_fft_z_rfc, 'o')
+            axis.semilogy(abs_fft_z_rfc, 'o', color='black')
             title += '\nstrongest and second strongest modes: {0} and {1}'.format(signed_strength_sorted_mode_index[0], signed_strength_sorted_mode_index[1])
         else:
             assert False, 'this should never happen'

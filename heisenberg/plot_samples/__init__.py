@@ -180,13 +180,13 @@ def plot_samples (dynamics_context, options, *, rng):
             axis.set_title('objective function value of orbit with initial p_y')
             axis.set_xlabel('p_y')
             axis.set_ylabel('objective')
-            axis.plot(data_v[:,4], data_v[:,0])
+            axis.plot(data_v[:,4], data_v[:,0], color='black')
 
             axis = axis_vv[1][0]
             axis.set_title('objective-minimizing time (t_min) of orbit with initial p_y')
             axis.set_xlabel('p_y')
             axis.set_ylabel('t_min')
-            axis.scatter(data_v[:,4], data_v[:,1], s=1)
+            axis.scatter(data_v[:,4], data_v[:,1], s=1, color='black')
 
             fig.tight_layout()
             filename = os.path.join(options.samples_dir, 'objective-and-t_min.pdf')
@@ -205,7 +205,7 @@ def plot_samples (dynamics_context, options, *, rng):
             axis.set_title('objective function value of orbit with initial p_y')
             axis.set_xlabel('p_y')
             axis.set_ylabel('objective')
-            axis.plot(data_v[:,4], data_v[:,0])
+            axis.plot(data_v[:,4], data_v[:,0], color='black')
 
             fig.tight_layout()
             filename = os.path.join(options.samples_dir, 'objective.pdf')
@@ -224,7 +224,7 @@ def plot_samples (dynamics_context, options, *, rng):
             axis.set_title('objective-minimizing time (t_min) of orbit with initial p_y')
             axis.set_xlabel('p_y')
             axis.set_ylabel('t_min')
-            axis.scatter(data_v[:,4], data_v[:,1], s=1)
+            axis.scatter(data_v[:,4], data_v[:,1], s=1, color='black')
 
             fig.tight_layout()
             filename = os.path.join(options.samples_dir, 't_min.pdf')
