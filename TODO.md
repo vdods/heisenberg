@@ -3,10 +3,6 @@
 These items have been accumulated over the course of the development of this project, and are not likely
 to ever be completely finished.  One can consider software development to be an asymptotic process.
 
--   HUGE BUG: The "excessive items omitted" feature of the summary file prevents all the commandline
-    arguments from being printed (if there are more than 10, which there can be).  This is a critical
-    bug which prevents 100% reproducibility.  In particular, the ability to reconstruct the commandline
-    to re-run a subprogram exactly is hindered.
 -   Create "turn-key" examples which replicate research by running a single command.
 -   Use ast.literal_eval (as in heisenberg.sample) to parse initial conditions options.
 -   Idea for cleaner and more organized option specification and validation:

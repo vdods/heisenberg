@@ -24,7 +24,7 @@ def write_human_readable_value (f, name, value, indent_level=0):
     elif type(value) == list:
         write_human_readable_list(f, name, value, indent_level)
     elif type(value) == np.ndarray:
-        write_human_readable_list(f, name, value.tolist(), indent_level, type_name_override='numpy.ndarray')
+        write_human_readable_ndarray(f, name, value.tolist(), indent_level, type_name_override='numpy.ndarray')
     else:
         f.write(__indent*indent_level)
         if name is not None:
@@ -43,23 +43,35 @@ def write_human_readable_dict (f, dict_name, dict_value, indent_level=0):
         value = dict_value[key]
         write_human_readable_value(f, repr(key), value, indent_level+1)
 
-__max_print_list_element_count = 10
-
 def write_human_readable_list (f, list_name, list_value, indent_level=0, type_name_override=None):
     f.write(__indent*indent_level)
     if list_name is not None:
         f.write(list_name+' ')
     type_name = type_name_override if type_name_override is not None else 'list'
     f.write('({0}; {1} items):\n'.format(type_name, len(list_value)))
-    if len(list_value) > __max_print_list_element_count:
-        assert __max_print_list_element_count//2 + (__max_print_list_element_count+1)//2 == __max_print_list_element_count
-        for value in list_value[:__max_print_list_element_count//2]:
+    for value in list_value:
+        write_human_readable_value(f, None, value, indent_level+1)
+
+# The contents of np.ndarray objects are not considered to be critical to represent fully in summary
+# files, as they will typically contain hundreds, thousands, or more elements.  sys.argv is a list,
+# so that will be represented completely.
+__max_print_ndarray_element_count = 10
+
+def write_human_readable_ndarray (f, ndarray_name, ndarray_value, indent_level=0, type_name_override=None):
+    f.write(__indent*indent_level)
+    if ndarray_name is not None:
+        f.write(ndarray_name+' ')
+    type_name = type_name_override if type_name_override is not None else 'ndarray'
+    f.write('({0}; {1} items):\n'.format(type_name, len(ndarray_value)))
+    if len(ndarray_value) > __max_print_ndarray_element_count:
+        assert __max_print_ndarray_element_count//2 + (__max_print_ndarray_element_count+1)//2 == __max_print_ndarray_element_count
+        for value in ndarray_value[:__max_print_ndarray_element_count//2]:
             write_human_readable_value(f, None, value, indent_level+1)
         write_human_readable_value(f, None, '... (excessive items omitted) ...', indent_level+1)
-        for value in list_value[-((__max_print_list_element_count+1)//2):]:
+        for value in ndarray_value[-((__max_print_ndarray_element_count+1)//2):]:
             write_human_readable_value(f, None, value, indent_level+1)
     else:
-        for value in list_value:
+        for value in ndarray_value:
             write_human_readable_value(f, None, value, indent_level+1)
 
 def write_human_readable_summary (*, data, filename):
