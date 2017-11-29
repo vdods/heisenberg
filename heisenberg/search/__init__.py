@@ -96,6 +96,7 @@ def search (dynamics_context, options, *, rng):
                     orbit_plot.savefig_and_clear(filename=base_filename+'.'+options.plot_type)
                     # Put together the data to pickle
                     pickle_data = smo_0.data_to_pickle()
+                    pickle_data['full_commandline'] = heisenberg.util.reconstruct_full_commandline(executable=sys.executable, argv=sys.argv)
                     pickle_data['options'] = vars(options) # vars ensures it's a dict, and not a stupid optparse.Values object.
                     vorpy.pickle.try_to_pickle(data=pickle_data, pickle_filename=base_filename+'.pickle')
                     # Also create a human-readable summary of the pickle data.
@@ -159,6 +160,7 @@ def search (dynamics_context, options, *, rng):
         orbit_plot.savefig_and_clear(filename=base_filename+'.'+options.plot_type)
         # Put together the data to pickle
         pickle_data = smo_opt.data_to_pickle()
+        pickle_data['full_commandline'] = heisenberg.util.reconstruct_full_commandline(executable=sys.executable, argv=sys.argv)
         pickle_data['options'] = vars(options) # vars ensures it's a dict, and not a stupid optparse.Values object.
         vorpy.pickle.try_to_pickle(data=pickle_data, pickle_filename=base_filename+'.pickle')
         # Also create a human-readable summary of the pickle data.

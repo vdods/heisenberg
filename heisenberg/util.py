@@ -2,6 +2,7 @@ import heisenberg.library.util
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import shlex
 import subprocess
 import textwrap
 
@@ -71,6 +72,13 @@ def write_human_readable_summary (*, data, filename):
         f.write(filename)
         f.write('\n\n')
         write_human_readable_value(f, 'pickle contents', data)
+
+# TODO: Make this reconstruct the original full commandline (replacing the __main__.py of the subprogram), e.g.
+#     path/to/python3 -m heisenberg.plot --option1 --option2 --etc
+# and ideally put quotes around option values instead of full options, so it looks better
+def reconstruct_full_commandline (*, executable, argv):
+    # shlex.quote quotes a string for use in a shell.
+    return shlex.quote(executable) + ' ' + ' '.join(shlex.quote(arg) for arg in argv)
 
 def get_git_commit ():
     try:

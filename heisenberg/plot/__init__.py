@@ -100,6 +100,7 @@ def plot (dynamics_context, options, *, rng):
     op.savefig_and_clear(filename=base_filename+'.'+options.plot_type)
     # Put together the data to pickle
     pickle_data = smo.data_to_pickle()
+    pickle_data['full_commandline'] = heisenberg.util.reconstruct_full_commandline(executable=sys.executable, argv=sys.argv)
     pickle_data['options'] = vars(options) # vars ensures it's a dict, and not a stupid optparse.Values object.
     vorpy.pickle.try_to_pickle(data=pickle_data, pickle_filename=base_filename+'.pickle')
     # Also create a human-readable summary of the pickle data.

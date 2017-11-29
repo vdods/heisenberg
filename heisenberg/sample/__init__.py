@@ -164,6 +164,7 @@ def sample (dynamics_context, options, *, rng):
 
     # Create the data structure that will be pickled.
     data = {
+        'full_commandline': heisenberg.util.reconstruct_full_commandline(executable=sys.executable, argv=sys.argv),
         'options': vars(options), # vars ensures it's a dict, and not a stupid optparse.Values object.
         'sample_v': sample_result_v,
     }
