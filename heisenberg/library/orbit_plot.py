@@ -38,11 +38,27 @@ valid_plot_to_include_title_d = {
     'fft-t,z'       : 'testing fft_z_resampled_flow_curve',
 }
 
+terse_valid_plot_to_include_title_d = {
+    'x,y'           : '(x(t),y(t))',
+    't,z'           : '(t,z(t))',
+    'p_x,p_y'       : '(p_x(t),p_y(t))',
+    't,p_z'         : '(t,p_z(t)',
+    'error(H)'      : 'abs(H)',
+    'error(J)'      : 'abs(J - J(t=0))',
+    'sqd'           : 'sqr dist from IC',
+    'objective'     : 'obj func hist',
+    'resampled-x,y' : 'x,y portion of resampled_flow_curve',
+    'fft-x,y'       : 'fft_xy_resampled_flow_curve',
+    'class-signal'  : 'class-signal',
+    'resampled-t,z' : 't,z portion of resampled_flow_curve',
+    'fft-t,z'       : 'fft_z_resampled_flow_curve',
+}
+
 default_quantities_to_plot = 'x,y;t,z;error(H);error(J);sqd;class-signal;objective'
 default_quantity_to_plot_v = default_quantities_to_plot.split(';')
 
 class OrbitPlot:
-    def __init__ (self, *, curve_description_v, quantity_to_plot_v):
+    def __init__ (self, *, curve_description_v, quantity_to_plot_v, size):
         assert type(quantity_to_plot_v) == list
         assert len(frozenset(curve_description_v)) == len(curve_description_v), 'must specify unique values in curve_description_v'
         assert frozenset(quantity_to_plot_v).issubset(frozenset(valid_quantity_to_plot_v)), 'specified invalid elements of quantity_to_plot_v: {0}'.format(','.join(frozenset(quantity_to_plot_v).difference(frozenset(valid_quantity_to_plot_v))))
@@ -53,17 +69,20 @@ class OrbitPlot:
         row_count               = len(curve_description_v)
         col_count               = len(quantity_to_plot_v)
 
-        size                    = 10
+        size                    = size
         self.fig,self.axis_vv   = plt.subplots(row_count, col_count, squeeze=False, figsize=(size*col_count,size*row_count))
 
-    def plot_curve_quantity (self, *, axis, curve_description, quantity_to_plot, smo, objective_history_v=None, cut_off_curve_tail=False, disable_plot_decoration=False):
+    def plot_curve_quantity (self, *, axis, curve_description, quantity_to_plot, smo, objective_history_v=None, cut_off_curve_tail=False, disable_plot_decoration=False, use_terse_titles=False):
         """
         Plot a particular quantity from the curve.  This is called by plot_curve, and you shouldn't
         normally need to call this, unless you want very specific control over the plotting.
         """
         assert quantity_to_plot in valid_quantity_to_plot_v, 'quantity_to_plot (which is {0}) was not found in valid_quantity_to_plot_v (which is {1})'.format(quantity_to_plot, valid_quantity_to_plot_v)
 
-        title = '{0} {1}'.format(curve_description, valid_plot_to_include_title_d[quantity_to_plot])
+        if use_terse_titles:
+            title = terse_valid_plot_to_include_title_d[quantity_to_plot]
+        else:
+            title = '{0} {1}'.format(curve_description, valid_plot_to_include_title_d[quantity_to_plot])
 
         # end_t_index is the time-index to plot stuff to.
         end_t_index = len(smo.t_v())
@@ -83,10 +102,11 @@ class OrbitPlot:
                 axis.plot(flow_curve[Q_global_min_index,0,0], flow_curve[Q_global_min_index,0,1], 'o', color='red', alpha=0.5)
             axis.set_aspect('equal')
         elif quantity_to_plot == 't,z':
-            if not actually_cut_off_curve_tail:
-                title += ' (red line indicates t_min, which is {0:.10e})'.format(smo.t_min())
-            else:
-                title += ' (t_min is {0:.10e})'.format(smo.t_min())
+            if not use_terse_titles:
+                if not actually_cut_off_curve_tail:
+                    title += ' (red line indicates t_min, which is {0:.10e})'.format(smo.t_min())
+                else:
+                    title += ' (t_min is {0:.10e})'.format(smo.t_min())
             axis.axhline(0, color='black')
             axis.plot(smo.t_v()[:end_t_index], smo.flow_curve()[:end_t_index,0,2], color='black')
             if not actually_cut_off_curve_tail:
@@ -103,10 +123,11 @@ class OrbitPlot:
                 axis.plot(flow_curve[Q_global_min_index,1,0], flow_curve[Q_global_min_index,1,1], 'o', color='red', alpha=0.5)
             axis.set_aspect('equal')
         elif quantity_to_plot == 't,p_z':
-            if not actually_cut_off_curve_tail:
-                title += ' (red line indicates t_min, which is {0:.10e})'.format(smo.t_min())
-            else:
-                title += ' (t_min is {0:.10e})'.format(smo.t_min())
+            if not use_terse_titles:
+                if not actually_cut_off_curve_tail:
+                    title += ' (red line indicates t_min, which is {0:.10e})'.format(smo.t_min())
+                else:
+                    title += ' (t_min is {0:.10e})'.format(smo.t_min())
             axis.axhline(0, color='black')
             axis.plot(smo.t_v()[:end_t_index], smo.flow_curve()[:end_t_index,1,2], color='black')
             if not actually_cut_off_curve_tail:
@@ -114,25 +135,29 @@ class OrbitPlot:
         elif quantity_to_plot == 'error(H)':
             H_v = vorpy.apply_along_axes(heisenberg_dynamics_context.Numeric.H, (-2,-1), (smo.flow_curve(),), output_axis_v=(), func_output_shape=())
             abs_H_v = np.abs(H_v)
-            title += ' (should stay close to 0)\nmax(abs(H)) = {0:.2e}, H(t=0) = {1:e}'.format(np.max(abs_H_v), H_v[0])
+            if not use_terse_titles:
+                title += ' (should stay close to 0)\nmax(abs(H)) = {0:.2e}, H(t=0) = {1:e}'.format(np.max(abs_H_v), H_v[0])
             axis.semilogy(smo.t_v()[:end_t_index], abs_H_v[:end_t_index], color='black')
         elif quantity_to_plot == 'error(J)':
             J_v = vorpy.apply_along_axes(heisenberg_dynamics_context.Numeric.J, (-2,-1), (smo.flow_curve(),), output_axis_v=(), func_output_shape=())
             J_0 = J_v[0]
             J_v -= J_0
             abs_J_minus_J_0 = np.abs(J_v)
-            title += ' (should stay close to 0)\nJ(t=0) = {0}; max(abs(J - J(t=0))) = {1:.2e}'.format(J_0, np.max(abs_J_minus_J_0))
+            if not use_terse_titles:
+                title += ' (should stay close to 0)\nJ(t=0) = {0}; max(abs(J - J(t=0))) = {1:.2e}'.format(J_0, np.max(abs_J_minus_J_0))
             axis.semilogy(smo.t_v()[:end_t_index], abs_J_minus_J_0[:end_t_index], color='black')
             if not actually_cut_off_curve_tail:
                 axis.axvline(smo.t_min(), color='red')
         elif quantity_to_plot == 'sqd':
-            title += '\nt_min = {0:.10e}, min sqd = {1:.17e}'.format(smo.t_min(), smo.objective())
+            if not use_terse_titles:
+                title += '\nt_min = {0:.10e}, min sqd = {1:.17e}'.format(smo.t_min(), smo.objective())
             axis.semilogy(smo.t_v()[:end_t_index], smo.Q_v()[:end_t_index], color='black')
             if not actually_cut_off_curve_tail:
                 axis.axvline(smo.t_min(), color='red')
         elif quantity_to_plot == 'objective':
             assert objective_history_v is not None, 'must specify objective_history_v in order to plot {0}'.format(quantity_to_plot)
-            title += '\nminimum objective value = {0:.17e}'.format(np.min(objective_history_v))
+            if not use_terse_titles:
+                title += '\nminimum objective value = {0:.17e}'.format(np.min(objective_history_v))
             axis.semilogy(objective_history_v, color='black')
         elif quantity_to_plot == 'resampled-x,y':
             #sample_count    = 1024
@@ -153,7 +178,8 @@ class OrbitPlot:
             symmetry_class_signal_v = smo.symmetry_class_signal_v()
             axis.axvline(symmetry_class_estimate, color='green')
             axis.semilogy(symmetry_class_signal_v, 'o', color='black')
-            title += '\nclass_signal; class estimate = {0}, order estimate: {1}'.format(symmetry_class_estimate, symmetry_order_estimate)
+            if not use_terse_titles:
+                title += '\nclass_signal; class estimate = {0}, order estimate: {1}'.format(symmetry_class_estimate, symmetry_order_estimate)
         elif quantity_to_plot == 'resampled-t,z':
             sample_count    = 128
             rt              = smo.resampled_time(sample_count=sample_count)
@@ -184,7 +210,8 @@ class OrbitPlot:
             axis.axvline(strength_sorted_mode_index[0], color='green')
             axis.axvline(strength_sorted_mode_index[1], color='blue')
             axis.semilogy(abs_fft_z_rfc, 'o', color='black')
-            title += '\nstrongest and second strongest modes: {0} and {1}'.format(signed_strength_sorted_mode_index[0], signed_strength_sorted_mode_index[1])
+            if not use_terse_titles:
+                title += '\nstrongest and second strongest modes: {0} and {1}'.format(signed_strength_sorted_mode_index[0], signed_strength_sorted_mode_index[1])
         else:
             assert False, 'this should never happen'
 
@@ -193,7 +220,7 @@ class OrbitPlot:
         else:
             axis.set_title(title)
 
-    def plot_curve (self, *, curve_description, smo, objective_history_v=None, cut_off_curve_tail=False, disable_plot_decoration=False):
+    def plot_curve (self, *, curve_description, smo, objective_history_v=None, cut_off_curve_tail=False, disable_plot_decoration=False, use_terse_titles=False):
         """
         curve_description specifies which row to plot to (indexed by curve_description_v specified in the constructor).
         The quantity_to_plot_v value specified in the constructor indicates which quantities from smo to plot.
@@ -212,7 +239,7 @@ class OrbitPlot:
                 plot_it = False
             if plot_it:
                 #print('plotting quantity "{0}" for curve "{1}"'.format(quantity_to_plot, curve_description))
-                self.plot_curve_quantity(axis=axis, curve_description=curve_description, quantity_to_plot=quantity_to_plot, smo=smo, objective_history_v=objective_history_v, cut_off_curve_tail=cut_off_curve_tail, disable_plot_decoration=disable_plot_decoration)
+                self.plot_curve_quantity(axis=axis, curve_description=curve_description, quantity_to_plot=quantity_to_plot, smo=smo, objective_history_v=objective_history_v, cut_off_curve_tail=cut_off_curve_tail, disable_plot_decoration=disable_plot_decoration, use_terse_titles=use_terse_titles)
             else:
                 #print('NOT plotting quantity "{0}" for curve "{1}"'.format(quantity_to_plot, curve_description))
                 pass

@@ -71,7 +71,7 @@ class ShootingMethodObjective:
                 if not self.__disable_salvage:
                     # TEMP: Plot this salvaged curve in order to diagnose what went wrong
                     curve_description = 'salvaged curve - {0} steps out of {1}'.format(e.salvaged_qp_v.shape[0], original_step_count)
-                    op = orbit_plot.OrbitPlot(curve_description_v=[curve_description], quantity_to_plot_v=orbit_plot.default_quantity_to_plot_v)
+                    op = orbit_plot.OrbitPlot(curve_description_v=[curve_description], quantity_to_plot_v=orbit_plot.default_quantity_to_plot_v, size=10)
                     op.plot_curve(curve_description=curve_description, smo=self)
                     op.savefig_and_clear(
                         filename=os.path.join(

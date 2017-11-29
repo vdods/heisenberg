@@ -80,6 +80,20 @@ class OptionParser:
             default=False,
             help='Disables plotting certain non-essential labels and decoration.  Default behavior is to plot those things.'
         )
+        self.__op.add_option(
+            '--use-terse-plot-titles',
+            dest='use_terse_plot_titles',
+            action='store_true',
+            default=False,
+            help='Shortens the titles on plots; best used with --plot-size=3 to make the plot labels appear big relative to the plots themselves.'
+        )
+        self.__op.add_option(
+            '--plot-size',
+            dest='plot_size',
+            default=10,
+            type='int',
+            help='Specifies the size of the plot, where the plot labels are assumed to have a fixed size.  Thus a smaller value means the labels will appear bigger.  The default value is 10.'
+        )
 
         supported_plot_type_d = heisenberg.util.get_supported_plot_type_d()
         ext_v = sorted(list(supported_plot_type_d.keys()))

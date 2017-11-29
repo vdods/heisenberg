@@ -25,7 +25,7 @@ def plot (dynamics_context, options, *, rng):
     if options.optimize_initial:
         curve_description_v += ['optimized curve']
 
-    op = heisenberg.library.orbit_plot.OrbitPlot(curve_description_v=curve_description_v, quantity_to_plot_v=options.quantity_to_plot_v)
+    op = heisenberg.library.orbit_plot.OrbitPlot(curve_description_v=curve_description_v, quantity_to_plot_v=options.quantity_to_plot_v, size=options.plot_size)
 
     if options.optimize_initial:
         if options.initial_preimage is not None:
@@ -69,7 +69,7 @@ def plot (dynamics_context, options, *, rng):
         if embedding is not None:
             print('qp_opt embedding preimage; X_0 = {0}'.format(optimizer.parameter_history_v[-1]))
 
-        op.plot_curve(curve_description='optimized curve', smo=smo_opt, objective_history_v=optimizer.obj_history_v, cut_off_curve_tail=options.cut_off_optimized_curve_tail, disable_plot_decoration=options.disable_plot_decoration)
+        op.plot_curve(curve_description='optimized curve', smo=smo_opt, objective_history_v=optimizer.obj_history_v, cut_off_curve_tail=options.cut_off_optimized_curve_tail, disable_plot_decoration=options.disable_plot_decoration, use_terse_titles=options.use_terse_plot_titles)
 
         qp = qp_opt
         smo = smo_opt
@@ -93,7 +93,7 @@ def plot (dynamics_context, options, *, rng):
 
     if not options.disable_plot_initial:
         print('plotting initial curve')
-        op.plot_curve(curve_description='initial curve', smo=smo_0, cut_off_curve_tail=options.cut_off_initial_curve_tail, disable_plot_decoration=options.disable_plot_decoration)
+        op.plot_curve(curve_description='initial curve', smo=smo_0, cut_off_curve_tail=options.cut_off_initial_curve_tail, disable_plot_decoration=options.disable_plot_decoration, use_terse_titles=options.use_terse_plot_titles)
     else:
         print('NOT plotting initial curve')
 
