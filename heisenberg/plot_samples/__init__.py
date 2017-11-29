@@ -103,32 +103,6 @@ def plot_samples (dynamics_context, options, *, rng):
         lastClicked = points
 
     if dimension == 1:
-        # Compute all local minima of the objective function
-        p_y_v                   = data_v[:,4]
-        objective_v             = data_v[:,0]
-        t_min_v                 = data_v[:,1]
-        local_min_index_v       = [i for i in range(1,len(objective_v)-1) if objective_v[i-1] > objective_v[i] and objective_v[i] < objective_v[i+1]]
-        # Use quadratic fit to compute time of local mins at sub-sample accuracy.
-        local_min_v             = []
-        for local_min_index in local_min_index_v:
-            s                   = slice(local_min_index-1, local_min_index+2)
-            # Just take the "local" slice of p_y_v and objective_v
-            p_y_local_v         = p_y_v[s]
-            objective_local_v   = objective_v[s]
-            p_y_min,objective   = heisenberg.library.util.quadratic_min_time_parameterized(p_y_local_v, objective_local_v)
-            assert p_y_local_v[0] < p_y_min < p_y_local_v[-1], 'p_y_min is outside the neighborhood of the local min -- this should be impossible'
-
-            t_min_local_v       = t_min_v[s]
-            #print('p_y_local_v = {0}, t_min_local_v = {1}, p_y_min = {2}'.format(p_y_local_v, t_min_local_v, p_y_min))
-            period              = np.interp(p_y_min, p_y_local_v, t_min_local_v)
-
-            local_min_v.append((p_y_min, objective, period))
-        #print('local mins of objective function in (p_y, objective, period) form:')
-        #for p_y_min,objective,period in local_min_v:
-            #print('    ({0}, {1:.17e}, {2})'.format(p_y_min, objective, period))
-        print('shell commands to plot each of these:')
-        for p_y_min,objective,period in local_min_v:
-            print('/usr/bin/time --verbose python3 -m heisenberg.plot --dt=0.005 --max-time={0} --initial-preimage=[{1}] --embedding-dimension=1 --embedding-solution-sheet-index=1 --output-dir=OUTPUTDIR --quantities-to-plot="x,y;t,z;error(H);error(J);sqd;class-signal;objective" --plot-type=pdf'.format(period*1.1, p_y_min))
 
         def scatterplot (plot, point_v, value_v, *, use_log=False):
             assert np.all(np.isfinite(point_v))

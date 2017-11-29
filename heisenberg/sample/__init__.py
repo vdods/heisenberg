@@ -1,5 +1,6 @@
 import concurrent.futures
 import heisenberg.library.shooting_method_objective
+import heisenberg.library.util
 import heisenberg.util
 import itertools
 import numpy as np
@@ -167,9 +168,105 @@ def sample (dynamics_context, options, *, rng):
         'sample_v': sample_result_v,
     }
 
-    print('saving results, and exiting.')
+    print('saving results...')
     maybe_seed_string = 'seed:{0}.'.format(options.seed) if options.sampling_type == 'random' else ''
     base_filename = os.path.join(options.samples_dir, 'sample_v.{0}count:{1}'.format(maybe_seed_string, len(sample_result_v)))
     vorpy.pickle.try_to_pickle(data=data, pickle_filename=base_filename+'.pickle', log_out=sys.stdout)
     # Also create a human-readable summary of the pickle data.
     heisenberg.util.write_human_readable_summary(data=data, filename=base_filename+'.summary')
+
+    if options.embedding_dimension == 1 and options.sampling_type == 'ordered':
+        print('finding minima of the objective function and classifying the curves.')
+
+        p_y_v = []
+        objective_v = []
+        t_min_v = []
+
+        # Create lists of the relevant sample_result values.
+        for sample_result in sample_result_v:
+            # See make_sample_result for which element is which.
+
+            # sample_result[0] is initial preimage, which in the case of --embedding-dimension=1, is the initial p_y value.
+            assert np.shape(sample_result[0]) == (1,) # Should be a 1-vector.
+            p_y_v.append(sample_result[0][0])
+            # sample_result[4] is the objective function value for that initial condition.
+            assert np.shape(sample_result[4]) == tuple() # Should be a scalar.
+            objective_v.append(sample_result[4])
+            # sample_result[5] is t_min, which is the time at which the curve most nearly closed up on itself.
+            assert np.shape(sample_result[5]) == tuple() # Should be a scalar.
+            t_min_v.append(sample_result[5])
+
+        # Turn those lists into np.array objects.
+        p_y_v                   = np.array(p_y_v)
+        objective_v             = np.array(objective_v)
+        t_min_v                 = np.array(t_min_v)
+
+        # Compute all local minima of the objective function
+        local_min_index_v       = [i for i in range(1,len(objective_v)-1) if objective_v[i-1] > objective_v[i] and objective_v[i] < objective_v[i+1]]
+        # Use exp quadratic fit to compute time of local mins at sub-sample accuracy -- use
+        # exp_quadratic_min_time_parameterized so that the computed min is nonnegative.
+        local_min_v             = []
+        for local_min_index in local_min_index_v:
+            # For each local min, we only care about its discrete "neighborhood".
+            s                   = slice(local_min_index-1, local_min_index+2)
+            # Just take the "local" slice of p_y_v and objective_v
+            p_y_local_v         = p_y_v[s]
+            objective_local_v   = objective_v[s]
+            p_y_min,objective   = heisenberg.library.util.exp_quadratic_min_time_parameterized(p_y_local_v, objective_local_v)
+            assert p_y_local_v[0] < p_y_min < p_y_local_v[-1], 'p_y_min is outside the neighborhood of the local min -- this should be impossible'
+
+            t_min_local_v       = t_min_v[s]
+            #print('p_y_local_v = {0}, t_min_local_v = {1}, p_y_min = {2}'.format(p_y_local_v, t_min_local_v, p_y_min))
+            period              = np.interp(p_y_min, p_y_local_v, t_min_local_v)
+
+            local_min_v.append((p_y_min, objective, period))
+
+        # Go through each local min, compute the curve, classify it, and plot it if indicated by the --for-each-1d-minimum=classify-and-plot option.
+        print('Curve classifications (symmetry class and order values are estimates):')
+        print('Format is "class:order <=> { initial_p_y=<value>, objective=<value>, period=<value>, dt=<value> }')
+
+        try:
+            plot_commands_filename = base_filename+'.plot_commands'
+            plot_commands_file = open(plot_commands_filename, 'w')
+        except IOError as e:
+            print('was not able to open file "{0}" for writing; not writing plot commands.'.format(plot_commands_filename))
+            plot_commands_file = None
+
+        for local_min in local_min_v:
+            # TODO: Make this parallelized.
+            initial_p_y = np.array([local_min[0]])
+            qp_0 = dynamics_context.embedding(N=options.embedding_dimension, sheet_index=options.embedding_solution_sheet_index)(initial_p_y)
+
+            objective = local_min[1]
+
+            period = local_min[2]
+            # Go a little bit further than the period so there's at least some overlap to work with.
+            max_time = 1.1*period
+
+            # Create the object that will actually compute everything.
+            smo = heisenberg.library.shooting_method_objective.ShootingMethodObjective(dynamics_context=dynamics_context, preimage_qp_0=initial_p_y, qp_0=qp_0, t_max=max_time, t_delta=options.dt, disable_salvage=True)
+
+            # Print the classification along with enough info to reconstruct the curve fully.
+            classification_string = '{0}:{1} <=> {{ initial_p_y={2}, objective={3}, period={4}, dt={5} }}'.format(
+                smo.symmetry_class_estimate(),
+                smo.symmetry_order_estimate(),
+                initial_p_y,
+                objective,
+                period,
+                options.dt
+            )
+            print(classification_string)
+
+            # Print an example command to use heisenberg.plot to plot that curve.
+            plot_command = 'python3 -m heisenberg.plot --dt={0} --max-time={1} --initial-preimage=[{2}] --embedding-dimension=1 --embedding-solution-sheet-index={3} --output-dir={4} --quantities-to-plot="x,y;t,z;error(H);error(J);sqd;class-signal;objective" --plot-type=pdf # {5}'.format(
+                options.dt,
+                max_time,
+                initial_p_y[0],
+                options.embedding_solution_sheet_index,
+                options.samples_dir+'/plots',
+                classification_string
+            )
+            print('Command to plot:')
+            print(plot_command)
+            plot_commands_file.write(plot_command)
+            plot_commands_file.write('\n')
