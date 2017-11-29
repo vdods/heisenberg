@@ -7,6 +7,7 @@ to ever be completely finished.  One can consider software development to be an 
     arguments from being printed (if there are more than 10, which there can be).  This is a critical
     bug which prevents 100% reproducibility.  In particular, the ability to reconstruct the commandline
     to re-run a subprogram exactly is hindered.
+-   Make an entry in summary file that is the single, complete commandline to re-run the computation.
 -   Create "turn-key" examples which replicate research by running a single command.
 -   Use ast.literal_eval (as in heisenberg.sample) to parse initial conditions options.
 -   Idea for cleaner and more organized option specification and validation:
