@@ -130,16 +130,16 @@ def plot_samples (dynamics_context, options, *, rng):
             plot.setLogMode(x=False, y=use_log)
 
         if w1 is not None:
-            w1.setLabel('bottom', 'p_y')
+            w1.setLabel('bottom', 'p_theta')
             lineplot(w1, data_v[:,4], data_v[:,0], use_log=False) # objective
         if w2 is not None:
-            w2.setLabel('bottom', 'p_y')
+            w2.setLabel('bottom', 'p_theta')
             lineplot(w2, data_v[:,4], data_v[:,2], use_log=False) # max_abs_H
         if w3 is not None:
-            w3.setLabel('bottom', 'p_y')
+            w3.setLabel('bottom', 'p_theta')
             scatterplot(w3, data_v[:,4], data_v[:,1], use_log=False) # t_min
         if w4 is not None:
-            w4.setLabel('bottom', 'p_y')
+            w4.setLabel('bottom', 'p_theta')
             lineplot(w4, data_v[:,4], data_v[:,3], use_log=False) # max_abs_J_minus_J_0
 
         # Make some static plots
@@ -152,13 +152,13 @@ def plot_samples (dynamics_context, options, *, rng):
 
             axis = axis_vv[0][0]
             axis.set_title('objective function value of orbit with initial p_y')
-            axis.set_xlabel('p_y')
+            axis.set_xlabel('p_theta')
             axis.set_ylabel('objective')
             axis.plot(data_v[:,4], data_v[:,0], color='black')
 
             axis = axis_vv[1][0]
             axis.set_title('objective-minimizing time (t_min) of orbit with initial p_y')
-            axis.set_xlabel('p_y')
+            axis.set_xlabel('p_theta')
             axis.set_ylabel('t_min')
             axis.scatter(data_v[:,4], data_v[:,1], s=1, color='black')
 
@@ -176,8 +176,8 @@ def plot_samples (dynamics_context, options, *, rng):
             fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(col_width*col_count,row_height*row_count))
 
             axis = axis_vv[0][0]
-            axis.set_title('objective function value of orbit with initial p_y')
-            axis.set_xlabel('p_y')
+            axis.set_title('objective function value of orbit with initial p_theta')
+            axis.set_xlabel('p_theta')
             axis.set_ylabel('objective')
             axis.plot(data_v[:,4], data_v[:,0], color='black')
 
@@ -195,8 +195,8 @@ def plot_samples (dynamics_context, options, *, rng):
             fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(col_width*col_count,row_height*row_count))
 
             axis = axis_vv[0][0]
-            axis.set_title('objective-minimizing time (t_min) of orbit with initial p_y')
-            axis.set_xlabel('p_y')
+            axis.set_title('objective-minimizing time (t_min) of orbit with initial p_theta')
+            axis.set_xlabel('p_theta')
             axis.set_ylabel('t_min')
             axis.scatter(data_v[:,4], data_v[:,1], s=1, color='black')
 
@@ -264,7 +264,10 @@ def plot_samples (dynamics_context, options, *, rng):
                 proxy4 = pg.SignalProxy(w4.scene().sigMouseMoved, rateLimit=60, slot=lambda event:mouse_moved(w4,event))
     elif dimension == 2:
         # NOTE
-        # NOTE: In this whole section, the p_x and p_y initial condition coordinates are switched to be plotted (p_y,p_x).
+        # NOTE: In this whole section, the p_x (which is the same as J) and p_y (which is the same as
+        # NOTE: p_theta) initial condition coordinates are switched to be plotted (p_y,p_x) (i.e. (p_theta,J)).
+        # NOTE: Furthermore, note that p_x == J and p_y == p_theta because of the constraints made in choosing
+        # NOTE: the 2-dimensional initial conditions embedding.
         # NOTE
 
         def color_scatterplot_2d (plot, point_v, value_v, *, use_log=False):
@@ -350,7 +353,7 @@ def plot_samples (dynamics_context, options, *, rng):
             contour_level_v = np.linspace(0.0, 1.0, 11)
 
             axis = axis_vv[0][0]
-            axis.set_title('objective function value of orbit with initial (p_y,p_x)')
+            axis.set_title('objective function value of orbit with initial (p_theta,J)')
             axis.contour(x_v, y_v, z_v, contour_level_v, linewidths=0.5, colors='k')
             axis.contourf(x_v, y_v, z_v, contour_level_v, cmap=plt.cm.jet)
             axis.set_aspect('equal')
