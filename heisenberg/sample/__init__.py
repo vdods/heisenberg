@@ -172,4 +172,4 @@ def sample (dynamics_context, options, *, rng):
     base_filename = os.path.join(options.samples_dir, 'sample_v.{0}count:{1}'.format(maybe_seed_string, len(sample_result_v)))
     vorpy.pickle.try_to_pickle(data=data, pickle_filename=base_filename+'.pickle', log_out=sys.stdout)
     # Also create a human-readable summary of the pickle data.
-    heisenberg.util.write_human_readable_summary(data=data, filename=base_filename)
+    heisenberg.util.write_human_readable_summary(data=data, filename=base_filename+'.summary')

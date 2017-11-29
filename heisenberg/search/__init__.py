@@ -99,7 +99,7 @@ def search (dynamics_context, options, *, rng):
                     pickle_data['options'] = vars(options) # vars ensures it's a dict, and not a stupid optparse.Values object.
                     vorpy.pickle.try_to_pickle(data=pickle_data, pickle_filename=base_filename+'.pickle')
                     # Also create a human-readable summary of the pickle data.
-                    heisenberg.util.write_human_readable_summary(data=pickle_data, filename=base_filename)
+                    heisenberg.util.write_human_readable_summary(data=pickle_data, filename=base_filename+'.summary')
 
                 # Return False to indicate failure (this curve did not come close enough to closing up to warrant optimizing)
                 return False
