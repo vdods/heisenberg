@@ -302,7 +302,8 @@ class ShootingMethodObjective:
             else:
                 self.__t_min                    = t_v[_Q_global_min_index]
                 self.__objective                = Q_v[_Q_global_min_index]
-        except ValueError:
+        except ValueError as e:
+            print('exception in compute_t_min_and_objective: {0}'.format(e))
             # If there was no local min, then declare the objective function value to be NaN
             self.__Q_global_min_index           = None
             self.__t_min                        = np.nan
