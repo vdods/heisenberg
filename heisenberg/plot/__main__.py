@@ -16,12 +16,6 @@ dynamics_context = heisenberg.library.heisenberg_dynamics_context.Numeric()
 op = heisenberg.option_parser.OptionParser(module=heisenberg.plot)
 # Add the subprogram-specific options here.
 op.add_option(
-    '--k-fold-initial',
-    dest='k',
-    type='int',
-    help='Specifies that the given value, call it k, should be used in a particular form of initial condition intended to produce a k-fold symmetric orbit -- experimental.'
-)
-op.add_option(
     '--initial-preimage',
     dest='initial_preimage',
     type='string',
@@ -68,20 +62,16 @@ if options is None:
 num_initial_conditions_specified = sum([
     options.initial_preimage is not None,
     options.initial is not None,
-    options.k is not None
 ])
 if num_initial_conditions_specified != 1:
-    print('Some initial condition option must be specified; --k-fold-initial, --initial-preimage, --initial.  However, {0} of those were specified.'.format(num_initial_conditions_specified))
+    print('Some initial condition option must be specified; --initial-preimage, --initial.  However, {0} of those were specified.'.format(num_initial_conditions_specified))
     op.print_help()
     sys.exit(-1)
 
 # Validate subprogram-specific options here.
 
 # Attempt to parse initial conditions.  Upon success, the attribute options.qp_0 should exist.
-if options.k is not None:
-    options.initial_k_fold = np.array([1.0, 0.0, 0.25*np.sqrt(options.k**4 * np.pi**2 * 0.0625 - 1.0), 0.0, 1.0/options.k])
-    options.qp_0 = dynamics_context.embedding(N=5, sheet_index=1)(options.initial_k_fold)
-elif options.initial_preimage is not None:
+if options.initial_preimage is not None:
     try:
         options.initial_preimage = np.array(ast.literal_eval(options.initial_preimage))
         expected_shape = (options.embedding_dimension,)

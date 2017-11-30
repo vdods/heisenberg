@@ -83,4 +83,3 @@ to ever be completely finished.  One can consider software development to be an 
 -   The 1:1 orbit in the paper that looks like an infinity sign is classified by the class:order estimators as 0:1.
     While 0:1 and 1:1 are technically both correct, a single convention should be chosen.  Perhaps the initial
     condition for the 1:1 should be used to decide (does it show up nicely in the table of j/k <--> initial p_theta?)
--   Take out --k-fold-initial
