@@ -173,13 +173,23 @@ def search (dynamics_context, options, *, rng):
     try:
         # The "--exit-after-number-of-successes" option specifies that the limit only applies if this value is positive.
         check_success_count_to_exit = options.exit_after_number_of_successes > 0
+        # The number of successes for use in the "--exit-after-number-of-successes" option logic
+        success_count = 0
+
+        # The "--exit-after-number-of-tries" option specifies that the limit only applies if this value is positive.
+        check_try_count_to_exit = options.exit_after_number_of_tries > 0
+        # The number of tries for use in the "--exit-after-number-of-successes" option logicc
+        try_count = 0
         while True:
-            # The number of successes for use in the "--exit-after-number-of-successes" option logic
-            success_count = 0
+            try_count += 1
+            print('--------------------------------------------------------------------')
+            print('Beginning of try #{0}'.format(try_count))
+
             try:
                 succeeded = try_random_initial_condition()
                 if succeeded:
                     success_count += 1
+                    print('try_random_initial_condition() succeeded.  Incrementing success count to {0}'.format(success_count))
                     if check_success_count_to_exit:
                         if success_count >= options.exit_after_number_of_successes:
                             # The limit has been reached.  Break out of the infinite loop.
@@ -188,11 +198,25 @@ def search (dynamics_context, options, *, rng):
                         else:
                             # The limit has not been reached.  Print a progress statement.
                             print('{0} out of {1} successes.  Continuing search procedure.'.format(success_count, options.exit_after_number_of_successes))
+                else:
+                    print('try_random_initial_condition() did not succeed.  Continuing search procedure.')
             except Exception as e:
                 print('encountered exception of type {0} during try_random_initial_condition; skipping.  exception was: {1}'.format(type(e), e))
                 print('stack:')
                 ex_type,ex,tb = sys.exc_info()
                 traceback.print_tb(tb)
+
+            if check_try_count_to_exit:
+                if try_count >= options.exit_after_number_of_tries:
+                    # The limit has been reached.  Break out of the infinite loop.
+                    print('The limit {0} of tries specified by the --exit-after-number-of-tries option has been reached.  Exiting.'.format(options.exit_after_number_of_tries))
+                    break
+                else:
+                    # The limit has not been reached.  Print a progress statement.
+                    print('{0} out of {1} tries.  Continuing search procedure.'.format(try_count, options.exit_after_number_of_tries))
+
+            print()
+
     except KeyboardInterrupt:
         print('got KeyboardInterrupt -- exiting program')
         sys.exit(0)

@@ -1,0 +1,6 @@
+"Numerical Methods and Closed Orbits in the Kepler–Heisenberg Problem/Figure7/generate-orbit-1-5.sh"
+"Numerical Methods and Closed Orbits in the Kepler–Heisenberg Problem/Figure7/generate-orbit-2-5.sh"
+"Numerical Methods and Closed Orbits in the Kepler–Heisenberg Problem/Figure7/generate-orbit-3-5.sh"
+"Numerical Methods and Closed Orbits in the Kepler–Heisenberg Problem/Figure7/generate-orbit-4-5.sh"
+"Numerical Methods and Closed Orbits in the Kepler–Heisenberg Problem/Figure7/generate-orbit-1-4.sh"
+"Numerical Methods and Closed Orbits in the Kepler–Heisenberg Problem/Figure7/generate-orbit-3-4.sh"

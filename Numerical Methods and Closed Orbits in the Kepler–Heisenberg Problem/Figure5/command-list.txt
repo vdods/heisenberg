@@ -1,0 +1,2 @@
+"Numerical Methods and Closed Orbits in the Kepler–Heisenberg Problem/Figure5/generate-quasi-periodic-4.sh"
+"Numerical Methods and Closed Orbits in the Kepler–Heisenberg Problem/Figure5/generate-quasi-periodic-6.sh"

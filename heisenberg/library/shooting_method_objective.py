@@ -206,7 +206,8 @@ class ShootingMethodObjective:
 
             # TODO: Figure out some threshold for salience of strongest mode to second strongest mode.
             # TODO: Maybe also compute an "estimate salience" value
-            self.__symmetry_order_estimate = strength_sorted_mode_index_v[0]
+            # Use the mode with the highest strength, unless that's zero, in which case, use the second.
+            self.__symmetry_order_estimate = strength_sorted_mode_index_v[0] if strength_sorted_mode_index_v[0] != 0 else strength_sorted_mode_index_v[1]
             assert self.__symmetry_order_estimate is not None
         return self.__symmetry_order_estimate
 
@@ -236,6 +237,11 @@ class ShootingMethodObjective:
             class_signal_v /= signal_weight_v
             # The symmetry class estimate is the mode having the highest magnitude.
             self.__symmetry_class_estimate = np.argmax(class_signal_v)
+            # Use (1, 2, ..., order_estimate) as the set of representatives for the equivalence classes
+            # (which are integers modulo order_estimate) instead of the computer-default (0, 1, ..., order_estimate).
+            if self.__symmetry_class_estimate == 0:
+                print('NOTE: Found class 0 curve with order != 1; actual order is {0}'.format(order_estimate))
+                self.__symmetry_class_estimate = order_estimate
             self.__symmetry_class_signal_v = class_signal_v
             assert self.__symmetry_class_estimate is not None
             assert self.__symmetry_class_signal_v is not None

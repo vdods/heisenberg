@@ -151,13 +151,13 @@ def plot_samples (dynamics_context, options, *, rng):
             fig,axis_vv = plt.subplots(row_count, col_count, squeeze=False, figsize=(col_width*col_count,row_height*row_count))
 
             axis = axis_vv[0][0]
-            axis.set_title('objective function value of orbit with initial p_y')
+            axis.set_title('objective function value of orbit with initial p_theta')
             axis.set_xlabel('p_theta')
             axis.set_ylabel('objective')
             axis.plot(data_v[:,4], data_v[:,0], color='black')
 
             axis = axis_vv[1][0]
-            axis.set_title('objective-minimizing time (t_min) of orbit with initial p_y')
+            axis.set_title('objective-minimizing time (t_min) of orbit with initial p_theta')
             axis.set_xlabel('p_theta')
             axis.set_ylabel('t_min')
             axis.scatter(data_v[:,4], data_v[:,1], s=1, color='black')

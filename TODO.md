@@ -3,6 +3,8 @@
 These items have been accumulated over the course of the development of this project, and are not likely
 to ever be completely finished.  One can consider software development to be an asymptotic process.
 
+-   In reproduction instructions, make sure to note all the versions of all used libraries along with
+    the git repo commit hash used to produce all results.
 -   Create "turn-key" examples which replicate research by running a single command.
 -   Use ast.literal_eval (as in heisenberg.sample) to parse initial conditions options.
 -   Idea for cleaner and more organized option specification and validation:
@@ -83,3 +85,9 @@ to ever be completely finished.  One can consider software development to be an 
 -   The 1:1 orbit in the paper that looks like an infinity sign is classified by the class:order estimators as 0:1.
     While 0:1 and 1:1 are technically both correct, a single convention should be chosen.  Perhaps the initial
     condition for the 1:1 should be used to decide (does it show up nicely in the table of j/k <--> initial p_theta?)
+-   The specifics of quasi-periodic orbits in the K-H problem make it such that perhaps a better way of defining
+    the objective function would be to find where the orbit intersects the z=0 plane in the same direction as the
+    initial condition, and compute the squared distances in phase space of those points with the initial condition.
+    The lowest of these values would be the objective function value.  The point of this is that it would be using
+    the analogous point on a different lobe of the curve to compare.  This may also make computing a sub-sample
+    distance easier and more accurate.

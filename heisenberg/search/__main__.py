@@ -46,6 +46,13 @@ op.add_option(
     type='int',
     help='Specifies the number of "successes" after which to stop searching.  A "success" is defined by having found a curve that came close enough to closing up to then perform an optimization to refine it into a fully-closed curve.  Specifying any non-positive number indicates that there should be no limit.  The default value is 0.'
 )
+op.add_option(
+    '--exit-after-number-of-tries',
+    dest='exit_after_number_of_tries',
+    default=0,
+    type='int',
+    help='Specifies the number of "tries" after which to stop searching.  A "try" is defined by generating a random initial condition and checking if it comes close enough to closing up to be worth performing an optimization to refine it into a fully-closed curve; a "try" counts regardless of it does or does not come close enough to closing up.  Specifying any non-positive number indicates that there should be no limit.  The default value is 0.'
+)
 
 options,args = op.parse_argv_and_validate()
 if options is None:

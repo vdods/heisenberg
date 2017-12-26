@@ -187,7 +187,7 @@ def sample (dynamics_context, options, *, rng):
         for sample_result in sample_result_v:
             # See make_sample_result for which element is which.
 
-            # sample_result[0] is initial preimage, which in the case of --embedding-dimension=1, is the initial p_y value.
+            # sample_result[0] is initial preimage, which in the case of --embedding-dimension=1, is the initial p_y (aka p_theta) value.
             assert np.shape(sample_result[0]) == (1,) # Should be a 1-vector.
             p_y_v.append(sample_result[0][0])
             # sample_result[4] is the objective function value for that initial condition.
@@ -248,9 +248,9 @@ def sample (dynamics_context, options, *, rng):
             smo = heisenberg.library.shooting_method_objective.ShootingMethodObjective(dynamics_context=dynamics_context, preimage_qp_0=initial_p_y, qp_0=qp_0, t_max=max_time, t_delta=options.dt, disable_salvage=True)
 
             # Print the classification along with enough info to reconstruct the curve fully.
-            classification_string = '{0}:{1} <=> {{ initial_p_y={2}, objective={3}, period={4}, dt={5} }}'.format(
-                smo.symmetry_class_estimate(),
+            classification_string = 'order: {0}, class: {1}, symmetry type: {1}/{0} <=> {{ initial_p_y={2}, objective={3}, period={4}, dt={5} }}'.format(
                 smo.symmetry_order_estimate(),
+                smo.symmetry_class_estimate(),
                 initial_p_y,
                 objective,
                 period,
@@ -259,7 +259,7 @@ def sample (dynamics_context, options, *, rng):
             print(classification_string)
 
             # Print an example command to use heisenberg.plot to plot that curve.
-            plot_command = 'python3 -m heisenberg.plot --dt={0} --max-time={1} --initial-preimage=[{2}] --embedding-dimension=1 --embedding-solution-sheet-index={3} --output-dir={4} --quantities-to-plot="x,y;t,z;error(H);error(J);sqd;class-signal;objective" --plot-type=pdf # {5}'.format(
+            plot_command = 'python3 -m heisenberg.plot --dt={0} --max-time={1} --initial-preimage=[{2}] --embedding-dimension=1 --embedding-solution-sheet-index={3} --output-dir="{4}" --quantities-to-plot="x,y;t,z;error(H);error(J);sqd;class-signal;objective" --plot-type=pdf # {5}'.format(
                 options.dt,
                 max_time,
                 initial_p_y[0],
