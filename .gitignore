@@ -9,3 +9,5 @@ core
 *.pyprof
 *.kate-swp
 lambdified_cache
+old-data
+**/generated-data

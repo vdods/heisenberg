@@ -1,0 +1,2 @@
+NumericalMethodsAndClosedOrbitsInTheKeplerHeisenbergProblem/Figure5/generate-quasi-periodic-4.sh
+NumericalMethodsAndClosedOrbitsInTheKeplerHeisenbergProblem/Figure5/generate-quasi-periodic-6.sh

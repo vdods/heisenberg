@@ -49,6 +49,15 @@ Examples of invoking specific subprograms:
 
     python3 -m heisenberg.search --dt=1.0e-2 --max-time=1.922e2 --seed=123456789 --embedding-dimension=2 --embedding-solution-sheet-index=0 --cut-off-initial-curve-tail --plot-type=png --output-dir=search-example
 
+#### Installing the `vorpy` Dependency
+
+The `vorpy` Python module is needed by this tool suite.  To install the latest version available on github, simply
+run the following command.
+
+    pip install --upgrade git+https://github.com/vdods/vorpy.git
+
+Version `0.4.1` was the particular version used during the development and research for this project.
+
 #### License and Attribution
 
 This project is held under Copyright (2014-2017) by Victor Dods and is released as free, open-source software

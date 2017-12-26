@@ -31,11 +31,11 @@ valid_plot_to_include_title_d = {
     'error(J)'      : 'abs(J - J(t=0))',
     'sqd'           : 'squared distance from initial',
     'objective'     : 'objective function history',
-    'resampled-x,y' : 'testing x,y portion of resampled_flow_curve',
-    'fft-x,y'       : 'testing fft_xy_resampled_flow_curve',
-    'class-signal'  : 'testing class-signal',
-    'resampled-t,z' : 'testing t,z portion of resampled_flow_curve',
-    'fft-t,z'       : 'testing fft_z_resampled_flow_curve',
+    'resampled-x,y' : 'x,y portion of resampled_flow_curve',
+    'fft-x,y'       : 'fft_xy_resampled_flow_curve',
+    'class-signal'  : 'class-signal',
+    'resampled-t,z' : 't,z portion of resampled_flow_curve',
+    'fft-t,z'       : 'fft_z_resampled_flow_curve',
 }
 
 terse_valid_plot_to_include_title_d = {

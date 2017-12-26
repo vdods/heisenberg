@@ -1,0 +1,4 @@
+NumericalMethodsAndClosedOrbitsInTheKeplerHeisenbergProblem/Figure1/generate-orbit-1-4.sh
+NumericalMethodsAndClosedOrbitsInTheKeplerHeisenbergProblem/Figure1/generate-orbit-5-9.sh
+NumericalMethodsAndClosedOrbitsInTheKeplerHeisenbergProblem/Figure1/generate-orbit-6-41.sh
+NumericalMethodsAndClosedOrbitsInTheKeplerHeisenbergProblem/Figure1/generate-orbit-7-8.sh
