@@ -351,6 +351,14 @@ running the following command:
 
 The number of logical cores will indicate the maximum number of processes that can usefully be run in parallel.
 
+## Versions of Software
+
+Python version 3.5.2 was used to generate all results in this project.
+
+In general, Python 3 modules can be installed using the `pip3` package manager using the following command.
+
+    pip3 install <module-name>
+
 The following is a list of `python3` modules and their versions that are installed on the author's machine.  This list
 was obtained via the `pip3 freeze` command.  The point of listing these modules and their versions is for well-defined
 reproducibility by showing exactly which versions were used to generate the results.  Not nearly all of these modules
