@@ -8,6 +8,6 @@
 core
 *.pyprof
 *.kate-swp
-lambdified_cache
+lambdified_cache/__pycache__
 old-data
 **/generated-data

@@ -12,16 +12,16 @@ for details.
 ## Result Reproduction Instructions
 
 First, it should be noted that the results for this paper were generated from the state of the git repository
-tagged `NumericalMethods2017`, so before proceeding, make sure you've checked out that tag using the following
+tagged `NumericalMethods2018`, so before proceeding, make sure you've checked out that tag using the following
 command from the project root (the directory which contains the file `.gitignore` and `LICENSE.md`).
 
-    git checkout NumericalMethods2017
+    git checkout NumericalMethods2018
 
 Alternately, to retrieve the correct version without using the `git` commandline tool at all, download and
 extract the tagged archive using the following command.  This will create a directory called
-`heisenberg-NumericalMethods2017` in the current directory.
+`heisenberg-NumericalMethods2018` in the current directory.
 
-    curl -L https://github.com/vdods/heisenberg/archive/NumericalMethods2017.tar.gz | tar zxv
+    curl -L https://github.com/vdods/heisenberg/archive/NumericalMethods2018.tar.gz | tar zxv
 
 Once the correct version of the `heisenberg` project has been obtained, the data and plots for the figures and
 tables in the paper can be generated using the commands detailed in the following sections.  Note that all
@@ -364,7 +364,7 @@ was obtained via the `pip3 freeze` command.  The point of listing these modules 
 reproducibility by showing exactly which versions were used to generate the results.  Not nearly all of these modules
 were used in the `heisenberg` program, but getting the exact list of dependencies seemed quite difficult.  Probably
 the modules that are particularly relevant to the results are `matplotlib==2.0.2`, `numpy==1.13.0`, `scipy==0.19.0`,
-`sympy==1.0`, and `vorpy==0.4.1`.  See the project root [README.md](../README.md) for instructions on installing the
+`sympy==1.0`, and `vorpy==0.4.3`.  See the project root [README.md](../README.md) for instructions on installing the
 `vorpy` module.
 
     apturl==0.5.2
@@ -495,7 +495,7 @@ the modules that are particularly relevant to the results are `matplotlib==2.0.2
     unity-scope-zotero==0.1
     urllib3==1.13.1
     usb-creator==0.3.0
-    vorpy==0.4.1
+    vorpy==0.4.3
     wavio==0.0.3
     Werkzeug==0.12.2
     wrapt==1.10.10

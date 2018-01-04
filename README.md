@@ -25,7 +25,7 @@ can be found [here](NumericalMethodsAndClosedOrbitsInTheKeplerHeisenbergProblem/
 
 ## License and Attribution
 
-This project is held under Copyright (2014-2017) by Victor Dods and is released as free, open-source software
+This project is held under Copyright (2014-2018) by Victor Dods and is released as free, open-source software
 under the [MIT License](LICENSE.md), without warranty.
 
 If you use any code from this project, I'd love to hear about what you're applying it to!  Send me an email about it at
@@ -81,14 +81,39 @@ Examples of invoking specific subprograms:
 Please see [this](NumericalMethodsAndClosedOrbitsInTheKeplerHeisenbergProblem/README.md) and the scripts that it
 refers to for more specific examples.
 
-## Installing the `vorpy` Dependency
+## Installing Dependencies
 
-The `vorpy` Python module is needed by this tool suite.  To install the latest version available on github, simply
-run the following command.
+There are various Python modules needed by this tool suite, including [`vorpy`](https://github.com/vdods/vorpy) which has the
+module for symplectic integration.  Version `0.4.3` was the specific version used to produce the results in the "Numerical Methods..."
+paper.  Python modules can be installed easily using a command having the form
 
-    pip install --upgrade git+https://github.com/vdods/vorpy.git
+    pip3 install <package-name>
 
-Version `0.4.1` was the particular version used during the development and research for this project.
+In particular, to install `vorpy`, use
+
+    pip3 install vorpy
+
+The `pip3` command may either need to be run as the super-user (e.g. `sudo pip3 install <package-name>` which will install
+the package globally for use by everyone on the system) or in the user scheme (e.g. `pip3 install --user <package-name>` which
+will install the package under the user's home directory and therefore be available only to that user).
+
+## Additional References
+
+It was discovered that there was a [request to be cited by the `dill` package](https://pypi.python.org/pypi/dill) which is used
+indirectly by this codebase after the "Numerical Methods..." paper was published.  The citation is as follows.
+
+    If you use dill to do research that leads to publication, we ask that you acknowledge use of dill by citing the following in your publication:
+
+        M.M. McKerns, L. Strand, T. Sullivan, A. Fang, M.A.G. Aivazis,
+        "Building a framework for predictive science", Proceedings of
+        the 10th Python in Science Conference, 2011;
+        http://arxiv.org/pdf/1202.1056
+
+        Michael McKerns and Michael Aivazis,
+        "pathos: a framework for heterogeneous computing", 2010- ;
+        http://trac.mystic.cacr.caltech.edu/project/pathos
+
+    Please see http://trac.mystic.cacr.caltech.edu/project/pathos or http://arxiv.org/pdf/1202.1056 for further information.
 
 ## To-do List
 
