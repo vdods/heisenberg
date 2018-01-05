@@ -11,6 +11,10 @@ for details.
 
 ## Result Reproduction Instructions
 
+If you encounter problems trying to run this software and have put your own due diligence in trying to fix them (installing
+necessary software, etc), feel free to contact me at `victor <dot> dods <at-sign> gmail <dot> com` and I'll see if I can
+help!
+
 ### Obtaining the Source Code
 
 First, it should be noted that the results for this paper were generated from the git repository branch
