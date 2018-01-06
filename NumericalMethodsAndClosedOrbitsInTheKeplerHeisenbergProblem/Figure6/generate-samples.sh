@@ -14,4 +14,4 @@ mkdir -p "$OUTPUT_DIR"
 
 # Compute the objective function on a uniformly sampled interval of p_theta values.  This program uses internal parallel
 # processing, and will use as many processor cores as you have.
-/usr/bin/time --verbose python3 -m heisenberg.sample --dt=0.003 --max-time=200 --embedding-dimension=1 --embedding-solution-sheet-index=0 --samples-dir="$OUTPUT_DIR" --sampling-domain=[[0.0,0.4]] --sampling-type=ordered --sampling-range=[1000]
+/usr/bin/time python3 -m heisenberg.sample --dt=0.003 --max-time=200 --embedding-dimension=1 --embedding-solution-sheet-index=0 --samples-dir="$OUTPUT_DIR" --sampling-domain=[[0.0,0.4]] --sampling-type=ordered --sampling-range=[1000]

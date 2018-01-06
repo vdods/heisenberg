@@ -17,4 +17,4 @@ mkdir -p "$OUTPUT_DIR"
 # abort after the desired results are generated).  Also note the --optimization-iterations=0 option,
 # indicating that acceptable search candidates will not be optimized (because the point of this
 # command is the plots that appear in the abortive subdirectory).
-/usr/bin/time --verbose python3 -m heisenberg.search --dt=1.0e-2 --max-time=600 --seed=459540 --embedding-dimension=2 --embedding-solution-sheet-index=1 --plot-type=pdf --output-dir="$OUTPUT_DIR" --optimization-iterations=0 --exit-after-number-of-tries=11 --quantities-to-plot="x,y;t,z" --plot-size=3 --use-terse-plot-titles 2>&1 | tee "$OUTPUT_DIR/log.txt"
+/usr/bin/time python3 -m heisenberg.search --dt=1.0e-2 --max-time=600 --seed=459540 --embedding-dimension=2 --embedding-solution-sheet-index=1 --plot-type=pdf --output-dir="$OUTPUT_DIR" --optimization-iterations=0 --exit-after-number-of-tries=11 --quantities-to-plot="x,y;t,z" --plot-size=3 --use-terse-plot-titles 2>&1 | tee "$OUTPUT_DIR/log.txt"

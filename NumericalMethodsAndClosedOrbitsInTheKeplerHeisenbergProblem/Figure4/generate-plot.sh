@@ -13,4 +13,4 @@ fi
 mkdir -p "$OUTPUT_DIR"
 
 # Plot the generated samples.
-/usr/bin/time --verbose python3 -m heisenberg.plot_samples --plot-type=pdf --samples-dir="$OUTPUT_DIR"
+/usr/bin/time python3 -m heisenberg.plot_samples --plot-type=pdf --samples-dir="$OUTPUT_DIR"

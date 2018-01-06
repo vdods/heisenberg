@@ -13,4 +13,4 @@ fi
 mkdir -p "$OUTPUT_DIR"
 
 # The 2/5 orbit
-/usr/bin/time --verbose python3 -m heisenberg.plot --dt=0.003 --max-time=37.50116834001604 --initial-preimage=[0.1989971837263958] --embedding-dimension=1 --embedding-solution-sheet-index=0 --output-dir="$OUTPUT_DIR" --disable-plot-decoration --cut-off-initial-curve-tail --quantities-to-plot=x,y --plot-type=pdf
+/usr/bin/time python3 -m heisenberg.plot --dt=0.003 --max-time=37.50116834001604 --initial-preimage=[0.1989971837263958] --embedding-dimension=1 --embedding-solution-sheet-index=0 --output-dir="$OUTPUT_DIR" --disable-plot-decoration --cut-off-initial-curve-tail --quantities-to-plot=x,y --plot-type=pdf

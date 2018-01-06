@@ -14,4 +14,4 @@ mkdir -p "$OUTPUT_DIR"
 
 echo "Generating local minimum plots in parallel..."
 echo "Generated files will appear in the directory \"$OUTPUT_DIR\""
-cat "$GENERATED_DATA_DIR/sample_v.count:1000.plot_commands" | /usr/bin/time --verbose parallel 2>&1 | tee "$OUTPUT_DIR/log.txt"
+cat "$GENERATED_DATA_DIR/sample_v.count:1000.plot_commands" | /usr/bin/time parallel 2>&1 | tee "$OUTPUT_DIR/log.txt"

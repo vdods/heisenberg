@@ -47,4 +47,4 @@ cat "$BASE_DIR/Table1/command-list-for-orbits-of-order-7-to-8.txt" >> "$GENERATE
 # Note that because we're running some command lists for Figures/Tables directly, their generated-data directories
 # may not have a log.txt file (because their own generate.sh file is what creates that, but we're skipping those).
 
-/usr/bin/time --verbose bash -c "(parallel < \"$GENERATED_COMMAND_LIST\"; \"$BASE_DIR/Figure4/generate.sh\"; \"$BASE_DIR/Figure6/generate.sh\"; \"$BASE_DIR/Figure6/generate-local-minimum-plots.sh\")" 2>&1 | tee "$GENERATED_DATA_DIR/log.txt"
+/usr/bin/time bash -c "(parallel < \"$GENERATED_COMMAND_LIST\"; \"$BASE_DIR/Figure4/generate.sh\"; \"$BASE_DIR/Figure6/generate.sh\"; \"$BASE_DIR/Figure6/generate-local-minimum-plots.sh\")" 2>&1 | tee "$GENERATED_DATA_DIR/log.txt"

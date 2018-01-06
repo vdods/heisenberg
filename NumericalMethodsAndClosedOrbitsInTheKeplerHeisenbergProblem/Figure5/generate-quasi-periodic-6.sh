@@ -13,4 +13,4 @@ fi
 mkdir -p "$OUTPUT_DIR"
 
 # A quasi-periodic orbit having near-6-fold symmetry
-/usr/bin/time --verbose python3 -m heisenberg.plot --dt=1.0e-2 --max-time=600 --embedding-dimension=2 --embedding-solution-sheet-index=1 --initial-preimage=[4.35797440367095557e-02,3.48993491514963006e-01] --quantities-to-plot="x,y;t,z" --plot-type=pdf --use-terse-plot-titles --plot-size=3 --output-dir="$OUTPUT_DIR"
+/usr/bin/time python3 -m heisenberg.plot --dt=1.0e-2 --max-time=600 --embedding-dimension=2 --embedding-solution-sheet-index=1 --initial-preimage=[4.35797440367095557e-02,3.48993491514963006e-01] --quantities-to-plot="x,y;t,z" --plot-type=pdf --use-terse-plot-titles --plot-size=3 --output-dir="$OUTPUT_DIR"

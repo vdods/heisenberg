@@ -13,4 +13,4 @@ mkdir -p "$OUTPUT_DIR"
 
 echo "Generating 'Figure 5' plots in parallel..."
 echo "Generated files will appear in the directory \"$OUTPUT_DIR\""
-cat "$FIGURE_DIR/command-list.txt" | /usr/bin/time --verbose parallel 2>&1 | tee "$OUTPUT_DIR/log.txt"
+cat "$FIGURE_DIR/command-list.txt" | /usr/bin/time parallel 2>&1 | tee "$OUTPUT_DIR/log.txt"
