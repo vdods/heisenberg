@@ -1,44 +1,20 @@
+"""
+Note that it been proved that the Kepler-Heisenberg is not fully integrable:
+Andrzej Maciejewski, Tomasz Stachowiak - 2021 Feb
+https://www.researchsquare.com/article/rs-272845/v1
+"""
+
 import copy
 import numpy as np
 import sympy as sp
 import sympy.core.symbol
+import vorpy.manifold
 import vorpy.symbolic
+import vorpy.symplectic
 import vorpy.tensor
 
 class FancyException(Exception): # TODO: Rename
     pass
-
-def apply_vector_field_to_function (V, f, X):
-    """This returns the directional derivative of f along V in coordinates X."""
-    return np.dot(V.reshape(-1), vorpy.symbolic.differential(f, X).reshape(-1)).simplify()
-
-def lie_bracket (A, B, X):
-    """
-    Compute the Lie bracket of vector fields A and B with respect to coordinates
-    given by coordinates_v.
-
-    A formula for [A,B], i.e. the Lie bracket of vector fields A and B, is
-
-        J__B_reshaped*A - J__A_reshaped*B
-
-    where J_X is the Jacobian matrix of the vector field X.
-
-    See https://en.wikipedia.org/wiki/Lie_bracket_of_vector_fields#In_coordinates
-    See https://en.wikipedia.org/wiki/Jacobian_matrix_and_determinant
-    """
-
-    if A.shape != B.shape or A.shape != X.shape:
-        raise FancyException(f'The shapes of A, B, and X must all be equal, but instead got A.shape = {A.shape}, B.shape = {B.shape}, X.shape = {X.shape}')
-
-    # Flatten the shapes out for computing and contracting the Jacobian matrices.
-    A_reshaped = A.reshape(-1)
-    B_reshaped = B.reshape(-1)
-    X_reshaped = X.reshape(-1)
-    # Compute the Jacobian matrices of (the reshaped versions of) A and B
-    J__A_reshaped = vorpy.symbolic.differential(A_reshaped, X_reshaped)
-    J__B_reshaped = vorpy.symbolic.differential(B_reshaped, X_reshaped)
-    # Reshape the result into the original shape of the vector fields and coordinates.
-    return (np.dot(J__B_reshaped,A_reshaped) - np.dot(J__A_reshaped,B_reshaped)).reshape(X.shape)
 
 def lie_bracket__test ():
     n = 3
@@ -55,7 +31,7 @@ def lie_bracket__test ():
     ])
     #print(f'A = {A}')
     #print(f'B = {B}')
-    lb__A_B = lie_bracket(A, B, X)
+    lb__A_B = vorpy.manifold.lie_bracket(A, B, X)
     #print(f'lb__A_B = {lb__A_B}')
 
     f = sp.Function('f')(*list(X_reshaped))
@@ -63,67 +39,16 @@ def lie_bracket__test ():
 
     # Compute the Lie bracket the smart way (just as a function of the vector fields' coordinate expressions),
     # applied to a generic function of the coordinates.
-    computed_value = apply_vector_field_to_function(lb__A_B, f, X)
+    computed_value = vorpy.manifold.apply_vector_field_to_function(lb__A_B, f, X)
     # Compute the Lie bracket the definitional way (as the commutator of vector fields acting as derivations
     # on functions), applied to a generic function of the coordinates.
-    expected_value = apply_vector_field_to_function(A, apply_vector_field_to_function(B, f, X), X) - apply_vector_field_to_function(B, apply_vector_field_to_function(A, f, X), X)
+    expected_value = vorpy.manifold.apply_vector_field_to_function(A, vorpy.manifold.apply_vector_field_to_function(B, f, X), X) - vorpy.manifold.apply_vector_field_to_function(B, vorpy.manifold.apply_vector_field_to_function(A, f, X), X)
 
     error = (computed_value - expected_value).simplify()
     #print(f'error in lie brackets (expected value is 0) = {error}')
     if error != 0:
         raise FancyException(f'Error in computed vs expected Lie bracket value was not zero, but instead was {error}')
     print(f'lie_bracket__test passed')
-
-def symplectic_dual_of_vector_field (V):
-    """
-    V must have shape (2,n) for some n > 0, and must be in Darboux coordinates.
-    In particular, this implies that the symplectic form and its inverse are
-    respectively written
-
-        [ 0 -I ]        [  0 I ]
-        [ I  0 ]        [ -I 0 ]
-
-    The symplectic dual of a vector field is the symplectic form applied to
-    the vector field.
-    """
-    if len(V.shape) != 2 or V.shape[0] != 2 or V.shape[1] == 0:
-        raise FancyException(f'Expected V to have shape (2,n) for some n > 0, but instead it had shape {V.shape}')
-
-    return np.vstack((-V[1,:], V[0,:]))
-
-def symplectic_dual_of_covector_field (C):
-    """
-    C must have shape (2,n) for some n > 0, and must be in Darboux coordinates.
-    In particular, this implies that the symplectic form and its inverse are
-    respectively written
-
-        [ 0 -I ]        [  0 I ]
-        [ I  0 ]        [ -I 0 ]
-
-    The symplectic dual of a covector field is the inverse of the symplectic form applied to
-    the covector field.
-    """
-    if len(C.shape) != 2 or C.shape[0] != 2 or C.shape[1] == 0:
-        raise FancyException(f'Expected C to have shape (2,n) for some n > 0, but instead it had shape {C.shape}')
-
-    return np.vstack((C[1,:], -C[0,:]))
-
-def symplectic_gradient_of (f, X):
-    """
-    Returns the symplectic dual of the covector field df.
-
-    There is a choice of convention regarding where a particular negative sign goes (which
-    arguably stems from the sign in the tautological 1-form on the cotangent bundle).  This
-    function is defined such that the flow equation for the resulting vector field is
-    Hamilton's equations of motion for the Hamiltonian function f.
-    """
-
-    #df_dq = vorpy.symbolic.differential(f, X[0,:])
-    #df_dp = vorpy.symbolic.differential(f, X[1,:])
-    #return np.vstack((df_dp, -df_dq))
-    df = vorpy.symbolic.differential(f, X)
-    assert df.shape == (2,3)
-    return symplectic_dual_of_covector_field(df)
 
 def phase_space_coordinates ():
     return np.array((
@@ -153,6 +78,9 @@ class FancyFunction(sp.Function):
 
     def fdiff (self, argindex):
         return self._value(*self.args).diff(self.args[argindex-1])
+
+    def _expanded (self):
+        return self._value(*self.args)
 
 class P_x__(FancyFunction):
     @classmethod
@@ -308,6 +236,8 @@ class J__(FancyFunction):
         return value
 
 def P_x__test ():
+    # TODO: Deprecate this, it's just to test how subclassing sp.Function works.
+
     qp = phase_space_coordinates()
 
     x,y,z       = qp[0,:]
@@ -347,7 +277,7 @@ def P_x__test ():
 
     dH = vorpy.symbolic.differential(H, qp)
     print(f'dH = {dH}')
-    print(f'symplectic gradient of H = {symplectic_gradient_of(H, qp)}')
+    print(f'symplectic gradient of H = {vorpy.symplectic.symplectic_gradient_of(H, qp)}')
 
 def K (qp):
     return (P_x(qp)**2 + P_y(qp)**2)/2
@@ -384,12 +314,12 @@ def H__conservation_test ():
     """
 
     qp = phase_space_coordinates()
-    #X_H = symplectic_gradient_of(H(qp), qp)
+    #X_H = vorpy.symplectic.symplectic_gradient_of(H(qp), qp)
     H_qp = H__(*qp.reshape(-1).tolist())
-    X_H = symplectic_gradient_of(H_qp, qp)
+    X_H = vorpy.symplectic.symplectic_gradient_of(H_qp, qp)
 
     # Sanity check
-    X_H__H = apply_vector_field_to_function(X_H, H_qp, qp)
+    X_H__H = vorpy.manifold.apply_vector_field_to_function(X_H, H_qp, qp)
     if X_H__H != 0:
         raise FancyException(f'Expected X_H(H) == 0 but instead got {X_H__H}')
     print('H__conservation_test passed')
@@ -408,10 +338,10 @@ def p_theta__conservation_test ():
     """
 
     qp = phase_space_coordinates()
-    X_H = symplectic_gradient_of(H(qp), qp)
+    X_H = vorpy.symplectic.symplectic_gradient_of(H(qp), qp)
 
     # Sanity check
-    X_H__p_theta = apply_vector_field_to_function(X_H, p_theta(qp), qp)
+    X_H__p_theta = vorpy.manifold.apply_vector_field_to_function(X_H, p_theta(qp), qp)
     if X_H__p_theta != 0:
         raise FancyException(f'Expected X_H(p_theta) == 0 but instead got {X_H__p_theta}')
     print('p_theta__conservation_test passed')
@@ -429,10 +359,10 @@ def J__restricted_conservation_test ():
 
     qp = phase_space_coordinates()
     H_qp = H(qp)
-    X_H = symplectic_gradient_of(H_qp, qp)
+    X_H = vorpy.symplectic.symplectic_gradient_of(H_qp, qp)
 
     J_qp = J(qp)
-    X_H__J = apply_vector_field_to_function(X_H, J_qp, qp)
+    X_H__J = vorpy.manifold.apply_vector_field_to_function(X_H, J_qp, qp)
 
     p_z = qp[1,2]
 
@@ -469,35 +399,35 @@ def J__test ():
     r_squared_      = r_squared__(x,y)
 
     H_qp            = H__(*qp_)
-    X_H             = symplectic_gradient_of(H_qp, qp)
+    X_H             = vorpy.symplectic.symplectic_gradient_of(H_qp, qp)
 
     J_qp            = J__(*qp_)
     # Because X_H gives the vector field defining the time derivative of a solution to the dynamics,
     # it follows that X_H applied to J is equal to dJ/dt (where J(t) is J(qp(t)), where qp(t) is a
     # solution to Hamilton's equations).
-    X_H__J          = apply_vector_field_to_function(X_H, J_qp, qp)
-    print(f'J__test; X_H__J = {X_H__J}')
-    print(f'J__test; 2*H = {sp.expand(2*H_qp)}')
+    X_H__J          = vorpy.manifold.apply_vector_field_to_function(X_H, J_qp, qp)
+    #print(f'J__test; X_H__J = {X_H__J}')
+    #print(f'J__test; 2*H = {sp.expand(2*H_qp)}')
     actual_value    = X_H__J - sp.expand(2*H_qp)
-    print(f'J__test; X_H__J - 2*H = {actual_value}')
+    #print(f'J__test; X_H__J - 2*H = {actual_value}')
 
     # Annoyingly, this doesn't simplify to 0 automatically, so some manual manipulation has to be done.
 
     # Manipulate the expression to ensure the P_x and P_y terms cancel
     actual_value    = sp.collect(actual_value, [P_x_, P_y_])
-    print(f'J__test; after collect P_x, P_y: X_H__J - 2*H = {actual_value}')
-    actual_value    = sp.Subs(actual_value, [P_x_, P_y_], [P_x_._value(*qp_), P_y_._value(*qp_)]).doit()
-    print(f'J__test; after subs P_x, P_y: X_H__J - 2*H = {actual_value}')
+    #print(f'J__test; after collect P_x, P_y: X_H__J - 2*H = {actual_value}')
+    actual_value    = sp.Subs(actual_value, [P_x_, P_y_], [P_x_._expanded(), P_y_._expanded()]).doit()
+    #print(f'J__test; after subs P_x, P_y: X_H__J - 2*H = {actual_value}')
 
     # Manipulate the expression to ensure the mu terms cancel
     actual_value    = sp.factor_terms(actual_value, clear=True, fraction=True)
-    print(f'J__test; after factor_terms: X_H__J - 2*H = {actual_value}')
+    #print(f'J__test; after factor_terms: X_H__J - 2*H = {actual_value}')
     actual_value    = sp.collect(actual_value, [r_squared_])
-    print(f'J__test; after collect r_squared_: X_H__J - 2*H = {actual_value}')
-    actual_value    = sp.Subs(actual_value, [r_squared_._value(x,y)], [r_squared_]).doit()
-    print(f'J__test; after subs r_squared: X_H__J - 2*H = {actual_value}')
-    actual_value    = sp.Subs(actual_value, [mu_._value(x,y,z)], [mu_]).doit()
-    print(f'J__test; after subs mu: X_H__J - 2*H = {actual_value}')
+    #print(f'J__test; after collect r_squared_: X_H__J - 2*H = {actual_value}')
+    actual_value    = sp.Subs(actual_value, [r_squared_._expanded()], [r_squared_]).doit()
+    #print(f'J__test; after subs r_squared: X_H__J - 2*H = {actual_value}')
+    actual_value    = sp.Subs(actual_value, [mu_._expanded()], [mu_]).doit()
+    #print(f'J__test; after subs mu: X_H__J - 2*H = {actual_value}')
 
     if actual_value != 0:
         raise FancyException(f'Expected X_H__J - 2*H == 0, but actual value was {actual_value}')
@@ -524,7 +454,7 @@ def V (qp):
     A = dz + y/2 * dx - x/2 * dy
     V = del_{p_z} + y/2 * del_{p_x} - x/2 * del_{p_y}
     """
-    return symplectic_dual_of_covector_field(A(qp))
+    return vorpy.symplectic.symplectic_dual_of_covector_field(A(qp))
 
 def V__test ():
     qp = phase_space_coordinates()
@@ -542,22 +472,30 @@ def V__test ():
         raise FancyException(f'Expected V = {expected_value} but it was actually {actual_value}')
     print('V__test passed')
 
-def lie_bracket_of__X_H__V ():
+def lie_bracket_of__X_H__V__test ():
     qp = phase_space_coordinates()
-    print(f'H = {H(qp)}')
-    print(f'X_H = {symplectic_gradient_of(H(qp), qp)}')
+    #print(f'H = {H(qp)}')
+    #print(f'X_H = {vorpy.symplectic.symplectic_gradient_of(H(qp), qp)}')
 
-    print(f'A = {A(qp)}')
-    print(f'V = {V(qp)}')
+    #print(f'A = {A(qp)}')
+    #print(f'V = {V(qp)}')
 
-    lb__X_H__V = lie_bracket(symplectic_gradient_of(H(qp), qp), V(qp), qp)
-    print(f'[X_H,V] = {lb__X_H__V}')
+    lb__X_H__V = vorpy.manifold.lie_bracket(vorpy.symplectic.symplectic_gradient_of(H(qp), qp), V(qp), qp)
+    #print(f'[X_H,V] = {lb__X_H__V}')
+
+    # NOTE: This has sign opposite from Corey's Weinstein Note PDF file (he has a sign
+    # error in computing the symplectic dual of V).
     expected__lb__X_H__V = np.array((
         (sp.Integer(0), sp.Integer(0), sp.Integer(0)),
-        (       P_y(qp),       -P_x(qp), sp.Integer(0)),
+        (     -P_y(qp),       P_x(qp), sp.Integer(0)),
     ))
-    print(f'expected value = {expected__lb__X_H__V}')
-    print(f'[X_H,V] - expected_value = {lb__X_H__V - expected__lb__X_H__V}')
+    #print(f'expected value = {expected__lb__X_H__V}')
+    #print(f'[X_H,V] - expected_value = {lb__X_H__V - expected__lb__X_H__V}')
+
+    if not np.all(lb__X_H__V == expected__lb__X_H__V):
+        raise FancyException(f'Expected [X_H,V] = {expected__lb__X_H__V} but it was actually {lb__X_H__V}')
+
+    print('lie_bracket_of__X_H__V__test passed')
 
 """
 Design notes for integral-of-motion search.
@@ -573,70 +511,70 @@ after evaluating X_H(F) and before attempting to solve for the coefficients of F
 is conserved in this case (only when H = 0), this method should find J.
 """
 
-def tensor_power (V, p):
-    """
-    Returns the pth tensor power of vector V.  This should be a tensor having order p,
-    which looks like V \otimes ... \otimes V (with p factors).  If p is zero, then this
-    returns 1.
+#def tensor_power (V, p):
+    #"""
+    #Returns the pth tensor power of vector V.  This should be a tensor having order p,
+    #which looks like V \otimes ... \otimes V (with p factors).  If p is zero, then this
+    #returns 1.
 
-    TODO: Implement this for tensors of arbitrary order (especially including 0-tensors).
-    """
+    #TODO: Implement this for tensors of arbitrary order (especially including 0-tensors).
+    #"""
 
-    V_order = vorpy.tensor.order(V)
-    if V_order != 1:
-        raise FancyException(f'Expected V to be a vector (i.e. a 1-tensor), but it was actually a {V_order}-tensor')
-    if p < 0:
-        raise FancyException(f'Expected p to be a nonnegative integer, but it was actually {p}')
+    #V_order = vorpy.tensor.order(V)
+    #if V_order != 1:
+        #raise FancyException(f'Expected V to be a vector (i.e. a 1-tensor), but it was actually a {V_order}-tensor')
+    #if p < 0:
+        #raise FancyException(f'Expected p to be a nonnegative integer, but it was actually {p}')
 
-    if p == 0:
-        return np.array(1) # TODO: Should this be an actual scalar?
-    elif p == 1:
-        return V
-    else:
-        assert len(V.shape) == 1 # This should be equivalent to V_order == 1.
-        V_dim = V.shape[0]
-        V_to_the_p_minus_1 = tensor_power(V, p-1)
-        retval_shape = (V_dim,)*p
-        return np.outer(V, V_to_the_p_minus_1.reshape(-1)).reshape(*retval_shape)
+    #if p == 0:
+        #return np.array(1) # TODO: Should this be an actual scalar?
+    #elif p == 1:
+        #return V
+    #else:
+        #assert len(V.shape) == 1 # This should be equivalent to V_order == 1.
+        #V_dim = V.shape[0]
+        #V_to_the_p_minus_1 = vorpy.tensor.tensor_power_of_vector(V, p-1)
+        #retval_shape = (V_dim,)*p
+        #return np.outer(V, V_to_the_p_minus_1.reshape(-1)).reshape(*retval_shape)
 
 def tensor_power__test ():
     V = np.array((sp.var('x'), sp.var('y'), sp.var('z')))
 
     #print(f'V = {V}')
     #for p in range(5):
-        #print(f'tensor_power(V, {p}):')
-        #print(f'{tensor_power(V, p)}')
+        #print(f'vorpy.tensor.tensor_power_of_vector(V, {p}):')
+        #print(f'{vorpy.tensor.tensor_power_of_vector(V, p)}')
         #print()
 
     # Specific comparisons
 
     power           = 0
     expected_value  = 1
-    actual_value    = tensor_power(V, power)
+    actual_value    = vorpy.tensor.tensor_power_of_vector(V, power)
     if not np.all(expected_value == actual_value):
         raise FancyException(f'For power {power}, expected {expected_value} but actual value was {actual_value}')
 
     power           = 1
     expected_value  = V
-    actual_value    = tensor_power(V, power)
+    actual_value    = vorpy.tensor.tensor_power_of_vector(V, power)
     if not np.all(expected_value == actual_value):
         raise FancyException(f'For power {power}, expected {expected_value} but actual value was {actual_value}')
 
     power           = 2
     expected_value  = vorpy.tensor.contract('i,j', V, V, dtype=object)
-    actual_value    = tensor_power(V, power)
+    actual_value    = vorpy.tensor.tensor_power_of_vector(V, power)
     if not np.all(expected_value == actual_value):
         raise FancyException(f'For power {power}, expected {expected_value} but actual value was {actual_value}')
 
     power           = 3
     expected_value  = vorpy.tensor.contract('i,j,k', V, V, V, dtype=object)
-    actual_value    = tensor_power(V, power)
+    actual_value    = vorpy.tensor.tensor_power_of_vector(V, power)
     if not np.all(expected_value == actual_value):
         raise FancyException(f'For power {power}, expected {expected_value} but actual value was {actual_value}')
 
     power           = 4
     expected_value  = vorpy.tensor.contract('i,j,k,l', V, V, V, V, dtype=object)
-    actual_value    = tensor_power(V, power)
+    actual_value    = vorpy.tensor.tensor_power_of_vector(V, power)
     if not np.all(expected_value == actual_value):
         raise FancyException(f'For power {power}, expected {expected_value} but actual value was {actual_value}')
 
@@ -673,7 +611,7 @@ def symbolic_polynomial (coefficient_prefix, degree, X):
             else:
                 coefficient_accumulator.append(degree_p_coefficients[I])
 
-        degree_p_variable_tensor    = tensor_power(X_reshaped, p)
+        degree_p_variable_tensor    = vorpy.tensor.tensor_power_of_vector(X_reshaped, p)
         # Because of the sparsification done above, multiplying it out this way is somewhat inefficient, but it's fine for now.
         polynomial_accumulator     += np.dot(degree_p_coefficients.reshape(-1), degree_p_variable_tensor.reshape(-1))
 
@@ -682,7 +620,7 @@ def symbolic_polynomial (coefficient_prefix, degree, X):
 def symbolic_polynomial__test ():
     X = np.array((sp.var('x'), sp.var('y'), sp.var('z')))
 
-    print(f'symbolic_polynomial("a", 2, {X}) = {symbolic_polynomial("a", 2, X)}')
+    print(f'vorpy.symbolic.symbolic_polynomial("a", 2, {X}) = {vorpy.symbolic.symbolic_polynomial("a", 2, X)}')
     # TODO: actually do a check.
 
 def collect_by_linear_factors (expr, linear_factor_v, *, term_procedure=None, sanity_check=False):
@@ -707,19 +645,28 @@ def collect_by_linear_factors (expr, linear_factor_v, *, term_procedure=None, sa
     return np.dot(dexpr, linear_factor_v)
 
 def find_integral_of_motion (highest_degree_polynomial):
+    """
+    TODO: Could potentially use
+
+        https://www.sciencedirect.com/science/article/pii/S0747717185800146
+        https://www.sciencedirect.com/science/article/pii/S0747717185800146/pdf?md5=2523d9cdea9c529ac03075da71605760&pid=1-s2.0-S0747717185800146-main.pdf
+
+    to deal with a larger class of functions (ones involving radicals).
+    """
+
     qp = phase_space_coordinates()
     H_qp = H(qp)
-    X_H = symplectic_gradient_of(H_qp, qp)
+    X_H = vorpy.symplectic.symplectic_gradient_of(H_qp, qp)
 
     qp_reshaped = qp.reshape(-1)
 
     for degree in range(1, highest_degree_polynomial+1):
         print(f'degree = {degree}')
-        F, F_coefficients = symbolic_polynomial('F', degree, qp)
+        F, F_coefficients = vorpy.symbolic.symbolic_polynomial('F', degree, qp)
         print(f'F = {F}')
         print(f'len(F_coefficients) = {len(F_coefficients)}')
         print(f'F_coefficients = {F_coefficients}')
-        X_H__F = apply_vector_field_to_function(X_H, F, qp)
+        X_H__F = vorpy.manifold.apply_vector_field_to_function(X_H, F, qp)
         print(f'\nOriginal expression')
         print(f'X_H__F = {X_H__F}')
         X_H__F = sp.fraction(sp.factor_terms(X_H__F, clear=True))[0]
@@ -857,16 +804,16 @@ if __name__ == '__main__':
     P_x__test()
     if True:
         J__test()
-    if False:
+    if True:
         lie_bracket__test()
-        lie_bracket_of__X_H__V()
+        lie_bracket_of__X_H__V__test()
         V__test()
     if True:
         H__conservation_test()
-    if False:
+    if True:
         p_theta__conservation_test()
         J__restricted_conservation_test()
         tensor_power__test()
         symbolic_polynomial__test()
-
+    if False:
         find_integral_of_motion(2)
