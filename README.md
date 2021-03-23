@@ -7,6 +7,10 @@ The publication "Numerical Methods and Closed Orbits in the Kepler-Heisenberg Pr
 be found in [the Journal of Experimental Mathematics](http://www.tandfonline.com/doi/full/10.1080/10586458.2017.1416709),
 and the preprint on [the arXiv](https://arxiv.org/abs/1707.05937).
 
+The publication "Self-Similarity in the Kepler-Heisenberg Problem" in which these results appear can be found in
+[Journal of Nonlinear Science](https://www.springer.com/journal/332) (publication forthcoming as of 2021.03.22),
+and the preprint on [the arXiv](https://arxiv.org/abs/1912.12375).
+
 ## Contributors
 
 - Victor Dods    : programming, some math
@@ -22,6 +26,9 @@ results.
 
 Full details on how to reproduce the results found in "Numerical Methods and Closed Orbits in the Kepler-Heisenberg Problem"
 can be found [here](NumericalMethodsAndClosedOrbitsInTheKeplerHeisenbergProblem/README.md).
+
+Full details on how to reproduce the results found in "Self-Similarity in the Kepler-Heisenberg Problem"
+can be found [here](SelfSimilarityInTheKeplerHeisenbergProblem/README.md).
 
 ## License and Attribution
 
@@ -81,11 +88,15 @@ Examples of invoking specific subprograms:
 Please see [this](NumericalMethodsAndClosedOrbitsInTheKeplerHeisenbergProblem/README.md) and the scripts that it
 refers to for more specific examples.
 
+Please see [this](SelfSimilarityInTheKeplerHeisenbergProblem/README.md) and the scripts that it refers to for the
+specific examples for that paper.
+
 ## Installing Dependencies
 
 There are various Python modules needed by this tool suite, including [`vorpy`](https://github.com/vdods/vorpy) which has the
 module for symplectic integration.  Version `0.4.3` was the specific version used to produce the results in the "Numerical Methods..."
-paper.  Python modules can be installed easily using a command having the form
+paper, and version `0.9.0` was the specific version used to produce the results in the "Self-Similarity..." paper.  Python modules
+can be installed easily using a command having the form
 
     pip3 install <package-name>
 
