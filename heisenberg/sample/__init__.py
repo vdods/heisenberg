@@ -15,8 +15,8 @@ subprogram_description = 'Samples a specified parameter space of initial conditi
 
 ## TODO: Come up with less generic name.
 #Sample = collections.namedtuple('Sample', ['initial', 'qp_0', 'dt', 'max_time', 'objective', 't_min', 'max_abs_H', 'max_abs_J_minus_J_0', 'flow_curve_was_salvaged'])
-def make_sample_result (*, initial, qp_0, dt, max_time, objective, t_min, max_abs_H, max_abs_J_minus_J_0, flow_curve_was_salvaged):
-    return (initial, qp_0, dt, max_time, objective, t_min, max_abs_H, max_abs_J_minus_J_0, flow_curve_was_salvaged)
+def make_sample_result (*, initial, qp_0, dt, max_time, objective, t_min, max_abs_H, max_abs_J_minus_J_0, flow_curve_was_salvaged, flow_curve):
+    return (initial, qp_0, dt, max_time, objective, t_min, max_abs_H, max_abs_J_minus_J_0, flow_curve_was_salvaged, flow_curve)
 
 def worker (args):
     assert len(args) == 6, 'passed wrong number of arguments to worker function'
@@ -46,7 +46,8 @@ def worker (args):
             t_min=t_min,
             max_abs_H=np.max(abs_H_v),
             max_abs_J_minus_J_0=np.max(abs_J_minus_J_0),
-            flow_curve_was_salvaged=smo.flow_curve_was_salvaged
+            flow_curve_was_salvaged=smo.flow_curve_was_salvaged,
+            flow_curve=flow_curve
         )
         #print('recording sample {0}'.format(sample_result))
     except Exception as e:
@@ -63,7 +64,8 @@ def worker (args):
             t_min=np.nan,
             max_abs_H=np.nan,
             max_abs_J_minus_J_0=np.nan,
-            flow_curve_was_salvaged=True # Change this to "exception occurred" and store info about exception
+            flow_curve_was_salvaged=True, # Change this to "exception occurred" and store info about exception
+            flow_curve=flow_curve
         )
 
     return sample_result
