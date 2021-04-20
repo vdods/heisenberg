@@ -1,7 +1,7 @@
 # Kepler-Heisenberg Problem Computational Tool Suite
 
 Code for numerical computation in research on orbital dynamics in the Kepler-Heisenberg problem
-(solving for sun/planet dynamics in the Heisenberg group) -- a collaboration with Corey Shanbrom.
+(solving for star/planet dynamics in the Heisenberg group) -- a collaboration with Corey Shanbrom.
 
 The publication "Numerical Methods and Closed Orbits in the Kepler-Heisenberg Problem" in which these results appear can
 be found in [the Journal of Experimental Mathematics](http://www.tandfonline.com/doi/full/10.1080/10586458.2017.1416709),
